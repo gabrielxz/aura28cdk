@@ -56,6 +56,20 @@ Aura28 is a modern web platform built with Next.js, TypeScript, Tailwind CSS, an
 - **CI/CD**: GitHub Actions with separate jobs for linting, testing, and deployment
 - **SSL/TLS**: Certificates managed via ACM in us-east-1
 
+### 7. Git Workflow Rules
+
+**CRITICAL**: These rules MUST be followed at all times:
+
+- **NEVER push directly to main branch**
+- **ALWAYS work in the develop branch** unless explicitly instructed otherwise
+- **Production deployments** only happen via merging develop → main
+- **Default branch**: Always use `develop` for all changes
+- **Commit workflow**:
+  1. Make changes in develop branch
+  2. Run pre-commit checklist
+  3. Commit and push to develop
+  4. Only merge to main when explicitly requested by user
+
 ## Route Manifest
 
 ### Current Routes
