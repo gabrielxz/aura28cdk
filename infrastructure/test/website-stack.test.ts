@@ -1,11 +1,31 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { WebsiteStack } from '../lib/website-stack';
+import * as fs from 'fs';
+import * as path from 'path';
 
 describe('WebsiteStack', () => {
   let app: cdk.App;
   let stack: WebsiteStack;
   let template: Template;
+
+  // Create a temporary frontend/out directory for tests
+  const frontendOutDir = path.join(__dirname, '../../frontend/out');
+
+  beforeAll(() => {
+    if (!fs.existsSync(frontendOutDir)) {
+      fs.mkdirSync(frontendOutDir, { recursive: true });
+      // Create a dummy index.html file
+      fs.writeFileSync(path.join(frontendOutDir, 'index.html'), '<html></html>');
+    }
+  });
+
+  afterAll(() => {
+    // Clean up the temporary directory
+    if (fs.existsSync(frontendOutDir)) {
+      fs.rmSync(frontendOutDir, { recursive: true, force: true });
+    }
+  });
 
   beforeEach(() => {
     app = new cdk.App();

@@ -8,8 +8,8 @@
     "infrastructure"
   ],
   "scripts": {
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md,yml,yaml}\"",
     "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces",
     "build": "npm run build --workspaces",
