@@ -68,11 +68,11 @@ cd infrastructure
 npm install
 npm run build
 
-# Deploy development
-npx cdk deploy Aura28DevStack
+# Deploy development (default)
+npx cdk deploy -c env=dev
 
 # Deploy production
-npx cdk deploy Aura28ProdStack
+npx cdk deploy -c env=prod
 ```
 
 ## Architecture
