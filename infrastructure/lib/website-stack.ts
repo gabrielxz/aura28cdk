@@ -52,6 +52,9 @@ export class WebsiteStack extends cdk.Stack {
     } else {
       certificate = new acm.Certificate(this, 'Certificate', {
         domainName: siteDomain,
+        subjectAlternativeNames: props.environment === 'prod' 
+          ? [`www.${props.domainName}`] 
+          : undefined,
         validation: acm.CertificateValidation.fromDns(hostedZone),
       });
     }
@@ -84,7 +87,7 @@ export class WebsiteStack extends cdk.Stack {
     // Create CloudFront distribution
     this.distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultBehavior: {
-        origin: new cloudfront_origins.S3Origin(this.bucket),
+        origin: cloudfront_origins.S3BucketOrigin.withOriginAccessControl(this.bucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         functionAssociations: [{
           function: routingFunction,
