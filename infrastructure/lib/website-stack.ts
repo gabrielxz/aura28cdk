@@ -1,0 +1,161 @@
+import * as cdk from 'aws-cdk-lib';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as cloudfront_origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
+import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as route53_targets from 'aws-cdk-lib/aws-route53-targets';
+import { Construct } from 'constructs';
+
+export interface WebsiteStackProps extends cdk.StackProps {
+  domainName: string;
+  subdomain?: string;
+  certificateArn?: string;
+  environment: 'dev' | 'prod';
+}
+
+export class WebsiteStack extends cdk.Stack {
+  public readonly distribution: cloudfront.Distribution;
+  public readonly bucket: s3.Bucket;
+
+  constructor(scope: Construct, id: string, props: WebsiteStackProps) {
+    super(scope, id, props);
+
+    const siteDomain = props.subdomain 
+      ? `${props.subdomain}.${props.domainName}`
+      : props.domainName;
+
+    // Create S3 bucket for hosting
+    this.bucket = new s3.Bucket(this, 'WebsiteBucket', {
+      bucketName: `aura28-${props.environment}-website-${this.account}`,
+      publicReadAccess: false,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+
+    // Get hosted zone
+    const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
+      domainName: props.domainName,
+    });
+
+    // Create certificate (must be in us-east-1 for CloudFront)
+    let certificate: acm.ICertificate;
+    
+    if (props.certificateArn) {
+      certificate = acm.Certificate.fromCertificateArn(
+        this,
+        'Certificate',
+        props.certificateArn
+      );
+    } else {
+      certificate = new acm.Certificate(this, 'Certificate', {
+        domainName: siteDomain,
+        validation: acm.CertificateValidation.fromDns(hostedZone),
+      });
+    }
+
+    // CloudFront Function for handling routing
+    const routingFunction = new cloudfront.Function(this, 'RoutingFunction', {
+      code: cloudfront.FunctionCode.fromInline(`
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+          
+          // Check if URI already has an extension
+          if (uri.includes('.')) {
+            return request;
+          }
+          
+          // Check if URI ends with /
+          if (uri.endsWith('/')) {
+            request.uri = uri + 'index.html';
+          } else {
+            // Try to append .html
+            request.uri = uri + '.html';
+          }
+          
+          return request;
+        }
+      `),
+    });
+
+    // Create CloudFront distribution
+    this.distribution = new cloudfront.Distribution(this, 'Distribution', {
+      defaultBehavior: {
+        origin: new cloudfront_origins.S3Origin(this.bucket),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        functionAssociations: [{
+          function: routingFunction,
+          eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+        }],
+        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+      },
+      domainNames: props.environment === 'prod' 
+        ? [props.domainName, `www.${props.domainName}`]
+        : [siteDomain],
+      certificate,
+      errorResponses: [
+        {
+          httpStatus: 404,
+          responseHttpStatus: 200,
+          responsePagePath: '/404.html',
+          ttl: cdk.Duration.minutes(5),
+        },
+      ],
+      defaultRootObject: 'index.html',
+    });
+
+    // Create Route53 A record
+    new route53.ARecord(this, 'AliasRecord', {
+      recordName: siteDomain,
+      target: route53.RecordTarget.fromAlias(
+        new route53_targets.CloudFrontTarget(this.distribution)
+      ),
+      zone: hostedZone,
+    });
+
+    // If production, create www redirect
+    if (props.environment === 'prod') {
+      new route53.ARecord(this, 'WwwAliasRecord', {
+        recordName: `www.${props.domainName}`,
+        target: route53.RecordTarget.fromAlias(
+          new route53_targets.CloudFrontTarget(this.distribution)
+        ),
+        zone: hostedZone,
+      });
+
+      // Create redirect bucket for www to apex
+      const redirectBucket = new s3.Bucket(this, 'WwwRedirectBucket', {
+        bucketName: `www.${props.domainName}`,
+        websiteRedirect: {
+          hostName: props.domainName,
+          protocol: s3.RedirectProtocol.HTTPS,
+        },
+        publicReadAccess: false,
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      });
+    }
+
+    // Deploy site contents
+    new s3deploy.BucketDeployment(this, 'DeployWebsite', {
+      sources: [s3deploy.Source.asset('../frontend/out')],
+      destinationBucket: this.bucket,
+      distribution: this.distribution,
+      distributionPaths: ['/*'],
+    });
+
+    // Output CloudFront URL
+    new cdk.CfnOutput(this, 'DistributionUrl', {
+      value: `https://${siteDomain}`,
+      description: 'Website URL',
+    });
+
+    new cdk.CfnOutput(this, 'CloudFrontUrl', {
+      value: `https://${this.distribution.distributionDomainName}`,
+      description: 'CloudFront Distribution URL',
+    });
+  }
+}

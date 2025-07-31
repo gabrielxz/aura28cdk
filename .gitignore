@@ -39,11 +39,11 @@ yarn-error.log*
 Thumbs.db
 
 # CDK
-*.js
-!jest.config.js
-*.d.ts
-cdk.out/
-.cdk.staging/
+infrastructure/*.js
+infrastructure/*.d.ts
+infrastructure/cdk.out/
+infrastructure/.cdk.staging/
+!infrastructure/jest.config.js
 
 # Temporary
 *.tmp
