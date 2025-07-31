@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+cdk.out/
+*.js
+*.d.ts
+
+# CDK specific - but keep TypeScript source files
+!infrastructure/**/*.ts
+!frontend/**/*.ts
+!frontend/**/*.tsx
+
+# Test coverage
+coverage/
+*.lcov
+
+# Environment files
+.env*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Package files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

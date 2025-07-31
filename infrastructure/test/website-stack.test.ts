@@ -78,12 +78,12 @@ describe('WebsiteStack', () => {
 
   test('Resources are tagged with Project tag', () => {
     const resources = template.toJSON().Resources;
-    
+
     // Check that S3 bucket has the tag
     const s3Resources = Object.entries(resources).filter(
-      ([_, resource]: [string, any]) => resource.Type === 'AWS::S3::Bucket'
+      ([_, resource]: [string, any]) => resource.Type === 'AWS::S3::Bucket',
     );
-    
+
     expect(s3Resources.length).toBeGreaterThan(0);
     s3Resources.forEach(([_, resource]: [string, any]) => {
       expect(resource.Properties.Tags).toEqual(
@@ -92,7 +92,7 @@ describe('WebsiteStack', () => {
             Key: 'Project',
             Value: 'Aura28CDK',
           }),
-        ])
+        ]),
       );
     });
   });
@@ -115,7 +115,7 @@ describe('WebsiteStack', () => {
         Type: 'A',
       },
     });
-    
+
     expect(Object.keys(aRecords).length).toBe(2);
   });
 });

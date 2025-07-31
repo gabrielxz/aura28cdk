@@ -25,7 +25,7 @@ export class WebsiteStack extends cdk.Stack {
     // Tag all resources in this stack
     cdk.Tags.of(this).add('Project', 'Aura28CDK');
 
-    const siteDomain = props.subdomain 
+    const siteDomain = props.subdomain
       ? `${props.subdomain}.${props.domainName}`
       : props.domainName;
 
@@ -34,8 +34,15 @@ export class WebsiteStack extends cdk.Stack {
       bucketName: `aura28-${props.environment}-website-${this.account}`,
       publicReadAccess: false,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      autoDeleteObjects: true,
+      removalPolicy:
+        props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: props.environment !== 'prod',
+      lifecycleRules: [
+        {
+          id: 'AbortIncompleteMultipartUploads',
+          abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
+        },
+      ],
     });
 
     // Get hosted zone
@@ -45,19 +52,14 @@ export class WebsiteStack extends cdk.Stack {
 
     // Create certificate (must be in us-east-1 for CloudFront)
     let certificate: acm.ICertificate;
-    
+
     if (props.certificateArn) {
-      certificate = acm.Certificate.fromCertificateArn(
-        this,
-        'Certificate',
-        props.certificateArn
-      );
+      certificate = acm.Certificate.fromCertificateArn(this, 'Certificate', props.certificateArn);
     } else {
       certificate = new acm.Certificate(this, 'Certificate', {
         domainName: siteDomain,
-        subjectAlternativeNames: props.environment === 'prod' 
-          ? [`www.${props.domainName}`] 
-          : undefined,
+        subjectAlternativeNames:
+          props.environment === 'prod' ? [`www.${props.domainName}`] : undefined,
         validation: acm.CertificateValidation.fromDns(hostedZone),
       });
     }
@@ -92,15 +94,16 @@ export class WebsiteStack extends cdk.Stack {
       defaultBehavior: {
         origin: cloudfront_origins.S3BucketOrigin.withOriginAccessControl(this.bucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        functionAssociations: [{
-          function: routingFunction,
-          eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-        }],
+        functionAssociations: [
+          {
+            function: routingFunction,
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+          },
+        ],
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
       },
-      domainNames: props.environment === 'prod' 
-        ? [props.domainName, `www.${props.domainName}`]
-        : [siteDomain],
+      domainNames:
+        props.environment === 'prod' ? [props.domainName, `www.${props.domainName}`] : [siteDomain],
       certificate,
       errorResponses: [
         {
@@ -117,7 +120,7 @@ export class WebsiteStack extends cdk.Stack {
     new route53.ARecord(this, 'AliasRecord', {
       recordName: siteDomain,
       target: route53.RecordTarget.fromAlias(
-        new route53_targets.CloudFrontTarget(this.distribution)
+        new route53_targets.CloudFrontTarget(this.distribution),
       ),
       zone: hostedZone,
     });
@@ -127,7 +130,7 @@ export class WebsiteStack extends cdk.Stack {
       new route53.ARecord(this, 'WwwAliasRecord', {
         recordName: `www.${props.domainName}`,
         target: route53.RecordTarget.fromAlias(
-          new route53_targets.CloudFrontTarget(this.distribution)
+          new route53_targets.CloudFrontTarget(this.distribution),
         ),
         zone: hostedZone,
       });

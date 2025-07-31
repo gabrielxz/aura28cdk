@@ -1,0 +1,29 @@
+{
+  "name": "aura28cdk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A modern web platform built with Next.js, TypeScript, Tailwind CSS, and deployed with AWS CDK.",
+  "workspaces": [
+    "frontend",
+    "infrastructure"
+  ],
+  "scripts": {
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces",
+    "lint:frontend": "npm run lint --workspace=frontend",
+    "lint:infrastructure": "npm run lint --workspace=infrastructure",
+    "test:frontend": "npm run test --workspace=frontend",
+    "test:infrastructure": "npm run test --workspace=infrastructure"
+  },
+  "devDependencies": {
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.4.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gabrielxz/aura28cdk.git"
+  },
+  "license": "ISC"
+}
