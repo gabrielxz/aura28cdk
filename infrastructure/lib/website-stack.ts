@@ -134,18 +134,6 @@ export class WebsiteStack extends cdk.Stack {
         ),
         zone: hostedZone,
       });
-
-      // Create redirect bucket for www to apex
-      const redirectBucket = new s3.Bucket(this, 'WwwRedirectBucket', {
-        bucketName: `www.${props.domainName}`,
-        websiteRedirect: {
-          hostName: props.domainName,
-          protocol: s3.RedirectProtocol.HTTPS,
-        },
-        publicReadAccess: false,
-        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      });
     }
 
     // Deploy site contents

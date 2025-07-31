@@ -14,6 +14,7 @@ aura28cdk/
 ## Development Setup
 
 ### Prerequisites
+
 - Node.js 20.x
 - AWS CLI configured with appropriate permissions
 - GitHub repository with AWS secrets configured
@@ -21,11 +22,13 @@ aura28cdk/
 ### Local Development
 
 1. **Frontend Development:**
+
    ```bash
    cd frontend
    npm install
    npm run dev
    ```
+
    Visit http://localhost:3000
 
 2. **Build Frontend:**
@@ -37,6 +40,7 @@ aura28cdk/
 ### AWS Infrastructure
 
 The infrastructure is managed using AWS CDK and includes:
+
 - S3 buckets for static hosting
 - CloudFront distributions for global CDN
 - Route 53 DNS configuration
@@ -45,16 +49,20 @@ The infrastructure is managed using AWS CDK and includes:
 ## Deployment
 
 ### GitHub Secrets Required
+
 Add these secrets to your GitHub repository:
+
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 - `AWS_REGION` (e.g., us-east-1)
 
 ### Environments
+
 - **Development**: https://dev.aura28.com (deploys from `develop` branch)
 - **Production**: https://aura28.com (deploys from `main` branch)
 
 ### Manual Deployment
+
 ```bash
 cd infrastructure
 npm install
@@ -76,6 +84,7 @@ npx cdk deploy Aura28ProdStack
 - **CI/CD**: GitHub Actions
 
 ## Future Features
+
 - User authentication
 - OpenAI integration
 - Stripe payment processing

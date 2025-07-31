@@ -9,7 +9,7 @@ jobs:
   lint-frontend:
     name: Lint Frontend
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
   lint-infrastructure:
     name: Lint Infrastructure
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
     name: Test Frontend
     runs-on: ubuntu-latest
     needs: lint-frontend
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -79,7 +79,7 @@ jobs:
     name: Test Infrastructure
     runs-on: ubuntu-latest
     needs: lint-infrastructure
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -100,7 +100,7 @@ jobs:
     name: Build Frontend
     runs-on: ubuntu-latest
     needs: test-frontend
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -129,7 +129,7 @@ jobs:
     name: Deploy to AWS
     runs-on: ubuntu-latest
     needs: [build-frontend, test-infrastructure]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
