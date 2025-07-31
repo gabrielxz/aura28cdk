@@ -22,6 +22,9 @@ export class WebsiteStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: WebsiteStackProps) {
     super(scope, id, props);
 
+    // Tag all resources in this stack
+    cdk.Tags.of(this).add('Project', 'Aura28CDK');
+
     const siteDomain = props.subdomain 
       ? `${props.subdomain}.${props.domainName}`
       : props.domainName;
