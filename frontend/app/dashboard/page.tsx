@@ -9,8 +9,13 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // Only redirect if we're done loading and there's definitely no user
     if (!loading && !user) {
-      router.push('/login');
+      // Small delay to prevent race conditions with auth context
+      const timer = setTimeout(() => {
+        router.push('/login');
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [user, loading, router]);
 

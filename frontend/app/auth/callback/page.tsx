@@ -3,11 +3,13 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthService } from '@/lib/auth/auth-service';
+import { useAuth } from '@/lib/auth/use-auth';
 
 function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const { refreshUser } = useAuth();
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -29,8 +31,14 @@ function AuthCallbackContent() {
       try {
         const authService = new AuthService();
         await authService.handleCallback(code);
-        // Redirect to dashboard after successful auth
-        router.push('/dashboard');
+        
+        // Refresh the auth context to pick up the new tokens
+        await refreshUser();
+        
+        // Small delay to ensure state is updated
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 100);
       } catch (err) {
         console.error('Auth callback error:', err);
         setError(err instanceof Error ? err.message : 'Authentication failed');
@@ -39,7 +47,7 @@ function AuthCallbackContent() {
     };
 
     handleCallback();
-  }, [searchParams, router]);
+  }, [searchParams, router, refreshUser]);
 
   return (
     <div className="flex min-h-screen items-center justify-center">
