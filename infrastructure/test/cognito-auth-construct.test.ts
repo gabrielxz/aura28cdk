@@ -118,13 +118,13 @@ describe('CognitoAuthConstruct', () => {
       // Outputs are created at the construct level with CDK hashes
       const outputs = template.findOutputs('*');
       const outputKeys = Object.keys(outputs);
-      
+
       // Check that outputs with the correct prefix exist
-      expect(outputKeys.some(key => key.startsWith('TestAuthUserPoolId'))).toBe(true);
-      expect(outputKeys.some(key => key.startsWith('TestAuthUserPoolClientId'))).toBe(true);
-      expect(outputKeys.some(key => key.startsWith('TestAuthCognitoDomainPrefix'))).toBe(true);
-      expect(outputKeys.some(key => key.startsWith('TestAuthCognitoHostedUIURL'))).toBe(true);
-      expect(outputKeys.some(key => key.startsWith('TestAuthOAuthSecretsReminder'))).toBe(true);
+      expect(outputKeys.some((key) => key.startsWith('TestAuthUserPoolId'))).toBe(true);
+      expect(outputKeys.some((key) => key.startsWith('TestAuthUserPoolClientId'))).toBe(true);
+      expect(outputKeys.some((key) => key.startsWith('TestAuthCognitoDomainPrefix'))).toBe(true);
+      expect(outputKeys.some((key) => key.startsWith('TestAuthCognitoHostedUIURL'))).toBe(true);
+      expect(outputKeys.some((key) => key.startsWith('TestAuthOAuthSecretsReminder'))).toBe(true);
     });
   });
 
