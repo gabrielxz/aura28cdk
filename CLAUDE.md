@@ -24,10 +24,12 @@ Aura28 is a modern web platform built with Next.js, TypeScript, Tailwind CSS, an
 
 - **Formatting**: Prettier handles ALL code formatting
   - Configuration in `.prettierrc.json`
+  - Includes CSS files in addition to TS/JS/JSON/MD
   - Run `npm run format` at root level
 - **Linting**: ESLint configured for TypeScript monorepo
   - Extends `prettier` to avoid conflicts
   - Frontend disables `@next/next/no-html-link-for-pages` rule
+  - Infrastructure ignores `.d.ts` files and allows underscore-prefixed unused vars
   - Run `npm run lint` at root level
 
 ### 4. Testing Requirements
@@ -38,6 +40,8 @@ Aura28 is a modern web platform built with Next.js, TypeScript, Tailwind CSS, an
 - **Commands**:
   - `npm run test:frontend`
   - `npm run test:infrastructure`
+- **Infrastructure Test Setup**: Tests create temporary `frontend/out` directory to avoid build dependency
+- **Frontend Jest Config**: Uses type assertion for Next.js compatibility (`as any`)
 
 ### 5. AWS Resource Management
 
@@ -83,6 +87,17 @@ Aura28 is a modern web platform built with Next.js, TypeScript, Tailwind CSS, an
 ### Planned Routes
 
 - `/api/*` - API endpoints (when server components are added)
+
+## Initial AWS Setup
+
+Before deploying this project, ensure the following prerequisites:
+
+1. **AWS CDK Bootstrap**: Run `cdk bootstrap aws://{account-id}/us-east-1`
+2. **Route 53 Hosted Zone**: Must exist for your domain (aura28.com)
+3. **GitHub Secrets**: Configure in your repository settings:
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+   - `AWS_REGION` (us-east-1)
 
 ## Project Structure
 
@@ -228,6 +243,50 @@ After CDK deployment:
      - `aura28/oauth/facebook/{env}`
      - `aura28/oauth/apple/{env}`
    - Configure identity providers in Cognito console
+
+## Known Issues and Solutions
+
+### Common CI/CD Failures
+
+1. **Infrastructure Tests Fail with "Cannot find asset at frontend/out"**
+   - **Cause**: Tests run before frontend is built
+   - **Solution**: Infrastructure tests create temporary directory in beforeAll/afterAll hooks
+
+2. **Jest TypeScript Configuration Error**
+   - **Cause**: Type mismatch with Next.js jest config
+   - **Solution**: Use type assertion in jest.config.ts: `export default createJestConfig(config as any)`
+
+3. **Frontend Format Check Fails on CSS Files**
+   - **Cause**: Root prettier config missing CSS file pattern
+   - **Solution**: Include CSS in prettier patterns: `"**/*.{ts,tsx,js,jsx,json,css,md,yml,yaml}"`
+
+4. **ESLint Errors on .d.ts Files**
+   - **Cause**: TypeScript declaration files not in tsconfig
+   - **Solution**: Add to infrastructure/.eslintrc.json: `"ignorePatterns": ["*.d.ts", "*.js", "cdk.out"]`
+
+## Migration Notes
+
+### Changing Stack Names
+
+When updating stack naming conventions (e.g., from `Aura28DevStack` to `Aura28-dev-Stack`):
+
+1. **Delete existing stacks in AWS CloudFormation console**
+   - Development stacks can be deleted safely (S3 bucket has DESTROY policy)
+   - Production requires manual S3 bucket deletion after stack deletion (RETAIN policy)
+
+2. **Clean up Route 53 records**
+   - Delete orphaned ACM validation CNAME records (start with underscore)
+   - Keep NS and SOA records
+
+3. **Update deployment commands**
+   - Use context-based deployment: `npx cdk deploy -c env=dev`
+
+### S3 Bucket Naming Conflicts
+
+S3 bucket names must be globally unique. If you encounter conflicts:
+
+- Delete the old stack first
+- Or use a different naming pattern in the new stack
 
 ## Future Enhancements
 
