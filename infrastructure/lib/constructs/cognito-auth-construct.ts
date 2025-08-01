@@ -58,14 +58,14 @@ export class CognitoAuthConstruct extends Construct {
           maxLen: 256,
           mutable: true,
         }),
-        birthLatitude: new cognito.NumberAttribute({
-          min: -90,
-          max: 90,
+        birthLatitude: new cognito.StringAttribute({
+          minLen: 1,
+          maxLen: 20,
           mutable: true,
         }),
-        birthLongitude: new cognito.NumberAttribute({
-          min: -180,
-          max: 180,
+        birthLongitude: new cognito.StringAttribute({
+          minLen: 1,
+          maxLen: 20,
           mutable: true,
         }),
       },

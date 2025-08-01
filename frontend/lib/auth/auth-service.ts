@@ -10,8 +10,8 @@ export interface User {
   family_name?: string;
   'custom:birthTime'?: string;
   'custom:birthPlace'?: string;
-  'custom:birthLatitude'?: number;
-  'custom:birthLongitude'?: number;
+  'custom:birthLatitude'?: string;
+  'custom:birthLongitude'?: string;
 }
 
 export interface AuthTokens {
