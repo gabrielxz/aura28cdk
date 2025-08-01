@@ -46,10 +46,13 @@ export class AuthService {
 
   /**
    * Redirect to Cognito Hosted UI for login
+   * @param forceAuth - If true, forces fresh authentication even if user has existing session
    */
-  redirectToLogin(): void {
+  redirectToLogin(forceAuth: boolean = true): void {
     const urls = getCognitoUrls(this.config);
-    window.location.href = urls.login;
+    // Add prompt=login to force fresh authentication and avoid the confusing session prompt
+    const loginUrl = forceAuth ? `${urls.login}&prompt=login` : urls.login;
+    window.location.href = loginUrl;
   }
 
   /**
@@ -58,6 +61,7 @@ export class AuthService {
   async logout(): Promise<void> {
     this.clearTokens();
     const urls = getCognitoUrls(this.config);
+    // Cognito logout URL will clear the session cookies
     window.location.href = urls.logout;
   }
 
