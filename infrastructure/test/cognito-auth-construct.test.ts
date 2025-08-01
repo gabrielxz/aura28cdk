@@ -63,12 +63,12 @@ describe('CognitoAuthConstruct', () => {
           }),
           Match.objectLike({
             Name: 'birthLatitude',
-            AttributeDataType: 'Number',
+            AttributeDataType: 'String',
             Mutable: true,
           }),
           Match.objectLike({
             Name: 'birthLongitude',
-            AttributeDataType: 'Number',
+            AttributeDataType: 'String',
             Mutable: true,
           }),
         ]),
