@@ -3,10 +3,9 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/use-auth';
-import { Button } from '@/components/ui/button';
 
 export default function DashboardPage() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -31,12 +30,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto max-w-4xl p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <Button onClick={() => logout()} variant="outline">
-          Logout
-        </Button>
-      </div>
+      <h1 className="mb-8 text-3xl font-bold">Dashboard</h1>
 
       <div className="rounded-lg bg-gray-50 p-6 dark:bg-gray-900">
         <h2 className="mb-4 text-xl font-semibold">Welcome, {user.email}!</h2>
