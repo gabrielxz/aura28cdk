@@ -7,6 +7,7 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as route53_targets from 'aws-cdk-lib/aws-route53-targets';
 import { Construct } from 'constructs';
+import { CognitoAuthConstruct } from './constructs/cognito-auth-construct';
 
 export interface WebsiteStackProps extends cdk.StackProps {
   domainName: string;
@@ -18,6 +19,7 @@ export interface WebsiteStackProps extends cdk.StackProps {
 export class WebsiteStack extends cdk.Stack {
   public readonly distribution: cloudfront.Distribution;
   public readonly bucket: s3.Bucket;
+  public readonly auth: CognitoAuthConstruct;
 
   constructor(scope: Construct, id: string, props: WebsiteStackProps) {
     super(scope, id, props);
@@ -28,6 +30,14 @@ export class WebsiteStack extends cdk.Stack {
     const siteDomain = props.subdomain
       ? `${props.subdomain}.${props.domainName}`
       : props.domainName;
+
+    // Create Cognito auth resources
+    this.auth = new CognitoAuthConstruct(this, 'Auth', {
+      environment: props.environment,
+      domainPrefix: `aura28-${props.environment}`,
+      callbackUrls: [`http://localhost:3000/auth/callback`, `https://${siteDomain}/auth/callback`],
+      logoutUrls: [`http://localhost:3000`, `https://${siteDomain}`],
+    });
 
     // Create S3 bucket for hosting
     this.bucket = new s3.Bucket(this, 'WebsiteBucket', {
@@ -142,6 +152,22 @@ export class WebsiteStack extends cdk.Stack {
       destinationBucket: this.bucket,
       distribution: this.distribution,
       distributionPaths: ['/*'],
+    });
+
+    // Output Cognito configuration for frontend
+    new cdk.CfnOutput(this, 'CognitoUserPoolId', {
+      value: this.auth.userPool.userPoolId,
+      description: 'Cognito User Pool ID',
+    });
+
+    new cdk.CfnOutput(this, 'CognitoClientId', {
+      value: this.auth.userPoolClient.userPoolClientId,
+      description: 'Cognito Client ID',
+    });
+
+    new cdk.CfnOutput(this, 'CognitoDomain', {
+      value: `aura28-${props.environment}`,
+      description: 'Cognito Domain Prefix',
     });
 
     // Output CloudFront URL
