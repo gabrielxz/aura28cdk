@@ -31,10 +31,10 @@ function AuthCallbackContent() {
       try {
         const authService = new AuthService();
         await authService.handleCallback(code);
-        
+
         // Refresh the auth context to pick up the new tokens
         await refreshUser();
-        
+
         // Small delay to ensure state is updated
         setTimeout(() => {
           router.push('/dashboard');
