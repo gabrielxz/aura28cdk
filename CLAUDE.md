@@ -60,16 +60,32 @@ Aura28 is a modern web platform built with Next.js, TypeScript, Tailwind CSS, an
 - **CI/CD**: GitHub Actions with separate jobs for linting, testing, and deployment
 - **SSL/TLS**: Certificates managed via ACM in us-east-1
 
+### 7. Git Workflow Rules
+
+**CRITICAL**: These rules MUST be followed at all times:
+
+- **NEVER push directly to main branch**
+- **ALWAYS work in the develop branch** unless explicitly instructed otherwise
+- **Production deployments** only happen via merging develop → main
+- **Default branch**: Always use `develop` for all changes
+- **Commit workflow**:
+  1. Make changes in develop branch
+  2. Run pre-commit checklist
+  3. Commit and push to develop
+  4. Only merge to main when explicitly requested by user
+
 ## Route Manifest
 
 ### Current Routes
 
 - `/` - Homepage (Hello Carri landing page)
+- `/login` - Redirects to Cognito Hosted UI
+- `/logout` - Logs out user and redirects to home
+- `/auth/callback` - OAuth callback handler
+- `/dashboard` - User dashboard (protected route)
 
 ### Planned Routes
 
-- `/login` - User authentication
-- `/dashboard` - User dashboard
 - `/api/*` - API endpoints (when server components are added)
 
 ## Initial AWS Setup
@@ -177,15 +193,56 @@ cd infrastructure && npx cdk diff -c env=prod
 ## Technology Stack Summary
 
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS, shadcn/ui
-- **Infrastructure**: AWS CDK, CloudFront, S3, Route 53, ACM
+- **Infrastructure**: AWS CDK, CloudFront, S3, Route 53, ACM, Cognito, Secrets Manager
+- **Authentication**: AWS Cognito with Hosted UI, JWT tokens
 - **Testing**: Jest, React Testing Library
 - **CI/CD**: GitHub Actions
 - **Code Quality**: ESLint, Prettier
 - **Package Management**: npm with workspaces
 
-## Environment Variables
+## Authentication Architecture
 
-Currently, no environment variables are required for local development. Future additions will be documented here.
+### AWS Cognito Setup
+
+- **User Pool**: Email-based authentication with custom attributes for birth information
+- **Hosted UI**: Cognito-managed login/signup pages
+- **Custom Attributes**:
+  - `custom:birthTime` - Birth time
+  - `custom:birthPlace` - Birth location
+  - `custom:birthLatitude` - Birth latitude
+  - `custom:birthLongitude` - Birth longitude
+- **OAuth Flow**: Authorization code grant with PKCE
+- **Token Storage**: Client-side localStorage with automatic refresh
+
+### Frontend Auth Implementation
+
+- **Custom Auth Service**: Lightweight SDK using `@aws-sdk/client-cognito-identity-provider`
+- **React Context**: Auth state management with `AuthProvider`
+- **Protected Routes**: Client-side route protection
+- **Session Management**: Automatic token refresh every 5 minutes
+
+### Environment Variables
+
+Required for frontend (in `.env.local`):
+
+```bash
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=us-east-1_xxxxxx
+NEXT_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxx
+NEXT_PUBLIC_COGNITO_DOMAIN=aura28-dev
+NEXT_PUBLIC_COGNITO_REGION=us-east-1
+```
+
+### Manual Configuration Steps
+
+After CDK deployment:
+
+1. Copy Cognito values from CDK output to `frontend/.env.local`
+2. For social login (future):
+   - Populate AWS Secrets Manager entries:
+     - `aura28/oauth/google/{env}`
+     - `aura28/oauth/facebook/{env}`
+     - `aura28/oauth/apple/{env}`
+   - Configure identity providers in Cognito console
 
 ## Known Issues and Solutions
 
@@ -233,11 +290,13 @@ S3 bucket names must be globally unique. If you encounter conflicts:
 
 ## Future Enhancements
 
-- User authentication system
-- OpenAI API integration
+- Social login providers (Google, Apple, Facebook) - OAuth secrets provisioned
+- Amazon Location Services for birth location geocoding
+- OpenAI API integration for astrology readings
 - Stripe payment processing
 - Database integration (likely DynamoDB or RDS)
 - API Gateway for serverless functions
+- Ephemeris calculations for astrology
 
 ---
 

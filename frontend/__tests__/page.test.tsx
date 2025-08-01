@@ -1,7 +1,25 @@
 import { render, screen } from '@testing-library/react';
 import Home from '@/app/page';
+import { useAuth } from '@/lib/auth/use-auth';
+
+// Mock the auth hook
+jest.mock('@/lib/auth/use-auth');
+
+// Mock next/navigation
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+  }),
+}));
 
 describe('Home Page', () => {
+  beforeEach(() => {
+    (useAuth as jest.Mock).mockReturnValue({
+      user: null,
+      login: jest.fn(),
+    });
+  });
+
   it('renders Hello Carri heading', () => {
     render(<Home />);
 
@@ -40,11 +58,11 @@ describe('Home Page', () => {
     expect(learnMoreButton).toBeInTheDocument();
   });
 
-  it('renders coming soon message', () => {
+  it('renders features message', () => {
     render(<Home />);
 
-    const comingSoonText = screen.getByText(/coming soon/i);
+    const featuresText = screen.getByText(/Features: User authentication with AWS Cognito/i);
 
-    expect(comingSoonText).toBeInTheDocument();
+    expect(featuresText).toBeInTheDocument();
   });
 });

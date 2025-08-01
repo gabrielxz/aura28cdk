@@ -1,0 +1,14 @@
+{
+  "Aura28-dev-Stack": {
+    "AuthUserPoolIdC0605E59": "us-east-1_rsin8LPL2",
+    "CognitoUserPoolId": "us-east-1_rsin8LPL2",
+    "CognitoClientId": "5t91gicik4tp9b035ot25ijdm0",
+    "CloudFrontUrl": "https://dob637y37anvm.cloudfront.net",
+    "AuthCognitoDomainPrefixA6F6E8D2": "aura28-dev",
+    "AuthOAuthSecretsReminderFE61AA17": "ACTION REQUIRED: When ready for social login, populate these secrets in AWS Secrets Manager: aura28/oauth/google/dev, aura28/oauth/facebook/dev, aura28/oauth/apple/dev",
+    "DistributionUrl": "https://dev.aura28.com",
+    "AuthUserPoolClientId8216BF9A": "5t91gicik4tp9b035ot25ijdm0",
+    "AuthCognitoHostedUIURLE53F229D": "https://aura28-dev.auth.us-east-1.amazoncognito.com",
+    "CognitoDomain": "aura28-dev"
+  }
+}
