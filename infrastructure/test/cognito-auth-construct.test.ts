@@ -112,7 +112,7 @@ describe('CognitoAuthConstruct', () => {
         GenerateSecret: false,
         ExplicitAuthFlows: Match.arrayWith(['ALLOW_USER_PASSWORD_AUTH', 'ALLOW_USER_SRP_AUTH']),
         AllowedOAuthFlows: ['code'],
-        AllowedOAuthScopes: ['email', 'openid', 'profile'],
+        AllowedOAuthScopes: ['email', 'openid', 'profile', 'aws.cognito.signin.user.admin'],
         CallbackURLs: [
           'http://localhost:3000/auth/callback',
           'https://dev.aura28.com/auth/callback',

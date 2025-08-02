@@ -128,7 +128,12 @@ export class CognitoAuthConstruct extends Construct {
           authorizationCodeGrant: true,
           implicitCodeGrant: false,
         },
-        scopes: [cognito.OAuthScope.EMAIL, cognito.OAuthScope.OPENID, cognito.OAuthScope.PROFILE],
+        scopes: [
+          cognito.OAuthScope.EMAIL,
+          cognito.OAuthScope.OPENID,
+          cognito.OAuthScope.PROFILE,
+          cognito.OAuthScope.COGNITO_ADMIN,
+        ],
         callbackUrls: props.callbackUrls,
         logoutUrls: props.logoutUrls,
       },
