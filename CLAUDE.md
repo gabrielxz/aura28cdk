@@ -155,6 +155,28 @@ aura28cdk/
 
 **Note**: Skipping these steps will likely cause GitHub Actions CI/CD pipeline failures, requiring additional commits to fix issues that could have been caught locally.
 
+### Important Lessons Learned
+
+1. **Format Check Differences**: The `npm run format:check` command in CI/CD may behave differently than `npm run format` at the root level. Always run both:
+   - `npm run format` - to fix formatting issues
+   - `npm run format:check` - to verify formatting matches CI/CD expectations
+   - Run these from the same directory that CI/CD uses (e.g., `cd frontend && npm run format:check`)
+
+2. **Test Output Visibility**: When running `npm test` at root level, important failures can be buried in verbose output from multiple test suites. Always run focused test commands:
+   - `npm run test:frontend` - for clear frontend test output
+   - `npm run test:infrastructure` - for infrastructure tests
+   - This ensures you catch all test failures before pushing
+
+3. **Test Isolation**: Frontend tests must properly isolate localStorage and other browser APIs:
+   - Clear localStorage in `beforeEach` hooks
+   - Mock `console.error` for tests that expect errors to reduce noise
+   - Ensure tests don't interfere with each other
+
+4. **State Management in Tests**: When testing React components with state updates:
+   - Be aware of timing issues between state updates and side effects
+   - Use `waitFor` assertions for async state changes
+   - Ensure state is properly synchronized before assertions
+
 ### Deployment
 
 1. Make changes and test locally
