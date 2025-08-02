@@ -96,6 +96,36 @@ describe('WebsiteStack', () => {
     });
   });
 
+  test('DynamoDB table is created with correct properties', () => {
+    template.hasResourceProperties('AWS::DynamoDB::Table', {
+      TableName: 'Aura28-dev-Users',
+      BillingMode: 'PAY_PER_REQUEST',
+      PointInTimeRecoverySpecification: {
+        PointInTimeRecoveryEnabled: true,
+      },
+      KeySchema: [
+        {
+          AttributeName: 'userId',
+          KeyType: 'HASH',
+        },
+        {
+          AttributeName: 'createdAt',
+          KeyType: 'RANGE',
+        },
+      ],
+      AttributeDefinitions: [
+        {
+          AttributeName: 'userId',
+          AttributeType: 'S',
+        },
+        {
+          AttributeName: 'createdAt',
+          AttributeType: 'S',
+        },
+      ],
+    });
+  });
+
   test('Resources are tagged with Project tag', () => {
     const resources = template.toJSON().Resources;
 
@@ -106,6 +136,23 @@ describe('WebsiteStack', () => {
 
     expect(s3Resources.length).toBeGreaterThan(0);
     s3Resources.forEach(([, resource]: [string, any]) => {
+      expect(resource.Properties.Tags).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            Key: 'Project',
+            Value: 'Aura28CDK',
+          }),
+        ]),
+      );
+    });
+
+    // Check that DynamoDB table has the tag
+    const dynamoResources = Object.entries(resources).filter(
+      ([, resource]: [string, any]) => resource.Type === 'AWS::DynamoDB::Table',
+    );
+
+    expect(dynamoResources.length).toBeGreaterThan(0);
+    dynamoResources.forEach(([, resource]: [string, any]) => {
       expect(resource.Properties.Tags).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -137,5 +184,25 @@ describe('WebsiteStack', () => {
     });
 
     expect(Object.keys(aRecords).length).toBe(2);
+  });
+
+  test('Production DynamoDB table has RETAIN removal policy', () => {
+    const prodApp = new cdk.App();
+    const prodStack = new WebsiteStack(prodApp, 'ProdTestStack', {
+      domainName: 'example.com',
+      environment: 'prod',
+      env: {
+        account: '123456789012',
+        region: 'us-east-1',
+      },
+    });
+    const prodTemplate = Template.fromStack(prodStack);
+
+    // Check DynamoDB table has correct removal policy
+    const dynamoResources = prodTemplate.findResources('AWS::DynamoDB::Table');
+    Object.values(dynamoResources).forEach((resource: any) => {
+      expect(resource.DeletionPolicy).toBe('Retain');
+      expect(resource.UpdateReplacePolicy).toBe('Retain');
+    });
   });
 });
