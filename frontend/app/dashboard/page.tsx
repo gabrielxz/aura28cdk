@@ -80,7 +80,9 @@ export default function DashboardPage() {
             {user['custom:birthDate'] && (
               <p>
                 <strong>Birth Date:</strong>{' '}
-                {new Date(user['custom:birthDate']).toLocaleDateString()}
+                {new Date(user['custom:birthDate']).toLocaleDateString('en-US', {
+                  timeZone: 'UTC',
+                })}
               </p>
             )}
             {user['custom:birthTime'] && (
