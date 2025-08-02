@@ -6,6 +6,7 @@ import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as route53_targets from 'aws-cdk-lib/aws-route53-targets';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 import { CognitoAuthConstruct } from './constructs/cognito-auth-construct';
 
@@ -20,6 +21,7 @@ export class WebsiteStack extends cdk.Stack {
   public readonly distribution: cloudfront.Distribution;
   public readonly bucket: s3.Bucket;
   public readonly auth: CognitoAuthConstruct;
+  public readonly userTable: dynamodb.Table;
 
   constructor(scope: Construct, id: string, props: WebsiteStackProps) {
     super(scope, id, props);
@@ -37,6 +39,23 @@ export class WebsiteStack extends cdk.Stack {
       domainPrefix: `aura28-${props.environment}`,
       callbackUrls: [`http://localhost:3000/auth/callback`, `https://${siteDomain}/auth/callback`],
       logoutUrls: [`http://localhost:3000`, `https://${siteDomain}`],
+    });
+
+    // Create DynamoDB table for user data
+    this.userTable = new dynamodb.Table(this, 'UserTable', {
+      tableName: `Aura28-${props.environment}-Users`,
+      partitionKey: {
+        name: 'userId',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'createdAt',
+        type: dynamodb.AttributeType.STRING,
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy:
+        props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+      pointInTimeRecovery: true,
     });
 
     // Create S3 bucket for hosting
@@ -112,6 +131,23 @@ export class WebsiteStack extends cdk.Stack {
         ],
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
       },
+      additionalBehaviors: {
+        '/favicon*': {
+          origin: cloudfront_origins.S3BucketOrigin.withOriginAccessControl(this.bucket),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: new cloudfront.CachePolicy(this, 'FaviconCachePolicy', {
+            cachePolicyName: `aura28-${props.environment}-favicon-cache-policy`,
+            defaultTtl: cdk.Duration.hours(1),
+            maxTtl: cdk.Duration.hours(24),
+            minTtl: cdk.Duration.seconds(0),
+            enableAcceptEncodingGzip: true,
+            enableAcceptEncodingBrotli: true,
+            queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+            headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+            cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+          }),
+        },
+      },
       domainNames:
         props.environment === 'prod' ? [props.domainName, `www.${props.domainName}`] : [siteDomain],
       certificate,
@@ -152,6 +188,7 @@ export class WebsiteStack extends cdk.Stack {
       destinationBucket: this.bucket,
       distribution: this.distribution,
       distributionPaths: ['/*'],
+      prune: false,
     });
 
     // Output Cognito configuration for frontend
@@ -179,6 +216,11 @@ export class WebsiteStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'CloudFrontUrl', {
       value: `https://${this.distribution.distributionDomainName}`,
       description: 'CloudFront Distribution URL',
+    });
+
+    new cdk.CfnOutput(this, 'UserTableName', {
+      value: this.userTable.tableName,
+      description: 'DynamoDB User Table Name',
     });
   }
 }

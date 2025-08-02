@@ -7,13 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\" --ignore-path ../.prettierignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\" --ignore-path ../.prettierignore",
     "test": "jest",
     "test:watch": "jest --watch"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.858.0",
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

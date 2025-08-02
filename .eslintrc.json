@@ -11,5 +11,27 @@
   "rules": {
     "no-console": "warn",
     "no-unused-vars": "error"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["frontend/**/*.{js,jsx,ts,tsx}"],
+      "extends": ["next/core-web-vitals", "next/typescript", "prettier"],
+      "rules": {
+        "@next/next/no-html-link-for-pages": "off"
+      }
+    },
+    {
+      "files": ["infrastructure/**/*.ts"],
+      "parser": "@typescript-eslint/parser",
+      "parserOptions": {
+        "project": "./tsconfig.json"
+      },
+      "plugins": ["@typescript-eslint"],
+      "rules": {
+        "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+        "no-unused-vars": "off"
+      }
+    }
+  ],
+  "ignorePatterns": ["*.d.ts", "*.js", "cdk.out", "!jest.config.js"]
 }

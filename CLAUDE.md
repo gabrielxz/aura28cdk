@@ -139,6 +139,7 @@ aura28cdk/
 3. **Run tests**: `npm test` (at root level)
    - Verifies all tests pass
    - Prevents breaking existing functionality
+   - **Important**: Also run `npm run test:frontend` separately to ensure frontend test output is clearly visible
 
 4. **Build check**: `npm run build` (at root level)
    - Ensures the project builds successfully
@@ -153,6 +154,34 @@ aura28cdk/
    - Look for any debug code or temporary changes
 
 **Note**: Skipping these steps will likely cause GitHub Actions CI/CD pipeline failures, requiring additional commits to fix issues that could have been caught locally.
+
+### Important Lessons Learned
+
+1. **Format Check Differences**: The `npm run format:check` command in CI/CD may behave differently than `npm run format` at the root level. Always run both:
+   - `npm run format` - to fix formatting issues
+   - `npm run format:check` - to verify formatting matches CI/CD expectations
+   - Run these from the same directory that CI/CD uses (e.g., `cd frontend && npm run format:check`)
+
+2. **Test Output Visibility**: When running `npm test` at root level, important failures can be buried in verbose output from multiple test suites. Always run focused test commands:
+   - `npm run test:frontend` - for clear frontend test output
+   - `npm run test:infrastructure` - for infrastructure tests
+   - This ensures you catch all test failures before pushing
+
+3. **Test Isolation**: Frontend tests must properly isolate localStorage and other browser APIs:
+   - Clear localStorage in `beforeEach` hooks
+   - Mock `console.error` for tests that expect errors to reduce noise
+   - Ensure tests don't interfere with each other
+
+4. **State Management in Tests**: When testing React components with state updates:
+   - Be aware of timing issues between state updates and side effects
+   - Use `waitFor` assertions for async state changes
+   - Ensure state is properly synchronized before assertions
+
+5. **Mock Dependencies Completely**: When adding new dependencies to components:
+   - Update ALL test mocks to include new properties/methods
+   - Example: Adding `refreshUser` to `useAuth` requires updating all `useAuth` mocks
+   - Missing mock properties will cause runtime errors in tests
+   - Always run `npm run test:frontend` after modifying auth context or hooks
 
 ### Deployment
 
@@ -193,7 +222,8 @@ cd infrastructure && npx cdk diff -c env=prod
 ## Technology Stack Summary
 
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS, shadcn/ui
-- **Infrastructure**: AWS CDK, CloudFront, S3, Route 53, ACM, Cognito, Secrets Manager
+- **Infrastructure**: AWS CDK, CloudFront, S3, Route 53, ACM, Cognito, DynamoDB, Secrets Manager
+- **Database**: DynamoDB with pay-per-request billing
 - **Authentication**: AWS Cognito with Hosted UI, JWT tokens
 - **Testing**: Jest, React Testing Library
 - **CI/CD**: GitHub Actions
@@ -232,6 +262,12 @@ NEXT_PUBLIC_COGNITO_DOMAIN=aura28-dev
 NEXT_PUBLIC_COGNITO_REGION=us-east-1
 ```
 
+Future environment variables (when API is implemented):
+
+```bash
+DYNAMODB_TABLE_NAME=Aura28-dev-Users
+```
+
 ### Manual Configuration Steps
 
 After CDK deployment:
@@ -243,6 +279,79 @@ After CDK deployment:
      - `aura28/oauth/facebook/{env}`
      - `aura28/oauth/apple/{env}`
    - Configure identity providers in Cognito console
+
+## Database Architecture
+
+### DynamoDB Setup
+
+- **Table Name**: `Aura28-{env}-Users` (environment-specific)
+- **Primary Key**: Composite key design
+  - **Partition Key**: `userId` (String) - Cognito user ID
+  - **Sort Key**: `createdAt` (String) - ISO timestamp
+- **Billing**: Pay-per-request mode for cost optimization
+- **Data Protection**: Point-in-time recovery enabled
+- **Removal Policy**:
+  - Development: DESTROY (allows clean teardown)
+  - Production: RETAIN (protects user data)
+
+### Data Model Example
+
+```typescript
+interface UserRecord {
+  userId: string; // Partition key (Cognito ID)
+  createdAt: string; // Sort key (ISO timestamp)
+  email: string;
+  profile: {
+    birthTime: string;
+    birthPlace: string;
+    birthLatitude: number;
+    birthLongitude: number;
+  };
+  readings?: Array<{
+    id: string;
+    type: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    date: string;
+    content: string;
+    createdAt: string;
+  }>;
+  updatedAt: string;
+}
+```
+
+### Access Patterns
+
+1. **Get user by ID**: Query with userId
+2. **Get user history**: Query with userId, sorted by createdAt
+3. **Store multiple records per user**: Same userId, different createdAt values
+
+## Configuration Management
+
+### Consolidated Configuration Files
+
+As of the latest update, all linting, formatting, and ignore configurations have been consolidated to the root level for easier maintenance:
+
+1. **ESLint Configuration** (`.eslintrc.json`)
+   - Single root configuration with overrides for frontend and infrastructure
+   - Frontend uses Next.js ESLint rules
+   - Infrastructure uses TypeScript ESLint with custom rules
+   - No separate ESLint configs in subdirectories
+
+2. **Git Ignore** (`.gitignore`)
+   - Single comprehensive .gitignore at root level
+   - Covers all frontend and infrastructure patterns
+   - No separate .gitignore files in subdirectories
+
+3. **Prettier Ignore** (`.prettierignore`)
+   - Comprehensive patterns for all build artifacts
+   - Properly excludes compiled files while keeping source files
+
+### Favicon Caching Solution
+
+To address favicon caching issues in CloudFront:
+
+- Added specific cache behavior for `/favicon*` paths
+- Custom cache policy with 1-hour default TTL and 24-hour max TTL
+- Ensures favicon updates are reflected more quickly in production
 
 ## Known Issues and Solutions
 
@@ -262,7 +371,26 @@ After CDK deployment:
 
 4. **ESLint Errors on .d.ts Files**
    - **Cause**: TypeScript declaration files not in tsconfig
-   - **Solution**: Add to infrastructure/.eslintrc.json: `"ignorePatterns": ["*.d.ts", "*.js", "cdk.out"]`
+   - **Solution**: Now handled in root .eslintrc.json with proper ignorePatterns
+
+5. **Cognito UpdateUserAttributes "Access Token does not have required scopes" Error**
+   - **Cause**: Missing `aws.cognito.signin.user.admin` scope in OAuth configuration
+   - **Solution**: 
+     - Add `cognito.OAuthScope.COGNITO_ADMIN` to CDK User Pool Client configuration
+     - Include `aws.cognito.signin.user.admin` in frontend OAuth login URL
+     - Both infrastructure AND frontend must be configured correctly
+
+6. **Onboarding Wizard Loop - User Stuck After Completion**
+   - **Cause**: ID token not immediately reflecting updated attributes after UpdateUserAttributes call
+   - **Solution**: 
+     - Call `refreshUser()` from auth context after updating attributes
+     - Add 500ms delay before redirecting to allow Cognito propagation
+     - Ensures `hasCompletedOnboarding` check has updated user data
+
+7. **Birth Date Off-by-One Display Error**
+   - **Cause**: JavaScript Date parsing timezone conversion (UTC to local time)
+   - **Solution**: Add `{ timeZone: 'UTC' }` to `toLocaleDateString()` calls
+   - **Example**: `new Date(birthDate).toLocaleDateString('en-US', { timeZone: 'UTC' })`
 
 ## Migration Notes
 
@@ -288,16 +416,80 @@ S3 bucket names must be globally unique. If you encounter conflicts:
 - Delete the old stack first
 - Or use a different naming pattern in the new stack
 
+## Useful Development Commands
+
+### User Management
+
+Delete a single Cognito user:
+```bash
+aws cognito-idp admin-delete-user \
+  --user-pool-id us-east-1_rsin8LPL2 \
+  --username user@example.com \
+  --region us-east-1
+```
+
+List all users:
+```bash
+aws cognito-idp list-users \
+  --user-pool-id us-east-1_rsin8LPL2 \
+  --region us-east-1
+```
+
+Delete all users (use with caution):
+```bash
+aws cognito-idp list-users --user-pool-id us-east-1_rsin8LPL2 --region us-east-1 | \
+  jq -r '.Users[].Username' | \
+  while read username; do
+    echo "Deleting $username"
+    aws cognito-idp admin-delete-user \
+      --user-pool-id us-east-1_rsin8LPL2 \
+      --username "$username" \
+      --region us-east-1
+  done
+```
+
+### Testing Commands
+
+```bash
+# Run specific frontend test file
+cd frontend && npm test -- __tests__/onboarding.test.tsx
+
+# Run frontend tests in watch mode
+cd frontend && npm test -- --watch
+
+# Run tests with coverage
+npm run test:frontend -- --coverage
+```
+
+### Debugging Commands
+
+```bash
+# Check current AWS Cognito client configuration
+aws cognito-idp describe-user-pool-client \
+  --user-pool-id us-east-1_rsin8LPL2 \
+  --client-id YOUR_CLIENT_ID \
+  --region us-east-1
+
+# View CDK synthesized template
+cd infrastructure && npx cdk synth --no-staging > synth.yaml
+
+# Check CDK diff before deploying
+cd infrastructure && npx cdk diff -c env=dev
+```
+
 ## Future Enhancements
 
 - Social login providers (Google, Apple, Facebook) - OAuth secrets provisioned
 - Amazon Location Services for birth location geocoding
 - OpenAI API integration for astrology readings
 - Stripe payment processing
-- Database integration (likely DynamoDB or RDS)
+- ~~Database integration (likely DynamoDB or RDS)~~ ✅ DynamoDB table implemented
 - API Gateway for serverless functions
+- Lambda functions for business logic
 - Ephemeris calculations for astrology
+- Global Secondary Indexes for additional query patterns
+- DynamoDB Streams for real-time updates
 
 ---
 
-Last Updated: [Auto-updated by Git hooks]
+Last Updated: August 2, 2025

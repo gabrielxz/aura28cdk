@@ -68,6 +68,31 @@ export class CognitoAuthConstruct extends Construct {
           maxLen: 20,
           mutable: true,
         }),
+        birthCity: new cognito.StringAttribute({
+          minLen: 1,
+          maxLen: 100,
+          mutable: true,
+        }),
+        birthState: new cognito.StringAttribute({
+          minLen: 1,
+          maxLen: 100,
+          mutable: true,
+        }),
+        birthCountry: new cognito.StringAttribute({
+          minLen: 1,
+          maxLen: 100,
+          mutable: true,
+        }),
+        birthDate: new cognito.StringAttribute({
+          minLen: 10,
+          maxLen: 10,
+          mutable: true,
+        }),
+        birthName: new cognito.StringAttribute({
+          minLen: 1,
+          maxLen: 256,
+          mutable: true,
+        }),
       },
       passwordPolicy: {
         minLength: 8,
@@ -103,12 +128,54 @@ export class CognitoAuthConstruct extends Construct {
           authorizationCodeGrant: true,
           implicitCodeGrant: false,
         },
-        scopes: [cognito.OAuthScope.EMAIL, cognito.OAuthScope.OPENID, cognito.OAuthScope.PROFILE],
+        scopes: [
+          cognito.OAuthScope.EMAIL,
+          cognito.OAuthScope.OPENID,
+          cognito.OAuthScope.PROFILE,
+          cognito.OAuthScope.COGNITO_ADMIN,
+        ],
         callbackUrls: props.callbackUrls,
         logoutUrls: props.logoutUrls,
       },
       preventUserExistenceErrors: true,
       supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.COGNITO],
+      readAttributes: new cognito.ClientAttributes()
+        .withStandardAttributes({
+          email: true,
+          emailVerified: true,
+          givenName: true,
+          familyName: true,
+          birthdate: true,
+        })
+        .withCustomAttributes(
+          'birthTime',
+          'birthPlace',
+          'birthLatitude',
+          'birthLongitude',
+          'birthCity',
+          'birthState',
+          'birthCountry',
+          'birthDate',
+          'birthName',
+        ),
+      writeAttributes: new cognito.ClientAttributes()
+        .withStandardAttributes({
+          email: true,
+          givenName: true,
+          familyName: true,
+          birthdate: true,
+        })
+        .withCustomAttributes(
+          'birthTime',
+          'birthPlace',
+          'birthLatitude',
+          'birthLongitude',
+          'birthCity',
+          'birthState',
+          'birthCountry',
+          'birthDate',
+          'birthName',
+        ),
     });
 
     // Create placeholder secrets for future OAuth providers

@@ -71,6 +71,31 @@ describe('CognitoAuthConstruct', () => {
             AttributeDataType: 'String',
             Mutable: true,
           }),
+          Match.objectLike({
+            Name: 'birthCity',
+            AttributeDataType: 'String',
+            Mutable: true,
+          }),
+          Match.objectLike({
+            Name: 'birthState',
+            AttributeDataType: 'String',
+            Mutable: true,
+          }),
+          Match.objectLike({
+            Name: 'birthCountry',
+            AttributeDataType: 'String',
+            Mutable: true,
+          }),
+          Match.objectLike({
+            Name: 'birthDate',
+            AttributeDataType: 'String',
+            Mutable: true,
+          }),
+          Match.objectLike({
+            Name: 'birthName',
+            AttributeDataType: 'String',
+            Mutable: true,
+          }),
         ]),
       });
     });
@@ -87,7 +112,7 @@ describe('CognitoAuthConstruct', () => {
         GenerateSecret: false,
         ExplicitAuthFlows: Match.arrayWith(['ALLOW_USER_PASSWORD_AUTH', 'ALLOW_USER_SRP_AUTH']),
         AllowedOAuthFlows: ['code'],
-        AllowedOAuthScopes: ['email', 'openid', 'profile'],
+        AllowedOAuthScopes: ['email', 'openid', 'profile', 'aws.cognito.signin.user.admin'],
         CallbackURLs: [
           'http://localhost:3000/auth/callback',
           'https://dev.aura28.com/auth/callback',

@@ -36,7 +36,7 @@ export const getCognitoUrls = (config: CognitoConfig) => {
   const baseUrl = `https://${config.domain}.auth.${config.region}.amazoncognito.com`;
 
   return {
-    login: `${baseUrl}/login?client_id=${config.clientId}&response_type=code&scope=email+openid+profile&redirect_uri=${encodeURIComponent(
+    login: `${baseUrl}/login?client_id=${config.clientId}&response_type=code&scope=email+openid+profile+aws.cognito.signin.user.admin&redirect_uri=${encodeURIComponent(
       config.redirectUri,
     )}`,
     logout: `${baseUrl}/logout?client_id=${config.clientId}&logout_uri=${encodeURIComponent(
