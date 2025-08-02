@@ -1,4 +1,8 @@
-import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
+import {
+  CognitoIdentityProviderClient,
+  UpdateUserAttributesCommand,
+  UpdateUserAttributesCommandInput,
+} from '@aws-sdk/client-cognito-identity-provider';
 import { jwtDecode } from 'jwt-decode';
 import { getCognitoConfig, getCognitoUrls, CognitoConfig } from './cognito-config';
 
@@ -12,6 +16,11 @@ export interface User {
   'custom:birthPlace'?: string;
   'custom:birthLatitude'?: string;
   'custom:birthLongitude'?: string;
+  'custom:birthCity'?: string;
+  'custom:birthState'?: string;
+  'custom:birthCountry'?: string;
+  'custom:birthDate'?: string;
+  'custom:birthName'?: string;
 }
 
 export interface AuthTokens {
@@ -221,5 +230,52 @@ export class AuthService {
    */
   private isTokenExpired(tokens: AuthTokens): boolean {
     return Date.now() >= tokens.expiresAt - 60000; // Consider expired 1 minute before actual expiry
+  }
+
+  /**
+   * Check if user has completed onboarding
+   */
+  hasCompletedOnboarding(user: User | null): boolean {
+    if (!user) return false;
+
+    // Check if all required birth information fields are present
+    return !!(
+      user['custom:birthCity'] &&
+      user['custom:birthState'] &&
+      user['custom:birthCountry'] &&
+      user['custom:birthDate'] &&
+      user['custom:birthName']
+    );
+  }
+
+  /**
+   * Update user attributes in Cognito
+   */
+  async updateUserAttributes(attributes: Record<string, string>): Promise<void> {
+    const tokens = this.getTokens();
+    if (!tokens) {
+      throw new Error('No authentication tokens found');
+    }
+
+    const userAttributes = Object.entries(attributes).map(([name, value]) => ({
+      Name: name,
+      Value: value,
+    }));
+
+    const input: UpdateUserAttributesCommandInput = {
+      AccessToken: tokens.accessToken,
+      UserAttributes: userAttributes,
+    };
+
+    try {
+      const command = new UpdateUserAttributesCommand(input);
+      await this.cognitoClient.send(command);
+
+      // Refresh the ID token to get updated attributes
+      await this.refreshToken();
+    } catch (error) {
+      console.error('Failed to update user attributes:', error);
+      throw new Error('Failed to update user profile');
+    }
   }
 }

@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/use-auth';
+import { AuthService } from '@/lib/auth/auth-service';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [authService] = useState(() => new AuthService());
 
   useEffect(() => {
     // Only redirect if we're done loading and there's definitely no user
@@ -17,7 +19,12 @@ export default function DashboardPage() {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [user, loading, router]);
+
+    // Check if user has completed onboarding
+    if (!loading && user && !authService.hasCompletedOnboarding(user)) {
+      router.push('/onboarding');
+    }
+  }, [user, loading, router, authService]);
 
   if (loading) {
     return (
@@ -64,32 +71,43 @@ export default function DashboardPage() {
 
         <div className="mt-6">
           <h3 className="mb-2 text-lg font-semibold">Birth Information</h3>
-          {user['custom:birthTime'] || user['custom:birthPlace'] ? (
-            <div className="space-y-2">
-              {user['custom:birthTime'] && (
+          <div className="space-y-2">
+            {user['custom:birthName'] && (
+              <p>
+                <strong>Birth Name:</strong> {user['custom:birthName']}
+              </p>
+            )}
+            {user['custom:birthDate'] && (
+              <p>
+                <strong>Birth Date:</strong>{' '}
+                {new Date(user['custom:birthDate']).toLocaleDateString()}
+              </p>
+            )}
+            {user['custom:birthTime'] && (
+              <p>
+                <strong>Birth Time:</strong> {user['custom:birthTime']}
+              </p>
+            )}
+            {user['custom:birthCity'] &&
+              user['custom:birthState'] &&
+              user['custom:birthCountry'] && (
                 <p>
-                  <strong>Birth Time:</strong> {user['custom:birthTime']}
+                  <strong>Birth Location:</strong> {user['custom:birthCity']},{' '}
+                  {user['custom:birthState']}, {user['custom:birthCountry']}
                 </p>
               )}
-              {user['custom:birthPlace'] && (
-                <p>
-                  <strong>Birth Place:</strong> {user['custom:birthPlace']}
-                </p>
-              )}
-              {user['custom:birthLatitude'] && (
-                <p>
-                  <strong>Birth Latitude:</strong> {user['custom:birthLatitude']}
-                </p>
-              )}
-              {user['custom:birthLongitude'] && (
-                <p>
-                  <strong>Birth Longitude:</strong> {user['custom:birthLongitude']}
-                </p>
-              )}
-            </div>
-          ) : (
-            <p className="text-gray-600">No birth information provided yet.</p>
-          )}
+            {user['custom:birthPlace'] && (
+              <p>
+                <strong>Birth Place (Legacy):</strong> {user['custom:birthPlace']}
+              </p>
+            )}
+            {user['custom:birthLatitude'] && user['custom:birthLongitude'] && (
+              <p>
+                <strong>Coordinates:</strong> {user['custom:birthLatitude']},{' '}
+                {user['custom:birthLongitude']}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>

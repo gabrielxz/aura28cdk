@@ -71,6 +71,31 @@ describe('CognitoAuthConstruct', () => {
             AttributeDataType: 'String',
             Mutable: true,
           }),
+          Match.objectLike({
+            Name: 'birthCity',
+            AttributeDataType: 'String',
+            Mutable: true,
+          }),
+          Match.objectLike({
+            Name: 'birthState',
+            AttributeDataType: 'String',
+            Mutable: true,
+          }),
+          Match.objectLike({
+            Name: 'birthCountry',
+            AttributeDataType: 'String',
+            Mutable: true,
+          }),
+          Match.objectLike({
+            Name: 'birthDate',
+            AttributeDataType: 'String',
+            Mutable: true,
+          }),
+          Match.objectLike({
+            Name: 'birthName',
+            AttributeDataType: 'String',
+            Mutable: true,
+          }),
         ]),
       });
     });

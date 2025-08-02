@@ -234,6 +234,7 @@ NEXT_PUBLIC_COGNITO_REGION=us-east-1
 ```
 
 Future environment variables (when API is implemented):
+
 ```bash
 DYNAMODB_TABLE_NAME=Aura28-dev-Users
 ```
@@ -260,7 +261,7 @@ After CDK deployment:
   - **Sort Key**: `createdAt` (String) - ISO timestamp
 - **Billing**: Pay-per-request mode for cost optimization
 - **Data Protection**: Point-in-time recovery enabled
-- **Removal Policy**: 
+- **Removal Policy**:
   - Development: DESTROY (allows clean teardown)
   - Production: RETAIN (protects user data)
 
@@ -268,8 +269,8 @@ After CDK deployment:
 
 ```typescript
 interface UserRecord {
-  userId: string;          // Partition key (Cognito ID)
-  createdAt: string;       // Sort key (ISO timestamp)
+  userId: string; // Partition key (Cognito ID)
+  createdAt: string; // Sort key (ISO timestamp)
   email: string;
   profile: {
     birthTime: string;

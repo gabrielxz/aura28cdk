@@ -68,6 +68,31 @@ export class CognitoAuthConstruct extends Construct {
           maxLen: 20,
           mutable: true,
         }),
+        birthCity: new cognito.StringAttribute({
+          minLen: 1,
+          maxLen: 100,
+          mutable: true,
+        }),
+        birthState: new cognito.StringAttribute({
+          minLen: 1,
+          maxLen: 100,
+          mutable: true,
+        }),
+        birthCountry: new cognito.StringAttribute({
+          minLen: 1,
+          maxLen: 100,
+          mutable: true,
+        }),
+        birthDate: new cognito.StringAttribute({
+          minLen: 10,
+          maxLen: 10,
+          mutable: true,
+        }),
+        birthName: new cognito.StringAttribute({
+          minLen: 1,
+          maxLen: 256,
+          mutable: true,
+        }),
       },
       passwordPolicy: {
         minLength: 8,
