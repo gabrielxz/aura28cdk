@@ -4,28 +4,49 @@ node_modules/
 
 # Build outputs
 .next/
+frontend/.next/
 out/
+frontend/out/
 build/
+frontend/build/
 dist/
 cdk.out/
+infrastructure/cdk.out/
+infrastructure/.cdk.staging/
+
+# Compiled files
 *.js
 *.d.ts
+infrastructure/*.js
+infrastructure/*.d.ts
 
-# CDK specific - but keep TypeScript source files
+# Keep source files
 !infrastructure/**/*.ts
 !frontend/**/*.ts
 !frontend/**/*.tsx
+!infrastructure/jest.config.js
+!frontend/jest.config.ts
 
 # Test coverage
 coverage/
+**/coverage/
 *.lcov
+.nyc_output
+
+# TypeScript
+*.tsbuildinfo
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
 
 # Environment files
 .env*
+*.local
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # OS
 .DS_Store
@@ -39,3 +60,14 @@ logs/
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# Vercel
+frontend/.vercel
+
+# Yarn
+frontend/.yarn/*
+
+# Temporary
+*.tmp
+*.temp
+.cache/

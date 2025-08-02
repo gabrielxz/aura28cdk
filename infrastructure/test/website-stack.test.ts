@@ -101,11 +101,11 @@ describe('WebsiteStack', () => {
 
     // Check that S3 bucket has the tag
     const s3Resources = Object.entries(resources).filter(
-      ([_key, resource]: [string, any]) => resource.Type === 'AWS::S3::Bucket',
+      ([, resource]: [string, any]) => resource.Type === 'AWS::S3::Bucket',
     );
 
     expect(s3Resources.length).toBeGreaterThan(0);
-    s3Resources.forEach(([_key, resource]: [string, any]) => {
+    s3Resources.forEach(([, resource]: [string, any]) => {
       expect(resource.Properties.Tags).toEqual(
         expect.arrayContaining([
           expect.objectContaining({

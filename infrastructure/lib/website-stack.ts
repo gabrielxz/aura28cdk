@@ -112,6 +112,23 @@ export class WebsiteStack extends cdk.Stack {
         ],
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
       },
+      additionalBehaviors: {
+        '/favicon*': {
+          origin: cloudfront_origins.S3BucketOrigin.withOriginAccessControl(this.bucket),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: new cloudfront.CachePolicy(this, 'FaviconCachePolicy', {
+            cachePolicyName: `aura28-${props.environment}-favicon-cache-policy`,
+            defaultTtl: cdk.Duration.hours(1),
+            maxTtl: cdk.Duration.hours(24),
+            minTtl: cdk.Duration.seconds(0),
+            enableAcceptEncodingGzip: true,
+            enableAcceptEncodingBrotli: true,
+            queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+            headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+            cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+          }),
+        },
+      },
       domainNames:
         props.environment === 'prod' ? [props.domainName, `www.${props.domainName}`] : [siteDomain],
       certificate,
@@ -152,6 +169,7 @@ export class WebsiteStack extends cdk.Stack {
       destinationBucket: this.bucket,
       distribution: this.distribution,
       distributionPaths: ['/*'],
+      prune: false,
     });
 
     // Output Cognito configuration for frontend

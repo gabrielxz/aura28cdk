@@ -244,6 +244,35 @@ After CDK deployment:
      - `aura28/oauth/apple/{env}`
    - Configure identity providers in Cognito console
 
+## Configuration Management
+
+### Consolidated Configuration Files
+
+As of the latest update, all linting, formatting, and ignore configurations have been consolidated to the root level for easier maintenance:
+
+1. **ESLint Configuration** (`.eslintrc.json`)
+   - Single root configuration with overrides for frontend and infrastructure
+   - Frontend uses Next.js ESLint rules
+   - Infrastructure uses TypeScript ESLint with custom rules
+   - No separate ESLint configs in subdirectories
+
+2. **Git Ignore** (`.gitignore`)
+   - Single comprehensive .gitignore at root level
+   - Covers all frontend and infrastructure patterns
+   - No separate .gitignore files in subdirectories
+
+3. **Prettier Ignore** (`.prettierignore`)
+   - Comprehensive patterns for all build artifacts
+   - Properly excludes compiled files while keeping source files
+
+### Favicon Caching Solution
+
+To address favicon caching issues in CloudFront:
+
+- Added specific cache behavior for `/favicon*` paths
+- Custom cache policy with 1-hour default TTL and 24-hour max TTL
+- Ensures favicon updates are reflected more quickly in production
+
 ## Known Issues and Solutions
 
 ### Common CI/CD Failures
@@ -262,7 +291,7 @@ After CDK deployment:
 
 4. **ESLint Errors on .d.ts Files**
    - **Cause**: TypeScript declaration files not in tsconfig
-   - **Solution**: Add to infrastructure/.eslintrc.json: `"ignorePatterns": ["*.d.ts", "*.js", "cdk.out"]`
+   - **Solution**: Now handled in root .eslintrc.json with proper ignorePatterns
 
 ## Migration Notes
 

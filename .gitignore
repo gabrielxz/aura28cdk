@@ -1,14 +1,27 @@
 # Dependencies
 node_modules/
+**/node_modules/
 .pnp
 .pnp.js
+.pnp.*
+
+# Yarn (Frontend)
+frontend/.yarn/*
+!frontend/.yarn/patches
+!frontend/.yarn/plugins
+!frontend/.yarn/releases
+!frontend/.yarn/versions
 
 # Testing
 coverage/
+**/coverage/
 *.lcov
 .nyc_output
 
 # Next.js
+frontend/.next/
+frontend/out/
+frontend/build/
 .next/
 out/
 build/
@@ -16,12 +29,17 @@ dist/
 
 # Production
 *.local
+.env
+.env*.local
+
+# TypeScript
+*.tsbuildinfo
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
 
 # Misc
 .DS_Store
 *.pem
-.env
-.env*.local
 
 # Debug
 npm-debug.log*
@@ -38,11 +56,15 @@ yarn-error.log*
 # OS
 Thumbs.db
 
-# CDK
+# Vercel
+frontend/.vercel
+
+# CDK / Infrastructure
 infrastructure/*.js
 infrastructure/*.d.ts
 infrastructure/cdk.out/
 infrastructure/.cdk.staging/
+infrastructure/node_modules/
 !infrastructure/jest.config.js
 
 # Temporary
