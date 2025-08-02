@@ -193,7 +193,8 @@ cd infrastructure && npx cdk diff -c env=prod
 ## Technology Stack Summary
 
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS, shadcn/ui
-- **Infrastructure**: AWS CDK, CloudFront, S3, Route 53, ACM, Cognito, Secrets Manager
+- **Infrastructure**: AWS CDK, CloudFront, S3, Route 53, ACM, Cognito, DynamoDB, Secrets Manager
+- **Database**: DynamoDB with pay-per-request billing
 - **Authentication**: AWS Cognito with Hosted UI, JWT tokens
 - **Testing**: Jest, React Testing Library
 - **CI/CD**: GitHub Actions
@@ -232,6 +233,11 @@ NEXT_PUBLIC_COGNITO_DOMAIN=aura28-dev
 NEXT_PUBLIC_COGNITO_REGION=us-east-1
 ```
 
+Future environment variables (when API is implemented):
+```bash
+DYNAMODB_TABLE_NAME=Aura28-dev-Users
+```
+
 ### Manual Configuration Steps
 
 After CDK deployment:
@@ -243,6 +249,50 @@ After CDK deployment:
      - `aura28/oauth/facebook/{env}`
      - `aura28/oauth/apple/{env}`
    - Configure identity providers in Cognito console
+
+## Database Architecture
+
+### DynamoDB Setup
+
+- **Table Name**: `Aura28-{env}-Users` (environment-specific)
+- **Primary Key**: Composite key design
+  - **Partition Key**: `userId` (String) - Cognito user ID
+  - **Sort Key**: `createdAt` (String) - ISO timestamp
+- **Billing**: Pay-per-request mode for cost optimization
+- **Data Protection**: Point-in-time recovery enabled
+- **Removal Policy**: 
+  - Development: DESTROY (allows clean teardown)
+  - Production: RETAIN (protects user data)
+
+### Data Model Example
+
+```typescript
+interface UserRecord {
+  userId: string;          // Partition key (Cognito ID)
+  createdAt: string;       // Sort key (ISO timestamp)
+  email: string;
+  profile: {
+    birthTime: string;
+    birthPlace: string;
+    birthLatitude: number;
+    birthLongitude: number;
+  };
+  readings?: Array<{
+    id: string;
+    type: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    date: string;
+    content: string;
+    createdAt: string;
+  }>;
+  updatedAt: string;
+}
+```
+
+### Access Patterns
+
+1. **Get user by ID**: Query with userId
+2. **Get user history**: Query with userId, sorted by createdAt
+3. **Store multiple records per user**: Same userId, different createdAt values
 
 ## Configuration Management
 
@@ -323,9 +373,12 @@ S3 bucket names must be globally unique. If you encounter conflicts:
 - Amazon Location Services for birth location geocoding
 - OpenAI API integration for astrology readings
 - Stripe payment processing
-- Database integration (likely DynamoDB or RDS)
+- ~~Database integration (likely DynamoDB or RDS)~~ ✅ DynamoDB table implemented
 - API Gateway for serverless functions
+- Lambda functions for business logic
 - Ephemeris calculations for astrology
+- Global Secondary Indexes for additional query patterns
+- DynamoDB Streams for real-time updates
 
 ---
 
