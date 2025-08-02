@@ -134,6 +134,43 @@ export class CognitoAuthConstruct extends Construct {
       },
       preventUserExistenceErrors: true,
       supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.COGNITO],
+      readAttributes: new cognito.ClientAttributes()
+        .withStandardAttributes({
+          email: true,
+          emailVerified: true,
+          givenName: true,
+          familyName: true,
+          birthdate: true,
+        })
+        .withCustomAttributes(
+          'birthTime',
+          'birthPlace',
+          'birthLatitude',
+          'birthLongitude',
+          'birthCity',
+          'birthState',
+          'birthCountry',
+          'birthDate',
+          'birthName',
+        ),
+      writeAttributes: new cognito.ClientAttributes()
+        .withStandardAttributes({
+          email: true,
+          givenName: true,
+          familyName: true,
+          birthdate: true,
+        })
+        .withCustomAttributes(
+          'birthTime',
+          'birthPlace',
+          'birthLatitude',
+          'birthLongitude',
+          'birthCity',
+          'birthState',
+          'birthCountry',
+          'birthDate',
+          'birthName',
+        ),
     });
 
     // Create placeholder secrets for future OAuth providers
