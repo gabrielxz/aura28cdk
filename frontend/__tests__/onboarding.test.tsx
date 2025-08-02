@@ -40,6 +40,7 @@ describe('OnboardingPage', () => {
     (useAuth as jest.Mock).mockReturnValue({
       user: null,
       loading: false,
+      refreshUser: jest.fn(),
     });
 
     render(<OnboardingPage />);
@@ -56,6 +57,7 @@ describe('OnboardingPage', () => {
     (useAuth as jest.Mock).mockReturnValue({
       user: { ...mockUser, 'custom:birthCity': 'San Francisco' },
       loading: false,
+      refreshUser: jest.fn(),
     });
 
     render(<OnboardingPage />);
@@ -67,6 +69,7 @@ describe('OnboardingPage', () => {
     (useAuth as jest.Mock).mockReturnValue({
       user: null,
       loading: true,
+      refreshUser: jest.fn(),
     });
 
     render(<OnboardingPage />);
@@ -83,6 +86,7 @@ describe('OnboardingPage', () => {
     (useAuth as jest.Mock).mockReturnValue({
       user: mockUser,
       loading: false,
+      refreshUser: jest.fn(),
     });
 
     render(<OnboardingPage />);
@@ -100,6 +104,7 @@ describe('OnboardingPage', () => {
     (useAuth as jest.Mock).mockReturnValue({
       user: mockUser,
       loading: false,
+      refreshUser: jest.fn(),
     });
 
     render(<OnboardingPage />);
@@ -123,6 +128,7 @@ describe('OnboardingPage', () => {
     (useAuth as jest.Mock).mockReturnValue({
       user: mockUser,
       loading: false,
+      refreshUser: jest.fn(),
     });
 
     render(<OnboardingPage />);
@@ -158,6 +164,7 @@ describe('OnboardingPage', () => {
   });
 
   it('navigates through all steps', async () => {
+    const mockRefreshUser = jest.fn().mockResolvedValue(undefined);
     const mockAuthService = {
       hasCompletedOnboarding: jest.fn().mockReturnValue(false),
       updateUserAttributes: jest.fn().mockResolvedValue(undefined),
@@ -167,6 +174,7 @@ describe('OnboardingPage', () => {
     (useAuth as jest.Mock).mockReturnValue({
       user: mockUser,
       loading: false,
+      refreshUser: mockRefreshUser,
     });
 
     render(<OnboardingPage />);
@@ -224,11 +232,20 @@ describe('OnboardingPage', () => {
         'custom:birthDate': '1990-07-15',
         'custom:birthName': 'John Michael Smith',
       });
-      expect(mockPush).toHaveBeenCalledWith('/dashboard');
+      expect(mockRefreshUser).toHaveBeenCalled();
     });
+
+    // Wait for the redirect to happen after the timeout
+    await waitFor(
+      () => {
+        expect(mockPush).toHaveBeenCalledWith('/dashboard');
+      },
+      { timeout: 1000 },
+    );
   });
 
   it('handles update errors gracefully', async () => {
+    const mockRefreshUser = jest.fn();
     const mockAuthService = {
       hasCompletedOnboarding: jest.fn().mockReturnValue(false),
       updateUserAttributes: jest.fn().mockRejectedValue(new Error('Update failed')),
@@ -238,6 +255,7 @@ describe('OnboardingPage', () => {
     (useAuth as jest.Mock).mockReturnValue({
       user: mockUser,
       loading: false,
+      refreshUser: mockRefreshUser,
     });
 
     render(<OnboardingPage />);
@@ -282,7 +300,7 @@ describe('OnboardingPage', () => {
     fireEvent.click(completeButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to save profile. Please try again.')).toBeInTheDocument();
+      expect(screen.getByText('Update failed. Please try again.')).toBeInTheDocument();
     });
   });
 });

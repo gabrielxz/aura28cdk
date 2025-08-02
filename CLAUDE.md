@@ -177,6 +177,12 @@ aura28cdk/
    - Use `waitFor` assertions for async state changes
    - Ensure state is properly synchronized before assertions
 
+5. **Mock Dependencies Completely**: When adding new dependencies to components:
+   - Update ALL test mocks to include new properties/methods
+   - Example: Adding `refreshUser` to `useAuth` requires updating all `useAuth` mocks
+   - Missing mock properties will cause runtime errors in tests
+   - Always run `npm run test:frontend` after modifying auth context or hooks
+
 ### Deployment
 
 1. Make changes and test locally
