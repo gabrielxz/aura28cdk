@@ -21,11 +21,19 @@ describe('OnboardingPage', () => {
     email: 'test@example.com',
     email_verified: true,
   };
+  let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
     localStorage.clear();
+    // Mock console.error to suppress expected error logs
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    // Restore console.error
+    consoleErrorSpy.mockRestore();
   });
 
   it('redirects to login if user is not authenticated', () => {
@@ -119,6 +127,9 @@ describe('OnboardingPage', () => {
 
     render(<OnboardingPage />);
 
+    // Verify we start at step 1
+    expect(screen.getByText('Birth Location')).toBeInTheDocument();
+
     // Fill in step 1
     fireEvent.change(screen.getByLabelText('City'), {
       target: { value: 'San Francisco' },
@@ -133,13 +144,17 @@ describe('OnboardingPage', () => {
     const nextButton = screen.getByText('Next');
     fireEvent.click(nextButton);
 
+    // Wait for navigation to step 2
     await waitFor(() => {
-      const savedData = localStorage.getItem('onboarding-progress');
-      expect(savedData).toBeTruthy();
-      const parsed = JSON.parse(savedData!);
-      expect(parsed.formData.birthCity).toBe('San Francisco');
-      expect(parsed.currentStep).toBe(2);
+      expect(screen.getByText('Birth Date')).toBeInTheDocument();
     });
+
+    // Now check localStorage
+    const savedData = localStorage.getItem('onboarding-progress');
+    expect(savedData).toBeTruthy();
+    const parsed = JSON.parse(savedData!);
+    expect(parsed.formData.birthCity).toBe('San Francisco');
+    expect(parsed.currentStep).toBe(2);
   });
 
   it('navigates through all steps', async () => {

@@ -71,9 +71,6 @@ export default function OnboardingPage() {
     }
   }, []);
 
-  const saveProgress = () => {
-    localStorage.setItem('onboarding-progress', JSON.stringify({ formData, currentStep }));
-  };
 
   const validateStep = (step: number): boolean => {
     const newErrors: Partial<FormData> = {};
@@ -112,8 +109,13 @@ export default function OnboardingPage() {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      saveProgress();
-      setCurrentStep(currentStep + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      // Save progress with the new step
+      localStorage.setItem(
+        'onboarding-progress',
+        JSON.stringify({ formData, currentStep: nextStep }),
+      );
     }
   };
 

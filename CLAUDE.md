@@ -139,6 +139,7 @@ aura28cdk/
 3. **Run tests**: `npm test` (at root level)
    - Verifies all tests pass
    - Prevents breaking existing functionality
+   - **Important**: Also run `npm run test:frontend` separately to ensure frontend test output is clearly visible
 
 4. **Build check**: `npm run build` (at root level)
    - Ensures the project builds successfully

@@ -31,6 +31,7 @@ jest.mock('@/lib/auth/cognito-config', () => ({
 describe('AuthService', () => {
   let authService: AuthService;
   let mockSend: jest.Mock;
+  let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -44,6 +45,14 @@ describe('AuthService', () => {
     Storage.prototype.getItem = jest.fn();
     Storage.prototype.setItem = jest.fn();
     Storage.prototype.removeItem = jest.fn();
+
+    // Mock console.error to suppress expected error logs
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    // Restore console.error
+    consoleErrorSpy.mockRestore();
   });
 
   describe('hasCompletedOnboarding', () => {
