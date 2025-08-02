@@ -10,8 +10,8 @@
     "test": "jest",
     "cdk": "cdk",
     "lint": "eslint . --ext .ts -c ../.eslintrc.json",
-    "format": "prettier --write \"**/*.{ts,js,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,js,json,md}\""
+    "format": "prettier --write \"**/*.{ts,js,json,md}\" --ignore-path ../.prettierignore",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md}\" --ignore-path ../.prettierignore"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
