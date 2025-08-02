@@ -373,6 +373,25 @@ To address favicon caching issues in CloudFront:
    - **Cause**: TypeScript declaration files not in tsconfig
    - **Solution**: Now handled in root .eslintrc.json with proper ignorePatterns
 
+5. **Cognito UpdateUserAttributes "Access Token does not have required scopes" Error**
+   - **Cause**: Missing `aws.cognito.signin.user.admin` scope in OAuth configuration
+   - **Solution**: 
+     - Add `cognito.OAuthScope.COGNITO_ADMIN` to CDK User Pool Client configuration
+     - Include `aws.cognito.signin.user.admin` in frontend OAuth login URL
+     - Both infrastructure AND frontend must be configured correctly
+
+6. **Onboarding Wizard Loop - User Stuck After Completion**
+   - **Cause**: ID token not immediately reflecting updated attributes after UpdateUserAttributes call
+   - **Solution**: 
+     - Call `refreshUser()` from auth context after updating attributes
+     - Add 500ms delay before redirecting to allow Cognito propagation
+     - Ensures `hasCompletedOnboarding` check has updated user data
+
+7. **Birth Date Off-by-One Display Error**
+   - **Cause**: JavaScript Date parsing timezone conversion (UTC to local time)
+   - **Solution**: Add `{ timeZone: 'UTC' }` to `toLocaleDateString()` calls
+   - **Example**: `new Date(birthDate).toLocaleDateString('en-US', { timeZone: 'UTC' })`
+
 ## Migration Notes
 
 ### Changing Stack Names
@@ -397,6 +416,67 @@ S3 bucket names must be globally unique. If you encounter conflicts:
 - Delete the old stack first
 - Or use a different naming pattern in the new stack
 
+## Useful Development Commands
+
+### User Management
+
+Delete a single Cognito user:
+```bash
+aws cognito-idp admin-delete-user \
+  --user-pool-id us-east-1_rsin8LPL2 \
+  --username user@example.com \
+  --region us-east-1
+```
+
+List all users:
+```bash
+aws cognito-idp list-users \
+  --user-pool-id us-east-1_rsin8LPL2 \
+  --region us-east-1
+```
+
+Delete all users (use with caution):
+```bash
+aws cognito-idp list-users --user-pool-id us-east-1_rsin8LPL2 --region us-east-1 | \
+  jq -r '.Users[].Username' | \
+  while read username; do
+    echo "Deleting $username"
+    aws cognito-idp admin-delete-user \
+      --user-pool-id us-east-1_rsin8LPL2 \
+      --username "$username" \
+      --region us-east-1
+  done
+```
+
+### Testing Commands
+
+```bash
+# Run specific frontend test file
+cd frontend && npm test -- __tests__/onboarding.test.tsx
+
+# Run frontend tests in watch mode
+cd frontend && npm test -- --watch
+
+# Run tests with coverage
+npm run test:frontend -- --coverage
+```
+
+### Debugging Commands
+
+```bash
+# Check current AWS Cognito client configuration
+aws cognito-idp describe-user-pool-client \
+  --user-pool-id us-east-1_rsin8LPL2 \
+  --client-id YOUR_CLIENT_ID \
+  --region us-east-1
+
+# View CDK synthesized template
+cd infrastructure && npx cdk synth --no-staging > synth.yaml
+
+# Check CDK diff before deploying
+cd infrastructure && npx cdk diff -c env=dev
+```
+
 ## Future Enhancements
 
 - Social login providers (Google, Apple, Facebook) - OAuth secrets provisioned
@@ -412,4 +492,4 @@ S3 bucket names must be globally unique. If you encounter conflicts:
 
 ---
 
-Last Updated: [Auto-updated by Git hooks]
+Last Updated: August 2, 2025
