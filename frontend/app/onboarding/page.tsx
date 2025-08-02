@@ -71,7 +71,6 @@ export default function OnboardingPage() {
     }
   }, []);
 
-
   const validateStep = (step: number): boolean => {
     const newErrors: Partial<FormData> = {};
 
