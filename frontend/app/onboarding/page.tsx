@@ -33,7 +33,7 @@ const INITIAL_FORM_DATA: FormData = {
 };
 
 export default function OnboardingPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUser } = useAuth();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
@@ -150,11 +150,17 @@ export default function OnboardingPage() {
       // Clear saved progress
       localStorage.removeItem('onboarding-progress');
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Refresh the user data to get updated attributes
+      await refreshUser();
+
+      // Small delay to ensure data is propagated
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 500);
     } catch (error) {
       console.error('Failed to save profile:', error);
-      setErrors({ birthName: 'Failed to save profile. Please try again.' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save profile';
+      setErrors({ birthName: `${errorMessage}. Please try again.` });
     } finally {
       setIsSubmitting(false);
     }
