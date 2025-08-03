@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { AuthService } from '@/lib/auth/auth-service';
+import { UserApi } from '@/lib/api/user-api';
 
 interface FormData {
   birthCity: string;
@@ -33,13 +33,13 @@ const INITIAL_FORM_DATA: FormData = {
 };
 
 export default function OnboardingPage() {
-  const { user, loading, refreshUser } = useAuth();
+  const { user, loading, refreshUser, authService } = useAuth();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [authService] = useState(() => new AuthService());
+  const [userApi] = useState(() => new UserApi(authService));
 
   const totalSteps = 4;
   const progress = (currentStep / totalSteps) * 100;
@@ -51,11 +51,23 @@ export default function OnboardingPage() {
       return;
     }
 
-    // If user has already completed onboarding, redirect to dashboard
-    if (!loading && user && authService.hasCompletedOnboarding(user)) {
-      router.push('/dashboard');
-    }
-  }, [user, loading, router, authService]);
+    // Check if user has already completed onboarding via API
+    const checkOnboarding = async () => {
+      if (!loading && user) {
+        try {
+          const hasCompleted = await userApi.hasCompletedOnboarding(user.sub);
+          if (hasCompleted) {
+            router.push('/dashboard');
+          }
+        } catch {
+          // If error checking, assume onboarding not completed
+          console.log('Proceeding with onboarding');
+        }
+      }
+    };
+
+    checkOnboarding();
+  }, [user, loading, router, userApi]);
 
   useEffect(() => {
     // Load saved progress from localStorage
@@ -127,25 +139,25 @@ export default function OnboardingPage() {
 
     setIsSubmitting(true);
     try {
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       // Format birth date as ISO string
       const birthDate = `${formData.birthYear}-${formData.birthMonth.padStart(2, '0')}-${formData.birthDay.padStart(2, '0')}`;
 
-      // Prepare attributes for Cognito
-      const attributes: Record<string, string> = {
-        'custom:birthCity': formData.birthCity,
-        'custom:birthState': formData.birthState,
-        'custom:birthCountry': formData.birthCountry,
-        'custom:birthDate': birthDate,
-        'custom:birthName': formData.birthName,
+      // Prepare profile data for API
+      const profileData = {
+        birthName: formData.birthName,
+        birthDate: birthDate,
+        birthTime: formData.birthTime || undefined,
+        birthCity: formData.birthCity,
+        birthState: formData.birthState,
+        birthCountry: formData.birthCountry,
       };
 
-      // Only add birth time if provided
-      if (formData.birthTime) {
-        attributes['custom:birthTime'] = formData.birthTime;
-      }
-
-      // Update user attributes in Cognito
-      await authService.updateUserAttributes(attributes);
+      // Save profile to DynamoDB via API
+      await userApi.updateUserProfile(user.sub, profileData);
 
       // Clear saved progress
       localStorage.removeItem('onboarding-progress');

@@ -28,7 +28,16 @@ describe('WebsiteStack', () => {
   });
 
   beforeEach(() => {
-    app = new cdk.App();
+    // Set bundling to use local mode for tests
+    app = new cdk.App({
+      context: {
+        'aws:cdk:bundling-stacks': ['TestStack'],
+      },
+    });
+
+    // Mock bundling for Lambda functions
+    process.env.CDK_BUNDLING_STAGING_DISABLED = '1';
+
     stack = new WebsiteStack(app, 'TestStack', {
       domainName: 'example.com',
       subdomain: 'test',

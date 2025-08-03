@@ -1,0 +1,5 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+// Skip bundling for NodejsFunction during tests
+process.env.CDK_BUNDLING_STAGING_DISABLED = '1';
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiamVzdC1zZXR1cC5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbImplc3Qtc2V0dXAudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7QUFBQSxnREFBZ0Q7QUFDaEQsT0FBTyxDQUFDLEdBQUcsQ0FBQyw2QkFBNkIsR0FBRyxHQUFHLENBQUMiLCJzb3VyY2VzQ29udGVudCI6WyIvLyBTa2lwIGJ1bmRsaW5nIGZvciBOb2RlanNGdW5jdGlvbiBkdXJpbmcgdGVzdHNcbnByb2Nlc3MuZW52LkNES19CVU5ETElOR19TVEFHSU5HX0RJU0FCTEVEID0gJzEnOyJdfQ==

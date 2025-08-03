@@ -51,51 +51,6 @@ describe('CognitoAuthConstruct', () => {
             Required: false,
             Mutable: true,
           }),
-          Match.objectLike({
-            Name: 'birthTime',
-            AttributeDataType: 'String',
-            Mutable: true,
-          }),
-          Match.objectLike({
-            Name: 'birthPlace',
-            AttributeDataType: 'String',
-            Mutable: true,
-          }),
-          Match.objectLike({
-            Name: 'birthLatitude',
-            AttributeDataType: 'String',
-            Mutable: true,
-          }),
-          Match.objectLike({
-            Name: 'birthLongitude',
-            AttributeDataType: 'String',
-            Mutable: true,
-          }),
-          Match.objectLike({
-            Name: 'birthCity',
-            AttributeDataType: 'String',
-            Mutable: true,
-          }),
-          Match.objectLike({
-            Name: 'birthState',
-            AttributeDataType: 'String',
-            Mutable: true,
-          }),
-          Match.objectLike({
-            Name: 'birthCountry',
-            AttributeDataType: 'String',
-            Mutable: true,
-          }),
-          Match.objectLike({
-            Name: 'birthDate',
-            AttributeDataType: 'String',
-            Mutable: true,
-          }),
-          Match.objectLike({
-            Name: 'birthName',
-            AttributeDataType: 'String',
-            Mutable: true,
-          }),
         ]),
       });
     });

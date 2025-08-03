@@ -375,14 +375,14 @@ To address favicon caching issues in CloudFront:
 
 5. **Cognito UpdateUserAttributes "Access Token does not have required scopes" Error**
    - **Cause**: Missing `aws.cognito.signin.user.admin` scope in OAuth configuration
-   - **Solution**: 
+   - **Solution**:
      - Add `cognito.OAuthScope.COGNITO_ADMIN` to CDK User Pool Client configuration
      - Include `aws.cognito.signin.user.admin` in frontend OAuth login URL
      - Both infrastructure AND frontend must be configured correctly
 
 6. **Onboarding Wizard Loop - User Stuck After Completion**
    - **Cause**: ID token not immediately reflecting updated attributes after UpdateUserAttributes call
-   - **Solution**: 
+   - **Solution**:
      - Call `refreshUser()` from auth context after updating attributes
      - Add 500ms delay before redirecting to allow Cognito propagation
      - Ensures `hasCompletedOnboarding` check has updated user data
@@ -421,6 +421,7 @@ S3 bucket names must be globally unique. If you encounter conflicts:
 ### User Management
 
 Delete a single Cognito user:
+
 ```bash
 aws cognito-idp admin-delete-user \
   --user-pool-id us-east-1_rsin8LPL2 \
@@ -429,6 +430,7 @@ aws cognito-idp admin-delete-user \
 ```
 
 List all users:
+
 ```bash
 aws cognito-idp list-users \
   --user-pool-id us-east-1_rsin8LPL2 \
@@ -436,6 +438,7 @@ aws cognito-idp list-users \
 ```
 
 Delete all users (use with caution):
+
 ```bash
 aws cognito-idp list-users --user-pool-id us-east-1_rsin8LPL2 --region us-east-1 | \
   jq -r '.Users[].Username' | \

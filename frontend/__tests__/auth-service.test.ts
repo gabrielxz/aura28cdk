@@ -60,48 +60,37 @@ describe('AuthService', () => {
       expect(authService.hasCompletedOnboarding(null)).toBe(false);
     });
 
-    it('returns false if any required field is missing', () => {
+    it('returns false for any user', () => {
       const incompleteUser: User = {
         sub: '123',
         email: 'test@example.com',
         email_verified: true,
-        'custom:birthCity': 'San Francisco',
-        'custom:birthState': 'California',
-        // Missing birthCountry, birthDate, and birthName
       };
 
+      // Method is deprecated and always returns false
       expect(authService.hasCompletedOnboarding(incompleteUser)).toBe(false);
     });
 
-    it('returns true if all required fields are present', () => {
+    it('returns false since the method is deprecated', () => {
       const completeUser: User = {
         sub: '123',
         email: 'test@example.com',
         email_verified: true,
-        'custom:birthCity': 'San Francisco',
-        'custom:birthState': 'California',
-        'custom:birthCountry': 'United States',
-        'custom:birthDate': '1990-07-15',
-        'custom:birthName': 'John Smith',
       };
 
-      expect(authService.hasCompletedOnboarding(completeUser)).toBe(true);
+      // Method is deprecated and always returns false
+      expect(authService.hasCompletedOnboarding(completeUser)).toBe(false);
     });
 
-    it('returns true even if optional birthTime is missing', () => {
+    it('always returns false regardless of input', () => {
       const userWithoutBirthTime: User = {
         sub: '123',
         email: 'test@example.com',
         email_verified: true,
-        'custom:birthCity': 'San Francisco',
-        'custom:birthState': 'California',
-        'custom:birthCountry': 'United States',
-        'custom:birthDate': '1990-07-15',
-        'custom:birthName': 'John Smith',
-        // birthTime is optional
       };
 
-      expect(authService.hasCompletedOnboarding(userWithoutBirthTime)).toBe(true);
+      // Method is deprecated and always returns false
+      expect(authService.hasCompletedOnboarding(userWithoutBirthTime)).toBe(false);
     });
   });
 
