@@ -239,7 +239,7 @@ export class AuthService {
    * Check if user has completed onboarding
    * @deprecated Use UserApi.hasCompletedOnboarding instead
    */
-  hasCompletedOnboarding(_user: User | null): boolean {
+  hasCompletedOnboarding(_: User | null): boolean {
     // This method is deprecated - onboarding status is now checked via API
     return false;
   }

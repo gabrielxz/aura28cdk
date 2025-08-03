@@ -35,6 +35,7 @@ export class ApiConstruct extends Construct {
       memorySize: 256,
       bundling: {
         externalModules: ['@aws-sdk/*'],
+        forceDockerBundling: false,
       },
     });
 
@@ -53,14 +54,7 @@ export class ApiConstruct extends Construct {
         memorySize: 256,
         bundling: {
           externalModules: ['@aws-sdk/*'],
-          ...(process.env.CDK_BUNDLING_SKIP_TESTS === 'true' && {
-            forceDockerBundling: false,
-            commandHooks: {
-              beforeBundling: () => [],
-              afterBundling: () => [],
-              beforeInstall: () => [],
-            },
-          }),
+          forceDockerBundling: false,
         },
       },
     );
