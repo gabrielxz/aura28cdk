@@ -8,6 +8,7 @@ const docClient = DynamoDBDocumentClient.from(dynamoClient);
 const TABLE_NAME = process.env.TABLE_NAME!;
 
 interface ProfileData {
+  email: string;
   birthName: string;
   birthDate: string;
   birthTime?: string;
@@ -25,6 +26,13 @@ interface ValidationError {
 
 const validateBirthData = (data: any): ValidationError[] => {
   const errors: ValidationError[] = [];
+
+  // Email validation
+  if (!data.email || typeof data.email !== 'string') {
+    errors.push({ field: 'email', message: 'Email is required' });
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+    errors.push({ field: 'email', message: 'Invalid email format' });
+  }
 
   // Birth name validation
   if (!data.birthName || typeof data.birthName !== 'string') {
@@ -124,9 +132,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
-    // Extract user sub and email from authorizer context
+    // Extract user sub from authorizer context
     const authorizerUserId = event.requestContext.authorizer?.claims?.sub;
-    const userEmail = event.requestContext.authorizer?.claims?.email;
 
     if (!authorizerUserId) {
       return {
@@ -184,24 +191,34 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     // Prepare item for DynamoDB
     const now = new Date().toISOString();
+
+    // Build profile object without undefined values
+    const profile: any = {
+      birthName: profileData.birthName.trim(),
+      birthDate: profileData.birthDate,
+      birthCity: profileData.birthCity.trim(),
+      birthState: profileData.birthState.trim(),
+      birthCountry: profileData.birthCountry.trim(),
+    };
+
+    // Only add optional fields if they have values
+    if (profileData.birthTime) {
+      profile.birthTime = profileData.birthTime.trim();
+    }
+
+    if (profileData.birthLatitude !== undefined) {
+      profile.birthLatitude = profileData.birthLatitude;
+    }
+
+    if (profileData.birthLongitude !== undefined) {
+      profile.birthLongitude = profileData.birthLongitude;
+    }
+
     const item = {
       userId,
       createdAt: 'PROFILE', // Fixed sort key for profile data
-      email: userEmail,
-      profile: {
-        birthName: profileData.birthName.trim(),
-        birthDate: profileData.birthDate,
-        birthTime: profileData.birthTime?.trim(),
-        birthCity: profileData.birthCity.trim(),
-        birthState: profileData.birthState.trim(),
-        birthCountry: profileData.birthCountry.trim(),
-        ...(profileData.birthLatitude !== undefined && {
-          birthLatitude: profileData.birthLatitude,
-        }),
-        ...(profileData.birthLongitude !== undefined && {
-          birthLongitude: profileData.birthLongitude,
-        }),
-      },
+      email: profileData.email,
+      profile,
       onboardingCompleted: true,
       updatedAt: now,
       firstCreatedAt: now, // Will be overwritten if profile already exists

@@ -148,6 +148,7 @@ export default function OnboardingPage() {
 
       // Prepare profile data for API
       const profileData = {
+        email: user.email,
         birthName: formData.birthName,
         birthDate: birthDate,
         birthTime: formData.birthTime || undefined,

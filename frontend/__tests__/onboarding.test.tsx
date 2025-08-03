@@ -293,6 +293,7 @@ describe('OnboardingPage', () => {
 
     await waitFor(() => {
       expect(mockUpdateUserProfile).toHaveBeenCalledWith(mockUser.sub, {
+        email: 'test@example.com',
         birthName: 'John Michael Smith',
         birthDate: '1990-07-15',
         birthTime: undefined,

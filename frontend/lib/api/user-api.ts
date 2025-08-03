@@ -1,6 +1,7 @@
 import { AuthService } from '@/lib/auth/auth-service';
 
 export interface UserProfile {
+  email: string;
   birthName: string;
   birthDate: string;
   birthTime?: string;
