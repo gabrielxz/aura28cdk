@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/use-auth';
-import { AuthService } from '@/lib/auth/auth-service';
+import { UserApi, UserProfileResponse } from '@/lib/api/user-api';
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, authService } = useAuth();
   const router = useRouter();
-  const [authService] = useState(() => new AuthService());
+  const [userApi] = useState(() => new UserApi(authService));
+  const [profile, setProfile] = useState<UserProfileResponse | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(() => {
     // Only redirect if we're done loading and there's definitely no user
@@ -20,13 +23,31 @@ export default function DashboardPage() {
       return () => clearTimeout(timer);
     }
 
-    // Check if user has completed onboarding
-    if (!loading && user && !authService.hasCompletedOnboarding(user)) {
-      router.push('/onboarding');
-    }
-  }, [user, loading, router, authService]);
+    // Fetch user profile from API
+    const fetchProfile = async () => {
+      if (!loading && user) {
+        try {
+          setProfileLoading(true);
+          const userProfile = await userApi.getUserProfile(user.sub);
+          setProfile(userProfile);
+          setProfileError(null);
+        } catch (error) {
+          console.error('Failed to fetch profile:', error);
+          setProfileError('Failed to load profile');
+          // If profile not found, redirect to onboarding
+          if (error instanceof Error && error.message.includes('Profile not found')) {
+            router.push('/onboarding');
+          }
+        } finally {
+          setProfileLoading(false);
+        }
+      }
+    };
 
-  if (loading) {
+    fetchProfile();
+  }, [user, loading, router, userApi]);
+
+  if (loading || profileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -69,48 +90,46 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="mt-6">
-          <h3 className="mb-2 text-lg font-semibold">Birth Information</h3>
-          <div className="space-y-2">
-            {user['custom:birthName'] && (
+        {profileError && (
+          <div className="mt-4 rounded-lg bg-red-50 p-4 text-red-600">
+            <p>{profileError}</p>
+          </div>
+        )}
+
+        {profile && (
+          <div className="mt-6">
+            <h3 className="mb-2 text-lg font-semibold">Birth Information</h3>
+            <div className="space-y-2">
               <p>
-                <strong>Birth Name:</strong> {user['custom:birthName']}
+                <strong>Birth Name:</strong> {profile.profile.birthName}
               </p>
-            )}
-            {user['custom:birthDate'] && (
               <p>
                 <strong>Birth Date:</strong>{' '}
-                {new Date(user['custom:birthDate']).toLocaleDateString('en-US', {
+                {new Date(profile.profile.birthDate).toLocaleDateString('en-US', {
                   timeZone: 'UTC',
                 })}
               </p>
-            )}
-            {user['custom:birthTime'] && (
-              <p>
-                <strong>Birth Time:</strong> {user['custom:birthTime']}
-              </p>
-            )}
-            {user['custom:birthCity'] &&
-              user['custom:birthState'] &&
-              user['custom:birthCountry'] && (
+              {profile.profile.birthTime && (
                 <p>
-                  <strong>Birth Location:</strong> {user['custom:birthCity']},{' '}
-                  {user['custom:birthState']}, {user['custom:birthCountry']}
+                  <strong>Birth Time:</strong> {profile.profile.birthTime}
                 </p>
               )}
-            {user['custom:birthPlace'] && (
               <p>
-                <strong>Birth Place (Legacy):</strong> {user['custom:birthPlace']}
+                <strong>Birth Location:</strong> {profile.profile.birthCity},{' '}
+                {profile.profile.birthState}, {profile.profile.birthCountry}
               </p>
-            )}
-            {user['custom:birthLatitude'] && user['custom:birthLongitude'] && (
-              <p>
-                <strong>Coordinates:</strong> {user['custom:birthLatitude']},{' '}
-                {user['custom:birthLongitude']}
+              {profile.profile.birthLatitude && profile.profile.birthLongitude && (
+                <p>
+                  <strong>Coordinates:</strong> {profile.profile.birthLatitude},{' '}
+                  {profile.profile.birthLongitude}
+                </p>
+              )}
+              <p className="mt-2 text-sm text-gray-500">
+                <strong>Profile Updated:</strong> {new Date(profile.updatedAt).toLocaleString()}
               </p>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

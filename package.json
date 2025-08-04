@@ -21,6 +21,7 @@
     "build:infrastructure": "npm run build --workspace=infrastructure"
   },
   "devDependencies": {
+    "esbuild": "^0.25.8",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.4.2"
   },

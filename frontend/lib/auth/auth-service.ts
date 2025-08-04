@@ -12,15 +12,6 @@ export interface User {
   email_verified: boolean;
   given_name?: string;
   family_name?: string;
-  'custom:birthTime'?: string;
-  'custom:birthPlace'?: string;
-  'custom:birthLatitude'?: string;
-  'custom:birthLongitude'?: string;
-  'custom:birthCity'?: string;
-  'custom:birthState'?: string;
-  'custom:birthCountry'?: string;
-  'custom:birthDate'?: string;
-  'custom:birthName'?: string;
 }
 
 export interface AuthTokens {
@@ -233,19 +224,24 @@ export class AuthService {
   }
 
   /**
-   * Check if user has completed onboarding
+   * Get the current ID token
    */
-  hasCompletedOnboarding(user: User | null): boolean {
-    if (!user) return false;
+  async getIdToken(): Promise<string | null> {
+    const tokens = this.getTokens();
+    if (!tokens || this.isTokenExpired(tokens)) {
+      const refreshedTokens = await this.refreshToken();
+      return refreshedTokens?.idToken || null;
+    }
+    return tokens.idToken;
+  }
 
-    // Check if all required birth information fields are present
-    return !!(
-      user['custom:birthCity'] &&
-      user['custom:birthState'] &&
-      user['custom:birthCountry'] &&
-      user['custom:birthDate'] &&
-      user['custom:birthName']
-    );
+  /**
+   * Check if user has completed onboarding
+   * @deprecated Use UserApi.hasCompletedOnboarding instead
+   */
+  hasCompletedOnboarding(_: User | null): boolean {
+    // This method is deprecated - onboarding status is now checked via API
+    return false;
   }
 
   /**

@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/use-auth';
 import OnboardingPage from '@/app/onboarding/page';
-import { AuthService } from '@/lib/auth/auth-service';
+import { UserApi } from '@/lib/api/user-api';
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
@@ -12,7 +12,10 @@ jest.mock('next/navigation', () => ({
 
 // Mock auth hooks and services
 jest.mock('@/lib/auth/use-auth');
-jest.mock('@/lib/auth/auth-service');
+jest.mock('@/lib/api/user-api');
+
+// Mock fetch globally
+global.fetch = jest.fn();
 
 describe('OnboardingPage', () => {
   const mockPush = jest.fn();
@@ -22,25 +25,36 @@ describe('OnboardingPage', () => {
     email_verified: true,
   };
   let consoleErrorSpy: jest.SpyInstance;
+  let consoleLogSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
     localStorage.clear();
-    // Mock console.error to suppress expected error logs
+    // Mock console to suppress expected logs
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    // Setup default environment variable
+    process.env.NEXT_PUBLIC_API_GATEWAY_URL = 'https://api.test.com/';
   });
 
   afterEach(() => {
-    // Restore console.error
+    // Restore console
     consoleErrorSpy.mockRestore();
+    consoleLogSpy.mockRestore();
   });
 
   it('redirects to login if user is not authenticated', () => {
+    const mockAuthService = {
+      getIdToken: jest.fn().mockResolvedValue('mock-token'),
+    };
+
     (useAuth as jest.Mock).mockReturnValue({
       user: null,
       loading: false,
       refreshUser: jest.fn(),
+      authService: mockAuthService,
     });
 
     render(<OnboardingPage />);
@@ -48,28 +62,42 @@ describe('OnboardingPage', () => {
     expect(mockPush).toHaveBeenCalledWith('/login');
   });
 
-  it('redirects to dashboard if user has already completed onboarding', () => {
+  it('redirects to dashboard if user has already completed onboarding', async () => {
     const mockAuthService = {
-      hasCompletedOnboarding: jest.fn().mockReturnValue(true),
+      getIdToken: jest.fn().mockResolvedValue('mock-token'),
     };
-    (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+    // Mock UserApi
+    const mockHasCompletedOnboarding = jest.fn().mockResolvedValue(true);
+    (UserApi as jest.Mock).mockImplementation(() => ({
+      hasCompletedOnboarding: mockHasCompletedOnboarding,
+    }));
 
     (useAuth as jest.Mock).mockReturnValue({
-      user: { ...mockUser, 'custom:birthCity': 'San Francisco' },
+      user: mockUser,
       loading: false,
       refreshUser: jest.fn(),
+      authService: mockAuthService,
     });
 
     render(<OnboardingPage />);
 
-    expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    await waitFor(() => {
+      expect(mockHasCompletedOnboarding).toHaveBeenCalledWith(mockUser.sub);
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    });
   });
 
   it('shows loading state while auth is loading', () => {
+    const mockAuthService = {
+      getIdToken: jest.fn().mockResolvedValue('mock-token'),
+    };
+
     (useAuth as jest.Mock).mockReturnValue({
       user: null,
       loading: true,
       refreshUser: jest.fn(),
+      authService: mockAuthService,
     });
 
     render(<OnboardingPage />);
@@ -77,37 +105,55 @@ describe('OnboardingPage', () => {
     expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
-  it('displays the onboarding form for new users', () => {
+  it('displays the onboarding form for new users', async () => {
     const mockAuthService = {
-      hasCompletedOnboarding: jest.fn().mockReturnValue(false),
+      getIdToken: jest.fn().mockResolvedValue('mock-token'),
     };
-    (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+    // Mock UserApi
+    const mockHasCompletedOnboarding = jest.fn().mockResolvedValue(false);
+    (UserApi as jest.Mock).mockImplementation(() => ({
+      hasCompletedOnboarding: mockHasCompletedOnboarding,
+    }));
 
     (useAuth as jest.Mock).mockReturnValue({
       user: mockUser,
       loading: false,
       refreshUser: jest.fn(),
+      authService: mockAuthService,
     });
 
     render(<OnboardingPage />);
 
-    expect(screen.getByText('Complete Your Profile')).toBeInTheDocument();
-    expect(screen.getByLabelText('City')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Complete Your Profile')).toBeInTheDocument();
+      expect(screen.getByLabelText('City')).toBeInTheDocument();
+    });
   });
 
   it('validates required fields on step 1', async () => {
     const mockAuthService = {
-      hasCompletedOnboarding: jest.fn().mockReturnValue(false),
+      getIdToken: jest.fn().mockResolvedValue('mock-token'),
     };
-    (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+    // Mock UserApi
+    const mockHasCompletedOnboarding = jest.fn().mockResolvedValue(false);
+    (UserApi as jest.Mock).mockImplementation(() => ({
+      hasCompletedOnboarding: mockHasCompletedOnboarding,
+    }));
 
     (useAuth as jest.Mock).mockReturnValue({
       user: mockUser,
       loading: false,
       refreshUser: jest.fn(),
+      authService: mockAuthService,
     });
 
     render(<OnboardingPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('City')).toBeInTheDocument();
+    });
 
     const nextButton = screen.getByText('Next');
     fireEvent.click(nextButton);
@@ -121,20 +167,27 @@ describe('OnboardingPage', () => {
 
   it('saves progress to localStorage', async () => {
     const mockAuthService = {
-      hasCompletedOnboarding: jest.fn().mockReturnValue(false),
+      getIdToken: jest.fn().mockResolvedValue('mock-token'),
     };
-    (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+    // Mock UserApi
+    const mockHasCompletedOnboarding = jest.fn().mockResolvedValue(false);
+    (UserApi as jest.Mock).mockImplementation(() => ({
+      hasCompletedOnboarding: mockHasCompletedOnboarding,
+    }));
 
     (useAuth as jest.Mock).mockReturnValue({
       user: mockUser,
       loading: false,
       refreshUser: jest.fn(),
+      authService: mockAuthService,
     });
 
     render(<OnboardingPage />);
 
-    // Verify we start at step 1
-    expect(screen.getByText('Birth Location')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Birth Location')).toBeInTheDocument();
+    });
 
     // Fill in step 1
     fireEvent.change(screen.getByLabelText('City'), {
@@ -166,18 +219,32 @@ describe('OnboardingPage', () => {
   it('navigates through all steps', async () => {
     const mockRefreshUser = jest.fn().mockResolvedValue(undefined);
     const mockAuthService = {
-      hasCompletedOnboarding: jest.fn().mockReturnValue(false),
-      updateUserAttributes: jest.fn().mockResolvedValue(undefined),
+      getIdToken: jest.fn().mockResolvedValue('mock-token'),
     };
-    (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+    // Mock UserApi
+    const mockHasCompletedOnboarding = jest.fn().mockResolvedValue(false);
+    const mockUpdateUserProfile = jest.fn().mockResolvedValue({
+      message: 'Profile updated successfully',
+    });
+
+    (UserApi as jest.Mock).mockImplementation(() => ({
+      hasCompletedOnboarding: mockHasCompletedOnboarding,
+      updateUserProfile: mockUpdateUserProfile,
+    }));
 
     (useAuth as jest.Mock).mockReturnValue({
       user: mockUser,
       loading: false,
       refreshUser: mockRefreshUser,
+      authService: mockAuthService,
     });
 
     render(<OnboardingPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('City')).toBeInTheDocument();
+    });
 
     // Step 1: Location
     fireEvent.change(screen.getByLabelText('City'), {
@@ -225,12 +292,14 @@ describe('OnboardingPage', () => {
     fireEvent.click(completeButton);
 
     await waitFor(() => {
-      expect(mockAuthService.updateUserAttributes).toHaveBeenCalledWith({
-        'custom:birthCity': 'San Francisco',
-        'custom:birthState': 'California',
-        'custom:birthCountry': 'United States',
-        'custom:birthDate': '1990-07-15',
-        'custom:birthName': 'John Michael Smith',
+      expect(mockUpdateUserProfile).toHaveBeenCalledWith(mockUser.sub, {
+        email: 'test@example.com',
+        birthName: 'John Michael Smith',
+        birthDate: '1990-07-15',
+        birthTime: undefined,
+        birthCity: 'San Francisco',
+        birthState: 'California',
+        birthCountry: 'United States',
       });
       expect(mockRefreshUser).toHaveBeenCalled();
     });
@@ -247,18 +316,30 @@ describe('OnboardingPage', () => {
   it('handles update errors gracefully', async () => {
     const mockRefreshUser = jest.fn();
     const mockAuthService = {
-      hasCompletedOnboarding: jest.fn().mockReturnValue(false),
-      updateUserAttributes: jest.fn().mockRejectedValue(new Error('Update failed')),
+      getIdToken: jest.fn().mockResolvedValue('mock-token'),
     };
-    (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+    // Mock UserApi
+    const mockHasCompletedOnboarding = jest.fn().mockResolvedValue(false);
+    const mockUpdateUserProfile = jest.fn().mockRejectedValue(new Error('Update failed'));
+
+    (UserApi as jest.Mock).mockImplementation(() => ({
+      hasCompletedOnboarding: mockHasCompletedOnboarding,
+      updateUserProfile: mockUpdateUserProfile,
+    }));
 
     (useAuth as jest.Mock).mockReturnValue({
       user: mockUser,
       loading: false,
       refreshUser: mockRefreshUser,
+      authService: mockAuthService,
     });
 
     render(<OnboardingPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('City')).toBeInTheDocument();
+    });
 
     // Navigate to last step
     // Step 1

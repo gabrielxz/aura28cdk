@@ -47,53 +47,6 @@ export class CognitoAuthConstruct extends Construct {
           mutable: true,
         },
       },
-      customAttributes: {
-        birthTime: new cognito.StringAttribute({
-          minLen: 1,
-          maxLen: 10,
-          mutable: true,
-        }),
-        birthPlace: new cognito.StringAttribute({
-          minLen: 1,
-          maxLen: 256,
-          mutable: true,
-        }),
-        birthLatitude: new cognito.StringAttribute({
-          minLen: 1,
-          maxLen: 20,
-          mutable: true,
-        }),
-        birthLongitude: new cognito.StringAttribute({
-          minLen: 1,
-          maxLen: 20,
-          mutable: true,
-        }),
-        birthCity: new cognito.StringAttribute({
-          minLen: 1,
-          maxLen: 100,
-          mutable: true,
-        }),
-        birthState: new cognito.StringAttribute({
-          minLen: 1,
-          maxLen: 100,
-          mutable: true,
-        }),
-        birthCountry: new cognito.StringAttribute({
-          minLen: 1,
-          maxLen: 100,
-          mutable: true,
-        }),
-        birthDate: new cognito.StringAttribute({
-          minLen: 10,
-          maxLen: 10,
-          mutable: true,
-        }),
-        birthName: new cognito.StringAttribute({
-          minLen: 1,
-          maxLen: 256,
-          mutable: true,
-        }),
-      },
       passwordPolicy: {
         minLength: 8,
         requireLowercase: true,
@@ -147,17 +100,7 @@ export class CognitoAuthConstruct extends Construct {
           familyName: true,
           birthdate: true,
         })
-        .withCustomAttributes(
-          'birthTime',
-          'birthPlace',
-          'birthLatitude',
-          'birthLongitude',
-          'birthCity',
-          'birthState',
-          'birthCountry',
-          'birthDate',
-          'birthName',
-        ),
+        .withCustomAttributes(),
       writeAttributes: new cognito.ClientAttributes()
         .withStandardAttributes({
           email: true,
@@ -165,17 +108,7 @@ export class CognitoAuthConstruct extends Construct {
           familyName: true,
           birthdate: true,
         })
-        .withCustomAttributes(
-          'birthTime',
-          'birthPlace',
-          'birthLatitude',
-          'birthLongitude',
-          'birthCity',
-          'birthState',
-          'birthCountry',
-          'birthDate',
-          'birthName',
-        ),
+        .withCustomAttributes(),
     });
 
     // Create placeholder secrets for future OAuth providers

@@ -9,6 +9,7 @@ import * as route53_targets from 'aws-cdk-lib/aws-route53-targets';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 import { CognitoAuthConstruct } from './constructs/cognito-auth-construct';
+import { ApiConstruct } from './constructs/api-construct';
 
 export interface WebsiteStackProps extends cdk.StackProps {
   domainName: string;
@@ -22,6 +23,7 @@ export class WebsiteStack extends cdk.Stack {
   public readonly bucket: s3.Bucket;
   public readonly auth: CognitoAuthConstruct;
   public readonly userTable: dynamodb.Table;
+  public readonly api: ApiConstruct;
 
   constructor(scope: Construct, id: string, props: WebsiteStackProps) {
     super(scope, id, props);
@@ -56,6 +58,18 @@ export class WebsiteStack extends cdk.Stack {
       removalPolicy:
         props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
       pointInTimeRecovery: true,
+    });
+
+    // Create API Gateway and Lambda functions
+    this.api = new ApiConstruct(this, 'Api', {
+      environment: props.environment,
+      userTable: this.userTable,
+      userPool: this.auth.userPool,
+      allowedOrigins: [
+        'http://localhost:3000',
+        `https://${siteDomain}`,
+        ...(props.environment === 'prod' ? [`https://www.${props.domainName}`] : []),
+      ],
     });
 
     // Create S3 bucket for hosting
@@ -221,6 +235,11 @@ export class WebsiteStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'UserTableName', {
       value: this.userTable.tableName,
       description: 'DynamoDB User Table Name',
+    });
+
+    new cdk.CfnOutput(this, 'ApiGatewayUrl', {
+      value: this.api.api.url,
+      description: 'API Gateway URL for frontend .env.local',
     });
   }
 }
