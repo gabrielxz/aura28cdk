@@ -121,6 +121,7 @@ jobs:
           NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ secrets.PROD_NEXT_PUBLIC_COGNITO_CLIENT_ID }}
           NEXT_PUBLIC_COGNITO_DOMAIN: ${{ secrets.PROD_NEXT_PUBLIC_COGNITO_DOMAIN }}
           NEXT_PUBLIC_COGNITO_REGION: ${{ secrets.PROD_NEXT_PUBLIC_COGNITO_REGION }}
+          NEXT_PUBLIC_API_GATEWAY_URL: ${{ secrets.PROD_NEXT_PUBLIC_API_GATEWAY_URL }}
         run: npm run build
 
       - name: Upload build artifacts
