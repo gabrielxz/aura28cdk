@@ -83,6 +83,7 @@ Aura28 is a modern web platform built with Next.js, TypeScript, Tailwind CSS, an
 - `/logout` - Logs out user and redirects to home
 - `/auth/callback` - OAuth callback handler
 - `/dashboard` - User dashboard (protected route)
+- `/account-settings` - Account settings page (protected route)
 
 ### Planned Routes
 
