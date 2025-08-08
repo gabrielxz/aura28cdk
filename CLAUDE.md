@@ -127,34 +127,30 @@ aura28cdk/
 
 ### Pre-Commit Checklist
 
-**IMPORTANT**: Before committing or pushing any changes, you MUST complete ALL of the following steps:
+**IMPORTANT**: Before committing or pushing any changes, you MUST complete ALL of the following steps in this specific order.
 
-1. **Run formatting**: `npm run format` (at root level)
-   - This ensures all code follows consistent formatting rules
-   - Prevents CI/CD failures due to formatting issues
+1. **Run linting**: `npm run lint` (at root level)
+   - Catches potential code quality issues before spending time on other checks.
 
-2. **Run linting**: `npm run lint` (at root level)
-   - Catches potential code quality issues
-   - Ensures TypeScript and ESLint rules are satisfied
+2. **Run tests**: `npm test` (at root level)
+   - Verifies all tests pass and prevents breaking existing functionality.
+   - **Important**: Also run `npm run test:frontend` and `npm run test:infrastructure` separately to ensure test output is clearly visible.
 
-3. **Run tests**: `npm test` (at root level)
-   - Verifies all tests pass
-   - Prevents breaking existing functionality
-   - **Important**: Also run `npm run test:frontend` separately to ensure frontend test output is clearly visible
+3. **Build check**: `npm run build` (at root level)
+   - Ensures the project builds successfully and catches TypeScript compilation errors.
+   - **This step must be run BEFORE formatting**, as it generates declaration files (`.d.ts`) that also need to be formatted.
 
-4. **Build check**: `npm run build` (at root level)
-   - Ensures the project builds successfully
-   - Catches TypeScript compilation errors
+4. **Run formatting**: `npm run format` (at root level)
+   - This ensures all source code AND build artifacts (like `.d.ts` files) follow consistent formatting rules.
+   - Run this *after* the build to prevent CI/CD failures due to formatting.
 
 5. **Verify no untracked files**: `git status`
-   - Ensure all necessary files are staged
-   - Check for any accidentally modified files
+   - Ensure all necessary files, including newly formatted build artifacts, are staged for commit.
 
 6. **Review changes**: `git diff --staged`
-   - Double-check your changes are intentional
-   - Look for any debug code or temporary changes
+   - Double-check that your changes are intentional and that formatting changes to generated files look correct.
 
-**Note**: Skipping these steps will likely cause GitHub Actions CI/CD pipeline failures, requiring additional commits to fix issues that could have been caught locally.
+**Note**: The order of these steps is critical. Running `build` before `format` prevents CI pipeline failures related to the formatting of generated files.
 
 ### Important Lessons Learned
 
