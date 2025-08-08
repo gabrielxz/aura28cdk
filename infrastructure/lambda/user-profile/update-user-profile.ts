@@ -65,7 +65,7 @@ async function getGeoData(city: string, state: string, country: string): Promise
       };
     }
     return null;
-  } catch (error) {
+  } catch {
     // Re-throw or handle as a non-blocking error
     throw new Error('Failed to geocode location due to a service error.');
   }
@@ -333,9 +333,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         profile: item,
       }),
     };
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error:', error);
+  } catch {
     return {
       statusCode: 500,
       headers: {
