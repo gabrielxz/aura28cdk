@@ -83,6 +83,7 @@ Aura28 is a modern web platform built with Next.js, TypeScript, Tailwind CSS, an
 - `/logout` - Logs out user and redirects to home
 - `/auth/callback` - OAuth callback handler
 - `/dashboard` - User dashboard (protected route)
+- `/account-settings` - Account settings page (protected route)
 
 ### Planned Routes
 
@@ -234,15 +235,11 @@ cd infrastructure && npx cdk diff -c env=prod
 
 ### AWS Cognito Setup
 
-- **User Pool**: Email-based authentication with custom attributes for birth information
+- **User Pool**: Email-based authentication (profile data stored in DynamoDB)
 - **Hosted UI**: Cognito-managed login/signup pages
-- **Custom Attributes**:
-  - `custom:birthTime` - Birth time
-  - `custom:birthPlace` - Birth location
-  - `custom:birthLatitude` - Birth latitude
-  - `custom:birthLongitude` - Birth longitude
 - **OAuth Flow**: Authorization code grant with PKCE
 - **Token Storage**: Client-side localStorage with automatic refresh
+- **Important Note**: Cognito custom attributes cannot be removed once created. Full stack deletion required for schema changes.
 
 ### Frontend Auth Implementation
 
@@ -260,12 +257,13 @@ NEXT_PUBLIC_COGNITO_USER_POOL_ID=us-east-1_xxxxxx
 NEXT_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxx
 NEXT_PUBLIC_COGNITO_DOMAIN=aura28-dev
 NEXT_PUBLIC_COGNITO_REGION=us-east-1
+NEXT_PUBLIC_API_GATEWAY_URL=https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com
 ```
 
-Future environment variables (when API is implemented):
+Lambda environment variables (automatically configured):
 
 ```bash
-DYNAMODB_TABLE_NAME=Aura28-dev-Users
+TABLE_NAME=Aura28-{env}-Users
 ```
 
 ### Manual Configuration Steps
@@ -287,42 +285,37 @@ After CDK deployment:
 - **Table Name**: `Aura28-{env}-Users` (environment-specific)
 - **Primary Key**: Composite key design
   - **Partition Key**: `userId` (String) - Cognito user ID
-  - **Sort Key**: `createdAt` (String) - ISO timestamp
+  - **Sort Key**: `createdAt` (String) - Fixed value 'PROFILE' for profile data
 - **Billing**: Pay-per-request mode for cost optimization
 - **Data Protection**: Point-in-time recovery enabled
 - **Removal Policy**:
   - Development: DESTROY (allows clean teardown)
   - Production: RETAIN (protects user data)
 
-### Data Model Example
+### Data Model
 
 ```typescript
-interface UserRecord {
+interface UserProfile {
   userId: string; // Partition key (Cognito ID)
-  createdAt: string; // Sort key (ISO timestamp)
+  createdAt: 'PROFILE'; // Sort key (fixed value for profile)
   email: string;
   profile: {
-    birthTime: string;
-    birthPlace: string;
-    birthLatitude: number;
-    birthLongitude: number;
+    birthName: string;
+    birthDate: string; // ISO date string
+    birthTime?: string; // Optional time
+    birthCity: string;
+    birthState: string;
+    birthCountry: string;
   };
-  readings?: Array<{
-    id: string;
-    type: 'daily' | 'weekly' | 'monthly' | 'yearly';
-    date: string;
-    content: string;
-    createdAt: string;
-  }>;
-  updatedAt: string;
+  updatedAt: string; // ISO timestamp
 }
 ```
 
 ### Access Patterns
 
-1. **Get user by ID**: Query with userId
-2. **Get user history**: Query with userId, sorted by createdAt
-3. **Store multiple records per user**: Same userId, different createdAt values
+1. **Get user profile**: Query with userId and createdAt='PROFILE'
+2. **Update user profile**: Put item with userId and createdAt='PROFILE'
+3. **Future**: Store multiple records per user with different sort keys
 
 ## Configuration Management
 
@@ -373,21 +366,7 @@ To address favicon caching issues in CloudFront:
    - **Cause**: TypeScript declaration files not in tsconfig
    - **Solution**: Now handled in root .eslintrc.json with proper ignorePatterns
 
-5. **Cognito UpdateUserAttributes "Access Token does not have required scopes" Error**
-   - **Cause**: Missing `aws.cognito.signin.user.admin` scope in OAuth configuration
-   - **Solution**:
-     - Add `cognito.OAuthScope.COGNITO_ADMIN` to CDK User Pool Client configuration
-     - Include `aws.cognito.signin.user.admin` in frontend OAuth login URL
-     - Both infrastructure AND frontend must be configured correctly
-
-6. **Onboarding Wizard Loop - User Stuck After Completion**
-   - **Cause**: ID token not immediately reflecting updated attributes after UpdateUserAttributes call
-   - **Solution**:
-     - Call `refreshUser()` from auth context after updating attributes
-     - Add 500ms delay before redirecting to allow Cognito propagation
-     - Ensures `hasCompletedOnboarding` check has updated user data
-
-7. **Birth Date Off-by-One Display Error**
+5. **Birth Date Off-by-One Display Error**
    - **Cause**: JavaScript Date parsing timezone conversion (UTC to local time)
    - **Solution**: Add `{ timeZone: 'UTC' }` to `toLocaleDateString()` calls
    - **Example**: `new Date(birthDate).toLocaleDateString('en-US', { timeZone: 'UTC' })`
@@ -480,19 +459,128 @@ cd infrastructure && npx cdk synth --no-staging > synth.yaml
 cd infrastructure && npx cdk diff -c env=dev
 ```
 
+## API Architecture
+
+### API Gateway Setup
+
+- **Type**: REST API with Cognito authorizer
+- **Authentication**: JWT token validation via Cognito User Pool
+- **CORS**: Enabled for all endpoints
+- **Environment-specific URLs**: Separate APIs for dev and prod
+
+### Lambda Functions
+
+#### Update User Profile
+
+- **Endpoint**: `PUT /users/{userId}/profile`
+- **Purpose**: Save user profile data to DynamoDB
+- **Authentication**: Cognito JWT required
+- **Validation**: Ensures userId matches authenticated user
+
+#### Get User Profile
+
+- **Endpoint**: `GET /users/{userId}/profile`
+- **Purpose**: Retrieve user profile from DynamoDB
+- **Authentication**: Cognito JWT required
+- **Validation**: Users can only access their own profile
+
+### API Integration
+
+```typescript
+// Frontend API client example
+const response = await fetch(`${process.env.NEXT_PUBLIC_API_GATEWAY_URL}/users/${userId}/profile`, {
+  method: 'PUT',
+  headers: {
+    Authorization: `Bearer ${idToken}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(profileData),
+});
+```
+
+## GitHub Actions Configuration
+
+### Required Secrets
+
+#### Development Environment
+
+- `AWS_ACCESS_KEY_ID` - AWS credentials
+- `AWS_SECRET_ACCESS_KEY` - AWS credentials
+- `AWS_REGION` - us-east-1
+- `NEXT_PUBLIC_API_GATEWAY_URL` - Dev API Gateway URL
+
+#### Production Environment
+
+- `PROD_AWS_ACCESS_KEY_ID` - AWS credentials
+- `PROD_AWS_SECRET_ACCESS_KEY` - AWS credentials
+- `PROD_AWS_REGION` - us-east-1
+- `PROD_NEXT_PUBLIC_API_GATEWAY_URL` - Prod API Gateway URL
+
+### Deployment Workflow
+
+1. Code pushed to `develop` branch
+2. GitHub Actions runs tests and linting
+3. CDK deploys infrastructure to dev
+4. Frontend builds with API Gateway URL
+5. Static assets deployed to S3/CloudFront
+
 ## Future Enhancements
 
 - Social login providers (Google, Apple, Facebook) - OAuth secrets provisioned
 - Amazon Location Services for birth location geocoding
 - OpenAI API integration for astrology readings
 - Stripe payment processing
-- ~~Database integration (likely DynamoDB or RDS)~~ ✅ DynamoDB table implemented
-- API Gateway for serverless functions
-- Lambda functions for business logic
+- ~~Database integration~~ ✅ DynamoDB implemented
+- ~~API Gateway for serverless functions~~ ✅ REST API implemented
+- ~~Lambda functions for business logic~~ ✅ Profile Lambda functions implemented
 - Ephemeris calculations for astrology
 - Global Secondary Indexes for additional query patterns
 - DynamoDB Streams for real-time updates
 
+6. **DynamoDB Undefined Values Error**
+   - **Cause**: DynamoDB SDK doesn't allow undefined values in item attributes
+   - **Error**: "Pass options.removeUndefinedValues=true to remove undefined values"
+   - **Solution**: Build objects conditionally, only including fields with defined values
+   - **Example**:
+
+     ```typescript
+     const profile: any = {
+       birthName: profileData.birthName,
+       birthDate: profileData.birthDate,
+       // Required fields...
+     };
+
+     // Only add optional fields if they have values
+     if (profileData.birthTime) {
+       profile.birthTime = profileData.birthTime;
+     }
+     ```
+
+7. **Cognito Custom Attributes Immutability**
+   - **Issue**: Once custom attributes are added to a Cognito User Pool, they cannot be removed
+   - **Impact**: Schema changes require complete stack deletion and recreation
+   - **Solution**: Delete stack, clean up resources, and redeploy with new schema
+   - **Prevention**: Carefully plan Cognito schema before production deployment
+
+## Migration from Cognito Custom Attributes to DynamoDB
+
+The project has migrated from storing user profile data in Cognito custom attributes to using DynamoDB with an API layer. This provides:
+
+1. **Flexibility**: Profile schema can be modified without recreating the User Pool
+2. **Scalability**: DynamoDB handles complex data structures better than Cognito attributes
+3. **Performance**: Direct database queries vs parsing JWT tokens
+4. **Cost Optimization**: Pay-per-request billing for DynamoDB
+5. **Future-proofing**: Easier to add features like user history, preferences, etc.
+
+### Migration Steps Taken
+
+1. Removed Cognito custom attributes from CDK stack
+2. Created DynamoDB table with userId/createdAt composite key
+3. Implemented API Gateway with Lambda functions
+4. Updated frontend to call API instead of Cognito UpdateUserAttributes
+5. Added API Gateway URL to GitHub Actions secrets
+6. Deployed to both dev and prod environments
+
 ---
 
-Last Updated: August 2, 2025
+Last Updated: January 4, 2025

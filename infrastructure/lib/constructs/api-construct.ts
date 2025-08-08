@@ -5,12 +5,14 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
 
 export interface ApiConstructProps {
   environment: 'dev' | 'prod';
   userTable: dynamodb.Table;
   userPool: cognito.UserPool;
+  placeIndexName: string;
   allowedOrigins: string[];
 }
 
@@ -49,6 +51,7 @@ export class ApiConstruct extends Construct {
         runtime: lambda.Runtime.NODEJS_18_X,
         environment: {
           TABLE_NAME: props.userTable.tableName,
+          PLACE_INDEX_NAME: props.placeIndexName,
         },
         timeout: cdk.Duration.seconds(30),
         memorySize: 256,
@@ -62,6 +65,18 @@ export class ApiConstruct extends Construct {
     // Grant DynamoDB permissions
     props.userTable.grantReadData(this.getUserProfileFunction);
     props.userTable.grantWriteData(this.updateUserProfileFunction);
+
+    // Grant Location Service permissions
+    this.updateUserProfileFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['geo:SearchPlaceIndexForText'],
+        resources: [
+          `arn:aws:geo:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:place-index/${
+            props.placeIndexName
+          }`,
+        ],
+      }),
+    );
 
     // Create API Gateway
     this.api = new apigateway.RestApi(this, 'UserApi', {

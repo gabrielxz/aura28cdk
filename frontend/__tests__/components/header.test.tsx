@@ -16,6 +16,15 @@ jest.mock('next/link', () => {
   };
 });
 
+// Mock next/navigation
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+  }),
+}));
+
 describe('Header', () => {
   const mockLogin = jest.fn();
   const mockLogout = jest.fn();
@@ -30,6 +39,10 @@ describe('Header', () => {
       loading: false,
       login: mockLogin,
       logout: mockLogout,
+      authService: {
+        getCurrentUser: jest.fn().mockReturnValue(null),
+        getIdToken: jest.fn().mockResolvedValue(null),
+      },
     });
 
     render(<Header />);
@@ -44,6 +57,10 @@ describe('Header', () => {
       loading: true,
       login: mockLogin,
       logout: mockLogout,
+      authService: {
+        getCurrentUser: jest.fn().mockReturnValue(null),
+        getIdToken: jest.fn().mockResolvedValue(null),
+      },
     });
 
     render(<Header />);
@@ -57,6 +74,10 @@ describe('Header', () => {
       loading: false,
       login: mockLogin,
       logout: mockLogout,
+      authService: {
+        getCurrentUser: jest.fn().mockReturnValue(null),
+        getIdToken: jest.fn().mockResolvedValue(null),
+      },
     });
 
     render(<Header />);
@@ -67,7 +88,7 @@ describe('Header', () => {
     expect(mockLogin).toHaveBeenCalledTimes(1);
   });
 
-  test('shows logout button and dashboard link when authenticated', () => {
+  test('shows user dropdown and dashboard link when authenticated', () => {
     const mockUser = {
       sub: '123',
       email: 'test@example.com',
@@ -79,6 +100,10 @@ describe('Header', () => {
       loading: false,
       login: mockLogin,
       logout: mockLogout,
+      authService: {
+        getCurrentUser: jest.fn().mockReturnValue(mockUser),
+        getIdToken: jest.fn().mockResolvedValue('mock-token'),
+      },
     });
 
     render(<Header />);
@@ -88,11 +113,8 @@ describe('Header', () => {
     expect(dashboardLink).toBeInTheDocument();
     expect(dashboardLink.closest('a')).toHaveAttribute('href', '/dashboard');
 
-    // Check logout button
-    const logoutButton = screen.getByText('Logout');
-    expect(logoutButton).toBeInTheDocument();
-
-    fireEvent.click(logoutButton);
-    expect(mockLogout).toHaveBeenCalledTimes(1);
+    // Check user dropdown (avatar button)
+    const avatarButton = screen.getByRole('button');
+    expect(avatarButton).toBeInTheDocument();
   });
 });

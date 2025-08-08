@@ -1,11 +1,15 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { LocationClient, SearchPlaceIndexForTextCommand } from '@aws-sdk/client-location';
+import tzlookup from 'tz-lookup';
 
 const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
+const locationClient = new LocationClient({});
 
 const TABLE_NAME = process.env.TABLE_NAME!;
+const PLACE_INDEX_NAME = process.env.PLACE_INDEX_NAME!;
 
 interface ProfileData {
   email: string;
@@ -17,6 +21,54 @@ interface ProfileData {
   birthCountry: string;
   birthLatitude?: number;
   birthLongitude?: number;
+  ianaTimeZone?: string;
+  standardizedLocationName?: string;
+}
+
+interface GeoData {
+  latitude: number;
+  longitude: number;
+  ianaTimeZone: string;
+  standardizedLocationName: string;
+}
+
+/**
+ * Geocodes a location and returns its coordinates, time zone, and standardized name.
+ */
+async function getGeoData(city: string, state: string, country: string): Promise<GeoData | null> {
+  const searchText = `${city}, ${state}, ${country}`;
+
+  try {
+    const command = new SearchPlaceIndexForTextCommand({
+      IndexName: PLACE_INDEX_NAME,
+      Text: searchText,
+      MaxResults: 1,
+    });
+    const response = await locationClient.send(command);
+
+    if (response.Results && response.Results.length > 0 && response.Results[0].Place) {
+      const place = response.Results[0].Place;
+      const [longitude, latitude] = place.Geometry?.Point || [];
+
+      if (longitude === undefined || latitude === undefined) {
+        return null;
+      }
+
+      const ianaTimeZone = tzlookup(latitude, longitude);
+      const standardizedLocationName = place.Label || searchText;
+
+      return {
+        latitude: parseFloat(latitude.toFixed(6)),
+        longitude: parseFloat(longitude.toFixed(6)),
+        ianaTimeZone,
+        standardizedLocationName,
+      };
+    }
+    return null;
+  } catch {
+    // Re-throw or handle as a non-blocking error
+    throw new Error('Failed to geocode location due to a service error.');
+  }
 }
 
 interface ValidationError {
@@ -115,9 +167,6 @@ const validateBirthData = (data: any): ValidationError[] => {
 };
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  // eslint-disable-next-line no-console
-  console.log('Event:', JSON.stringify(event, null, 2));
-
   try {
     // Extract userId from path parameters
     const userId = event.pathParameters?.userId;
@@ -173,6 +222,38 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
+    // Geocode location
+    const geoData = await getGeoData(
+      profileData.birthCity,
+      profileData.birthState,
+      profileData.birthCountry,
+    );
+
+    if (!geoData) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify({
+          error: 'Validation failed',
+          validationErrors: [
+            {
+              field: 'birthCity',
+              message: 'Could not find a valid location for the city, state, and country provided.',
+            },
+          ],
+        }),
+      };
+    }
+
+    // Add geo data to profile
+    profileData.birthLatitude = geoData.latitude;
+    profileData.birthLongitude = geoData.longitude;
+    profileData.ianaTimeZone = geoData.ianaTimeZone;
+    profileData.standardizedLocationName = geoData.standardizedLocationName;
+
     // Validate profile data
     const validationErrors = validateBirthData(profileData);
     if (validationErrors.length > 0) {
@@ -214,6 +295,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       profile.birthLongitude = profileData.birthLongitude;
     }
 
+    if (profileData.ianaTimeZone) {
+      profile.ianaTimeZone = profileData.ianaTimeZone;
+    }
+
+    if (profileData.standardizedLocationName) {
+      profile.standardizedLocationName = profileData.standardizedLocationName;
+    }
+
     const item = {
       userId,
       createdAt: 'PROFILE', // Fixed sort key for profile data
@@ -244,9 +333,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         profile: item,
       }),
     };
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error:', error);
+  } catch {
     return {
       statusCode: 500,
       headers: {

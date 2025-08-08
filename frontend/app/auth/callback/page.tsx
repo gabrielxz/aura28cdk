@@ -35,17 +35,10 @@ function AuthCallbackContent() {
         // Refresh the auth context to pick up the new tokens
         await refreshUser();
 
-        // Get the updated user to check onboarding status
-        const currentUser = authService.getCurrentUser();
-
         // Small delay to ensure state is updated
         setTimeout(() => {
-          // Redirect to onboarding if incomplete, otherwise dashboard
-          if (currentUser && !authService.hasCompletedOnboarding(currentUser)) {
-            router.push('/onboarding');
-          } else {
-            router.push('/dashboard');
-          }
+          // Always redirect to dashboard - it will handle onboarding check
+          router.push('/dashboard');
         }, 100);
       } catch (err) {
         console.error('Auth callback error:', err);
