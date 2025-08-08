@@ -15,7 +15,13 @@ interface NatalChartEvent {
 }
 
 const validateEvent = (event: any): NatalChartEvent => {
-  if (!event.userId || !event.birthDate || !event.latitude || !event.longitude || !event.ianaTimeZone) {
+  if (
+    !event.userId ||
+    !event.birthDate ||
+    !event.latitude ||
+    !event.longitude ||
+    !event.ianaTimeZone
+  ) {
     throw new Error('Missing required event properties');
   }
   return event;
@@ -41,7 +47,9 @@ export const handler = async (event: any): Promise<void> => {
 
   // This is a simplified way to get timezone offset. A robust solution would use a library
   // that handles historical timezone changes, but for this scope, this is sufficient.
-  const timezoneOffsetInHours = new Date(tempDate.toLocaleString('en-US', { timeZone: ianaTimeZone })).getTimezoneOffset() / -60;
+  const timezoneOffsetInHours =
+    new Date(tempDate.toLocaleString('en-US', { timeZone: ianaTimeZone })).getTimezoneOffset() /
+    -60;
 
   try {
     const chartData = getAllPlanets(birthDateTimeStr, longitude, latitude, timezoneOffsetInHours);

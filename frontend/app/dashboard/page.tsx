@@ -61,10 +61,10 @@ export default function DashboardPage() {
     return null;
   }
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import NatalChartTab from './natal-chart-tab';
+  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+  import NatalChartTab from './natal-chart-tab';
 
-// ... (imports and existing component logic)
+  // ... (imports and existing component logic)
 
   return (
     <div className="container mx-auto max-w-4xl p-8">

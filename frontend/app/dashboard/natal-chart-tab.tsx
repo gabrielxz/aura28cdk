@@ -73,17 +73,14 @@ export default function NatalChartTab({ userApi, userId }: NatalChartTabProps) {
     <Card className="mt-6">
       <CardHeader>
         <CardTitle>Your Natal Chart</CardTitle>
-        <CardDescription>
-          Generated on {new Date(chart.createdAt).toLocaleString()}
-        </CardDescription>
+        <CardDescription>Generated on {new Date(chart.createdAt).toLocaleString()}</CardDescription>
       </CardHeader>
       <CardContent>
         {chart.isTimeEstimated && (
           <div className="mb-4 rounded-lg border border-yellow-500/50 bg-yellow-50 p-4 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400">
             <p>
-              <strong>Note:</strong> This chart was calculated with an estimated birth time of
-              12:00 PM (noon). For a more accurate chart, please add your birth time in your
-              profile.
+              <strong>Note:</strong> This chart was calculated with an estimated birth time of 12:00
+              PM (noon). For a more accurate chart, please add your birth time in your profile.
             </p>
           </div>
         )}
