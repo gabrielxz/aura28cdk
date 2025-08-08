@@ -7,6 +7,7 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as route53_targets from 'aws-cdk-lib/aws-route53-targets';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as location from 'aws-cdk-lib/aws-location';
 import { Construct } from 'constructs';
 import { CognitoAuthConstruct } from './constructs/cognito-auth-construct';
 import { ApiConstruct } from './constructs/api-construct';
@@ -60,11 +61,20 @@ export class WebsiteStack extends cdk.Stack {
       pointInTimeRecovery: true,
     });
 
+    // Create Amazon Location Service Place Index
+    const placeIndex = new location.CfnPlaceIndex(this, 'PlaceIndex', {
+      indexName: `Aura28-${props.environment}-PlaceIndex`,
+      dataSource: 'Here',
+      description: 'Place index for Aura28 application',
+      pricingPlan: 'RequestBasedUsage',
+    });
+
     // Create API Gateway and Lambda functions
     this.api = new ApiConstruct(this, 'Api', {
       environment: props.environment,
       userTable: this.userTable,
       userPool: this.auth.userPool,
+      placeIndexName: placeIndex.indexName,
       allowedOrigins: [
         'http://localhost:3000',
         `https://${siteDomain}`,

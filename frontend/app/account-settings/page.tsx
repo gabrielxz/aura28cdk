@@ -17,6 +17,7 @@ interface FormData {
   birthCity: string;
   birthState: string;
   birthCountry: string;
+  standardizedLocationName?: string;
 }
 
 export default function AccountSettingsPage() {
@@ -43,6 +44,9 @@ export default function AccountSettingsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [standardizedLocationName, setStandardizedLocationName] = useState<string | undefined>(
+    undefined,
+  );
 
   // Check if form has been modified
   const isFormModified = () => {
@@ -77,6 +81,7 @@ export default function AccountSettingsPage() {
           };
           setFormData(formDataFromProfile);
           setOriginalFormData(formDataFromProfile);
+          setStandardizedLocationName(userProfile.profile.standardizedLocationName);
         } catch (error) {
           console.error('Failed to fetch profile:', error);
           setProfileError('Failed to load profile');
@@ -109,10 +114,11 @@ export default function AccountSettingsPage() {
         birthCountry: formData.birthCountry,
       };
 
-      await userApi.updateUserProfile(user.sub, profileData);
+      const response = await userApi.updateUserProfile(user.sub, profileData);
 
       // Update the original form data to match the saved data
       setOriginalFormData(formData);
+      setStandardizedLocationName(response.profile.profile.standardizedLocationName);
 
       // Show success toast
       toast({
@@ -237,6 +243,19 @@ export default function AccountSettingsPage() {
                 />
               </div>
             </div>
+
+            {standardizedLocationName && (
+              <div>
+                <Label htmlFor="verifiedLocation">Verified Location</Label>
+                <Input
+                  id="verifiedLocation"
+                  type="text"
+                  value={standardizedLocationName}
+                  disabled
+                  className="bg-gray-100"
+                />
+              </div>
+            )}
 
             <Button type="submit" disabled={isSubmitting || !isFormModified()} className="w-full">
               {isSubmitting ? 'Saving...' : 'Save Changes'}
