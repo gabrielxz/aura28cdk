@@ -26,7 +26,9 @@
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "~5.6.3",
-    "@types/tz-lookup": "^6.1.0"
+    "@types/tz-lookup": "^6.1.0",
+    "aws-sdk-client-mock": "^4.0.0",
+    "aws-sdk-client-mock-jest": "^4.0.0"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.859.0",
@@ -34,6 +36,7 @@
     "@aws-sdk/lib-dynamodb": "^3.859.0",
     "aws-cdk-lib": "2.206.0",
     "constructs": "^10.0.0",
-    "tz-lookup": "^6.1.25"
+    "tz-lookup": "^6.1.25",
+    "ephemeris": "^2.0.0"
   }
 }

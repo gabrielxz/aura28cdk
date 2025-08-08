@@ -2,14 +2,17 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { LocationClient, SearchPlaceIndexForTextCommand } from '@aws-sdk/client-location';
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import tzlookup from 'tz-lookup';
 
 const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 const locationClient = new LocationClient({});
+const lambdaClient = new LambdaClient({});
 
 const TABLE_NAME = process.env.TABLE_NAME!;
 const PLACE_INDEX_NAME = process.env.PLACE_INDEX_NAME!;
+const GENERATE_NATAL_CHART_FUNCTION_NAME = process.env.GENERATE_NATAL_CHART_FUNCTION_NAME!;
 
 interface ProfileData {
   email: string;
@@ -319,6 +322,24 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         TableName: TABLE_NAME,
         Item: item,
         ConditionExpression: 'attribute_not_exists(userId) OR attribute_exists(userId)',
+      }),
+    );
+
+    // Asynchronously invoke the natal chart generation Lambda
+    const invocationPayload = {
+      userId,
+      birthDate: profileData.birthDate,
+      birthTime: profileData.birthTime,
+      latitude: profileData.birthLatitude,
+      longitude: profileData.birthLongitude,
+      ianaTimeZone: profileData.ianaTimeZone,
+    };
+
+    await lambdaClient.send(
+      new InvokeCommand({
+        FunctionName: GENERATE_NATAL_CHART_FUNCTION_NAME,
+        InvocationType: 'Event', // Asynchronous invocation
+        Payload: JSON.stringify(invocationPayload),
       }),
     );
 

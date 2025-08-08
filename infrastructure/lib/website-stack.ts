@@ -69,10 +69,24 @@ export class WebsiteStack extends cdk.Stack {
       pricingPlan: 'RequestBasedUsage',
     });
 
+    // Create DynamoDB table for natal chart data
+    const natalChartTable = new dynamodb.Table(this, 'NatalChartTable', {
+      tableName: `Aura28-${props.environment}-NatalCharts`,
+      partitionKey: {
+        name: 'userId',
+        type: dynamodb.AttributeType.STRING,
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy:
+        props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+      pointInTimeRecovery: true,
+    });
+
     // Create API Gateway and Lambda functions
     this.api = new ApiConstruct(this, 'Api', {
       environment: props.environment,
       userTable: this.userTable,
+      natalChartTable: natalChartTable, // Pass the new table
       userPool: this.auth.userPool,
       placeIndexName: placeIndex.indexName,
       allowedOrigins: [

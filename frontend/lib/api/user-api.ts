@@ -29,6 +29,26 @@ export interface UpdateProfileResponse {
   profile: UserProfileResponse;
 }
 
+export interface NatalChart {
+  userId: string;
+  chartType: 'natal';
+  createdAt: string;
+  // This will be expanded with the actual chart data
+  planets: {
+    [key: string]: {
+      position: number;
+      sign: string;
+    };
+  };
+  houses: {
+    [key: string]: {
+      position: number;
+      sign: string;
+    };
+  };
+  isTimeEstimated: boolean;
+}
+
 export interface ValidationError {
   field: string;
   message: string;
@@ -81,6 +101,31 @@ export class UserApi {
       return profile;
     } catch (error) {
       console.error('Error fetching user profile:', error);
+      throw error;
+    }
+  }
+
+  async getNatalChart(userId: string): Promise<NatalChart> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${this.baseUrl}api/users/${userId}/natal-chart`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        // Handle 404 specifically
+        if (response.status === 404) {
+          throw new Error('Natal chart not found. It may still be generating.');
+        }
+        const error: ApiError = await response.json();
+        throw new Error(error.error || 'Failed to fetch natal chart');
+      }
+
+      const chart: NatalChart = await response.json();
+      return chart;
+    } catch (error) {
+      console.error('Error fetching natal chart:', error);
       throw error;
     }
   }
