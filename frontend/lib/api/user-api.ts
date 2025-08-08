@@ -10,6 +10,8 @@ export interface UserProfile {
   birthCountry: string;
   birthLatitude?: number;
   birthLongitude?: number;
+  ianaTimeZone?: string;
+  standardizedLocationName?: string;
 }
 
 export interface UserProfileResponse {

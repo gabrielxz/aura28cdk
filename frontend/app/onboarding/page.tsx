@@ -173,7 +173,16 @@ export default function OnboardingPage() {
     } catch (error) {
       console.error('Failed to save profile:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to save profile';
-      setErrors({ birthName: `${errorMessage}. Please try again.` });
+
+      if (errorMessage.includes('Could not find a valid location')) {
+        setErrors({
+          birthCity:
+            'We could not verify this location. Please check the city, state, and country.',
+        });
+        setCurrentStep(1); // Go back to the location step
+      } else {
+        setErrors({ birthName: `${errorMessage}. Please try again.` });
+      }
     } finally {
       setIsSubmitting(false);
     }
