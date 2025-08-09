@@ -43,16 +43,18 @@ export const handler = async (event: any): Promise<void> => {
   const birthDateTimeStr = `${birthDate}T${birthTime}:00`;
 
   // Create a date object that represents the local time at the birth location
-  const tempDate = new Date(birthDateTimeStr);
+  const birthDateTime = new Date(birthDateTimeStr);
 
   // This is a simplified way to get timezone offset. A robust solution would use a library
   // that handles historical timezone changes, but for this scope, this is sufficient.
   const timezoneOffsetInHours =
-    new Date(tempDate.toLocaleString('en-US', { timeZone: ianaTimeZone })).getTimezoneOffset() /
-    -60;
+    new Date(
+      birthDateTime.toLocaleString('en-US', { timeZone: ianaTimeZone }),
+    ).getTimezoneOffset() / -60;
 
   try {
-    const chartData = getAllPlanets(birthDateTimeStr, longitude, latitude, timezoneOffsetInHours);
+    // The ephemeris library expects a Date object, not a string
+    const chartData = getAllPlanets(birthDateTime, longitude, latitude, timezoneOffsetInHours);
 
     const item = {
       userId,
