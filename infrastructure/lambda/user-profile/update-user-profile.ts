@@ -335,13 +335,27 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       ianaTimeZone: profileData.ianaTimeZone,
     };
 
-    await lambdaClient.send(
-      new InvokeCommand({
-        FunctionName: GENERATE_NATAL_CHART_FUNCTION_NAME,
-        InvocationType: 'Event', // Asynchronous invocation
-        Payload: JSON.stringify(invocationPayload),
-      }),
-    );
+    console.log('Invoking natal chart generation with payload:', invocationPayload);
+    console.log('Function name:', GENERATE_NATAL_CHART_FUNCTION_NAME);
+
+    try {
+      const invocationResponse = await lambdaClient.send(
+        new InvokeCommand({
+          FunctionName: GENERATE_NATAL_CHART_FUNCTION_NAME,
+          InvocationType: 'Event', // Asynchronous invocation
+          Payload: JSON.stringify(invocationPayload),
+        }),
+      );
+      
+      console.log('Natal chart generation invoked successfully:', {
+        statusCode: invocationResponse.StatusCode,
+        functionError: invocationResponse.FunctionError,
+      });
+    } catch (invocationError) {
+      console.error('Failed to invoke natal chart generation:', invocationError);
+      // Don't fail the profile update if natal chart generation fails
+      // The user can still see their profile even if the chart isn't ready
+    }
 
     return {
       statusCode: 200,
@@ -354,7 +368,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         profile: item,
       }),
     };
-  } catch {
+  } catch (error) {
+    console.error('Error in update-user-profile handler:', error);
     return {
       statusCode: 500,
       headers: {
