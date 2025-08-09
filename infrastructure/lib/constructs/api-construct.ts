@@ -11,6 +11,7 @@ import * as path from 'path';
 export interface ApiConstructProps {
   environment: 'dev' | 'prod';
   userTable: dynamodb.Table;
+  natalChartTable: dynamodb.Table;
   userPool: cognito.UserPool;
   placeIndexName: string;
   allowedOrigins: string[];
@@ -20,6 +21,8 @@ export class ApiConstruct extends Construct {
   public readonly api: apigateway.RestApi;
   public readonly getUserProfileFunction: lambda.Function;
   public readonly updateUserProfileFunction: lambda.Function;
+  public readonly generateNatalChartFunction: lambda.Function;
+  public readonly getNatalChartFunction: lambda.Function;
 
   constructor(scope: Construct, id: string, props: ApiConstructProps) {
     super(scope, id);
@@ -41,6 +44,27 @@ export class ApiConstruct extends Construct {
       },
     });
 
+    // Create generateNatalChartFunction first, before updateUserProfileFunction that references it
+    this.generateNatalChartFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'GenerateNatalChartFunction',
+      {
+        functionName: `aura28-${props.environment}-generate-natal-chart`,
+        entry: path.join(__dirname, '../../lambda/natal-chart/generate-natal-chart.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_18_X,
+        environment: {
+          NATAL_CHART_TABLE_NAME: props.natalChartTable.tableName,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 512, // Increased memory for ephemeris calculations
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
     this.updateUserProfileFunction = new lambdaNodeJs.NodejsFunction(
       this,
       'UpdateUserProfileFunction',
@@ -52,6 +76,7 @@ export class ApiConstruct extends Construct {
         environment: {
           TABLE_NAME: props.userTable.tableName,
           PLACE_INDEX_NAME: props.placeIndexName,
+          GENERATE_NATAL_CHART_FUNCTION_NAME: this.generateNatalChartFunction.functionName,
         },
         timeout: cdk.Duration.seconds(30),
         memorySize: 256,
@@ -65,6 +90,28 @@ export class ApiConstruct extends Construct {
     // Grant DynamoDB permissions
     props.userTable.grantReadData(this.getUserProfileFunction);
     props.userTable.grantWriteData(this.updateUserProfileFunction);
+    props.natalChartTable.grantWriteData(this.generateNatalChartFunction);
+
+    this.getNatalChartFunction = new lambdaNodeJs.NodejsFunction(this, 'GetNatalChartFunction', {
+      functionName: `aura28-${props.environment}-get-natal-chart`,
+      entry: path.join(__dirname, '../../lambda/natal-chart/get-natal-chart.ts'),
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_18_X,
+      environment: {
+        NATAL_CHART_TABLE_NAME: props.natalChartTable.tableName,
+      },
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      bundling: {
+        externalModules: ['@aws-sdk/*'],
+        forceDockerBundling: false,
+      },
+    });
+
+    props.natalChartTable.grantReadData(this.getNatalChartFunction);
+
+    // Grant invocation permission
+    this.generateNatalChartFunction.grantInvoke(this.updateUserProfileFunction);
 
     // Grant Location Service permissions
     this.updateUserProfileFunction.addToRolePolicy(
@@ -119,6 +166,17 @@ export class ApiConstruct extends Construct {
     profileResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(this.getUserProfileFunction),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      },
+    );
+
+    // Add /api/users/{userId}/natal-chart resource
+    const natalChartResource = userIdResource.addResource('natal-chart');
+    natalChartResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(this.getNatalChartFunction),
       {
         authorizer,
         authorizationType: apigateway.AuthorizationType.COGNITO,

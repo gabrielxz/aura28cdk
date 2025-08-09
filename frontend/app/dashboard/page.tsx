@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/use-auth';
 import { UserApi, UserProfileResponse } from '@/lib/api/user-api';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import NatalChartTab from './natal-chart-tab';
 
 export default function DashboardPage() {
   const { user, loading, authService } = useAuth();
@@ -63,74 +65,70 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto max-w-4xl p-8">
-      <h1 className="mb-8 text-3xl font-bold">Dashboard</h1>
+      <h1 className="mb-4 text-3xl font-bold">Dashboard</h1>
+      <h2 className="mb-8 text-xl text-gray-600 dark:text-gray-400">
+        Welcome back, {profile?.profile.birthName || user.email}!
+      </h2>
 
-      <div className="rounded-lg bg-gray-50 p-6 dark:bg-gray-900">
-        <h2 className="mb-4 text-xl font-semibold">Welcome, {user.email}!</h2>
-
-        <div className="space-y-2">
-          <p>
-            <strong>User ID:</strong> {user.sub}
-          </p>
-          <p>
-            <strong>Email:</strong> {user.email}
-          </p>
-          <p>
-            <strong>Email Verified:</strong> {user.email_verified ? 'Yes' : 'No'}
-          </p>
-          {user.given_name && (
-            <p>
-              <strong>First Name:</strong> {user.given_name}
-            </p>
-          )}
-          {user.family_name && (
-            <p>
-              <strong>Last Name:</strong> {user.family_name}
-            </p>
-          )}
-        </div>
-
-        {profileError && (
-          <div className="mt-4 rounded-lg bg-red-50 p-4 text-red-600">
-            <p>{profileError}</p>
-          </div>
-        )}
-
-        {profile && (
-          <div className="mt-6">
-            <h3 className="mb-2 text-lg font-semibold">Birth Information</h3>
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="natal-chart">Natal Chart</TabsTrigger>
+        </TabsList>
+        <TabsContent value="profile">
+          <div className="mt-6 rounded-lg bg-gray-50 p-6 dark:bg-gray-900">
+            <h3 className="mb-4 text-xl font-semibold">User Profile</h3>
             <div className="space-y-2">
               <p>
-                <strong>Birth Name:</strong> {profile.profile.birthName}
+                <strong>User ID:</strong> {user.sub}
               </p>
               <p>
-                <strong>Birth Date:</strong>{' '}
-                {new Date(profile.profile.birthDate).toLocaleDateString('en-US', {
-                  timeZone: 'UTC',
-                })}
+                <strong>Email:</strong> {user.email}
               </p>
-              {profile.profile.birthTime && (
-                <p>
-                  <strong>Birth Time:</strong> {profile.profile.birthTime}
-                </p>
-              )}
               <p>
-                <strong>Birth Location:</strong> {profile.profile.birthCity},{' '}
-                {profile.profile.birthState}, {profile.profile.birthCountry}
-              </p>
-              {profile.profile.birthLatitude && profile.profile.birthLongitude && (
-                <p>
-                  <strong>Coordinates:</strong> {profile.profile.birthLatitude},{' '}
-                  {profile.profile.birthLongitude}
-                </p>
-              )}
-              <p className="mt-2 text-sm text-gray-500">
-                <strong>Profile Updated:</strong> {new Date(profile.updatedAt).toLocaleString()}
+                <strong>Email Verified:</strong> {user.email_verified ? 'Yes' : 'No'}
               </p>
             </div>
+
+            {profileError && (
+              <div className="mt-4 rounded-lg bg-red-50 p-4 text-red-600">
+                <p>{profileError}</p>
+              </div>
+            )}
+
+            {profile && (
+              <div className="mt-6">
+                <h3 className="mb-2 text-lg font-semibold">Birth Information</h3>
+                <div className="space-y-2">
+                  <p>
+                    <strong>Birth Name:</strong> {profile.profile.birthName}
+                  </p>
+                  <p>
+                    <strong>Birth Date:</strong>{' '}
+                    {new Date(profile.profile.birthDate).toLocaleDateString('en-US', {
+                      timeZone: 'UTC',
+                    })}
+                  </p>
+                  {profile.profile.birthTime && (
+                    <p>
+                      <strong>Birth Time:</strong> {profile.profile.birthTime}
+                    </p>
+                  )}
+                  <p>
+                    <strong>Birth Location:</strong> {profile.profile.standardizedLocationName}
+                  </p>
+                  <p className="mt-2 text-sm text-gray-500">
+                    <strong>Profile Updated:</strong> {new Date(profile.updatedAt).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </TabsContent>
+        <TabsContent value="natal-chart">
+          <NatalChartTab userApi={userApi} userId={user.sub} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
