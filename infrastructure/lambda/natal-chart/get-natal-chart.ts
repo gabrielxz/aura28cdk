@@ -8,10 +8,18 @@ const docClient = DynamoDBDocumentClient.from(dynamoClient);
 const NATAL_CHART_TABLE_NAME = process.env.NATAL_CHART_TABLE_NAME!;
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  // CORS headers for all responses
+  const corsHeaders = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+
   const userId = event.pathParameters?.userId;
   if (!userId) {
     return {
       statusCode: 400,
+      headers: corsHeaders,
       body: JSON.stringify({ error: 'Missing userId parameter' }),
     };
   }
@@ -21,7 +29,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
   if (!authorizerUserId || authorizerUserId !== userId) {
     return {
       statusCode: 403,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: corsHeaders,
       body: JSON.stringify({ error: 'Forbidden' }),
     };
   }
@@ -37,18 +45,21 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (!Item) {
       return {
         statusCode: 404,
+        headers: corsHeaders,
         body: JSON.stringify({ error: 'Natal chart not found' }),
       };
     }
 
     return {
       statusCode: 200,
+      headers: corsHeaders,
       body: JSON.stringify(Item),
     };
   } catch (error) {
     console.error(error);
     return {
       statusCode: 500,
+      headers: corsHeaders,
       body: JSON.stringify({ error: 'Internal server error' }),
     };
   }
