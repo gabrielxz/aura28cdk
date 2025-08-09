@@ -84,14 +84,21 @@ export default function NatalChartTab({ userApi, userId }: NatalChartTabProps) {
             </p>
           </div>
         )}
-        <h4 className="mb-2 text-lg font-semibold">Planetary Positions</h4>
-        <pre className="overflow-x-auto rounded-lg bg-gray-100 p-4 dark:bg-gray-800">
-          <code>{JSON.stringify(chart.planets, null, 2)}</code>
-        </pre>
-        <h4 className="mb-2 mt-4 text-lg font-semibold">House Cusps</h4>
-        <pre className="overflow-x-auto rounded-lg bg-gray-100 p-4 dark:bg-gray-800">
-          <code>{JSON.stringify(chart.houses, null, 2)}</code>
-        </pre>
+        <h4 className="mb-4 text-lg font-semibold">Planetary Positions</h4>
+        <div className="space-y-2">
+          {chart.planets &&
+            Object.entries(chart.planets).map(([planetKey, planetData]) => (
+              <div key={planetKey} className="rounded-lg border p-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium capitalize">{planetData.name || planetKey}</span>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="mr-4">{planetData.longitudeDms}</span>
+                    <span>{planetData.longitude.toFixed(2)}°</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
       </CardContent>
     </Card>
   );

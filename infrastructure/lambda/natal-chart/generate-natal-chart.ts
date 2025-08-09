@@ -56,6 +56,23 @@ export const handler = async (event: any): Promise<void> => {
     // The ephemeris library expects a Date object, not a string
     const chartData = getAllPlanets(birthDateTime, longitude, latitude, timezoneOffsetInHours);
 
+    // Extract planetary positions from the observed namespace
+    const planets: Record<string, any> = {};
+    if (chartData.observed) {
+      // The ephemeris library returns data in the 'observed' property
+      Object.keys(chartData.observed).forEach((planetName) => {
+        const planetData = chartData.observed[planetName];
+        if (planetData) {
+          planets[planetName] = {
+            longitude: planetData.apparentLongitudeDd || 0,
+            longitudeDms: planetData.apparentLongitudeDms360 || '',
+            distanceKm: planetData.geocentricDistanceKm || 0,
+            name: planetData.name || planetName,
+          };
+        }
+      });
+    }
+
     const item = {
       userId,
       chartType: 'natal',
@@ -65,8 +82,8 @@ export const handler = async (event: any): Promise<void> => {
         ...validatedEvent,
         birthTime, // ensure birthTime is stored even if estimated
       },
-      planets: chartData.planets,
-      houses: chartData.houses,
+      planets,
+      // Note: The ephemeris library doesn't calculate astrological houses
     };
 
     await docClient.send(

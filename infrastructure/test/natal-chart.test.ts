@@ -6,8 +6,20 @@ import 'aws-sdk-client-mock-jest';
 // Mock the ephemeris library
 jest.mock('ephemeris', () => ({
   getAllPlanets: jest.fn(() => ({
-    planets: { sun: { longitude: 10.0 } },
-    houses: { '1': { longitude: 20.0 } },
+    observed: {
+      sun: {
+        apparentLongitudeDd: 10.0,
+        apparentLongitudeDms360: '10°00\'00"',
+        geocentricDistanceKm: 149597870.7,
+        name: 'sun',
+      },
+      moon: {
+        apparentLongitudeDd: 45.5,
+        apparentLongitudeDms360: '45°30\'00"',
+        geocentricDistanceKm: 384400,
+        name: 'moon',
+      },
+    },
   })),
 }));
 
@@ -39,8 +51,18 @@ describe('Generate Natal Chart Lambda', () => {
         userId: 'test-user-1',
         isTimeEstimated: false,
         chartType: 'natal',
-        planets: { sun: { longitude: 10 } },
-        houses: { '1': { longitude: 20 } },
+        planets: expect.objectContaining({
+          sun: expect.objectContaining({
+            longitude: 10.0,
+            longitudeDms: '10°00\'00"',
+            name: 'sun',
+          }),
+          moon: expect.objectContaining({
+            longitude: 45.5,
+            longitudeDms: '45°30\'00"',
+            name: 'moon',
+          }),
+        }),
       }),
     });
   });

@@ -33,20 +33,22 @@ export interface NatalChart {
   userId: string;
   chartType: 'natal';
   createdAt: string;
-  // This will be expanded with the actual chart data
   planets: {
     [key: string]: {
-      position: number;
-      sign: string;
-    };
-  };
-  houses: {
-    [key: string]: {
-      position: number;
-      sign: string;
+      longitude: number;
+      longitudeDms: string;
+      distanceKm: number;
+      name: string;
     };
   };
   isTimeEstimated: boolean;
+  birthInfo?: {
+    birthDate: string;
+    birthTime?: string;
+    latitude: number;
+    longitude: number;
+    ianaTimeZone: string;
+  };
 }
 
 export interface ValidationError {
