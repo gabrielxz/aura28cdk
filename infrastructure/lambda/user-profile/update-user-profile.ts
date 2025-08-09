@@ -346,7 +346,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           Payload: JSON.stringify(invocationPayload),
         }),
       );
-      
+
       console.log('Natal chart generation invoked successfully:', {
         statusCode: invocationResponse.StatusCode,
         functionError: invocationResponse.FunctionError,
