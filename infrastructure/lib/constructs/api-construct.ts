@@ -44,6 +44,27 @@ export class ApiConstruct extends Construct {
       },
     });
 
+    // Create generateNatalChartFunction first, before updateUserProfileFunction that references it
+    this.generateNatalChartFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'GenerateNatalChartFunction',
+      {
+        functionName: `aura28-${props.environment}-generate-natal-chart`,
+        entry: path.join(__dirname, '../../lambda/natal-chart/generate-natal-chart.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_18_X,
+        environment: {
+          NATAL_CHART_TABLE_NAME: props.natalChartTable.tableName,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 512, // Increased memory for ephemeris calculations
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
     this.updateUserProfileFunction = new lambdaNodeJs.NodejsFunction(
       this,
       'UpdateUserProfileFunction',
@@ -59,26 +80,6 @@ export class ApiConstruct extends Construct {
         },
         timeout: cdk.Duration.seconds(30),
         memorySize: 256,
-        bundling: {
-          externalModules: ['@aws-sdk/*'],
-          forceDockerBundling: false,
-        },
-      },
-    );
-
-    this.generateNatalChartFunction = new lambdaNodeJs.NodejsFunction(
-      this,
-      'GenerateNatalChartFunction',
-      {
-        functionName: `aura28-${props.environment}-generate-natal-chart`,
-        entry: path.join(__dirname, '../../lambda/natal-chart/generate-natal-chart.ts'),
-        handler: 'handler',
-        runtime: lambda.Runtime.NODEJS_18_X,
-        environment: {
-          NATAL_CHART_TABLE_NAME: props.natalChartTable.tableName,
-        },
-        timeout: cdk.Duration.seconds(30),
-        memorySize: 512, // Increased memory for ephemeris calculations
         bundling: {
           externalModules: ['@aws-sdk/*'],
           forceDockerBundling: false,

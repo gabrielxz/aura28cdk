@@ -75,3 +75,6 @@ infrastructure/node_modules/
 # Logs
 logs/
 *.log
+
+# Claude Code
+.claude/

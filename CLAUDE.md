@@ -60,20 +60,6 @@ Aura28 is a modern web platform built with Next.js, TypeScript, Tailwind CSS, an
 - **CI/CD**: GitHub Actions with separate jobs for linting, testing, and deployment
 - **SSL/TLS**: Certificates managed via ACM in us-east-1
 
-### 7. Git Workflow Rules
-
-**CRITICAL**: These rules MUST be followed at all times:
-
-- **NEVER push directly to main branch**
-- **ALWAYS work in the develop branch** unless explicitly instructed otherwise
-- **Production deployments** only happen via merging develop → main
-- **Default branch**: Always use `develop` for all changes
-- **Commit workflow**:
-  1. Make changes in develop branch
-  2. Run pre-commit checklist
-  3. Commit and push to develop
-  4. Only merge to main when explicitly requested by user
-
 ## Route Manifest
 
 ### Current Routes
@@ -125,6 +111,8 @@ aura28cdk/
 4. Format code: `npm run format` (at root)
 5. Lint code: `npm run lint` (at root)
 
+<<<<<<< Updated upstream
+
 ### Pre-Commit Checklist
 
 **IMPORTANT**: Before committing or pushing any changes, you MUST complete ALL of the following steps in this specific order.
@@ -142,7 +130,7 @@ aura28cdk/
 
 4. **Run formatting**: `npm run format` (at root level)
    - This ensures all source code AND build artifacts (like `.d.ts` files) follow consistent formatting rules.
-   - Run this *after* the build to prevent CI/CD failures due to formatting.
+   - Run this _after_ the build to prevent CI/CD failures due to formatting.
 
 5. **Verify no untracked files**: `git status`
    - Ensure all necessary files, including newly formatted build artifacts, are staged for commit.
@@ -180,33 +168,13 @@ aura28cdk/
    - Missing mock properties will cause runtime errors in tests
    - Always run `npm run test:frontend` after modifying auth context or hooks
 
-### Deployment
-
-1. Make changes and test locally
-2. Commit to `develop` branch
-3. GitHub Actions runs tests and deploys to dev
-4. Merge to `main` when ready for production
-
-### CDK Commands
-
-```bash
-# Deploy to dev (default)
-cd infrastructure && npx cdk deploy
-
-# Deploy to prod
-cd infrastructure && npx cdk deploy -c env=prod
-
-# View differences
-cd infrastructure && npx cdk diff -c env=prod
-```
-
 ## Maintenance Guidelines
 
 ### When Adding New Features
 
 1. Update this CLAUDE.md file with new routes or architectural changes
 2. Add appropriate tests
-3. Run linting and formatting before committing
+3. Run linting and formatting
 4. Ensure all AWS resources are properly tagged
 
 ### When Updating Dependencies
@@ -235,7 +203,6 @@ cd infrastructure && npx cdk diff -c env=prod
 - **Hosted UI**: Cognito-managed login/signup pages
 - **OAuth Flow**: Authorization code grant with PKCE
 - **Token Storage**: Client-side localStorage with automatic refresh
-- **Important Note**: Cognito custom attributes cannot be removed once created. Full stack deletion required for schema changes.
 
 ### Frontend Auth Implementation
 
@@ -369,21 +336,6 @@ To address favicon caching issues in CloudFront:
 
 ## Migration Notes
 
-### Changing Stack Names
-
-When updating stack naming conventions (e.g., from `Aura28DevStack` to `Aura28-dev-Stack`):
-
-1. **Delete existing stacks in AWS CloudFormation console**
-   - Development stacks can be deleted safely (S3 bucket has DESTROY policy)
-   - Production requires manual S3 bucket deletion after stack deletion (RETAIN policy)
-
-2. **Clean up Route 53 records**
-   - Delete orphaned ACM validation CNAME records (start with underscore)
-   - Keep NS and SOA records
-
-3. **Update deployment commands**
-   - Use context-based deployment: `npx cdk deploy -c env=dev`
-
 ### S3 Bucket Naming Conflicts
 
 S3 bucket names must be globally unique. If you encounter conflicts:
@@ -392,39 +344,6 @@ S3 bucket names must be globally unique. If you encounter conflicts:
 - Or use a different naming pattern in the new stack
 
 ## Useful Development Commands
-
-### User Management
-
-Delete a single Cognito user:
-
-```bash
-aws cognito-idp admin-delete-user \
-  --user-pool-id us-east-1_rsin8LPL2 \
-  --username user@example.com \
-  --region us-east-1
-```
-
-List all users:
-
-```bash
-aws cognito-idp list-users \
-  --user-pool-id us-east-1_rsin8LPL2 \
-  --region us-east-1
-```
-
-Delete all users (use with caution):
-
-```bash
-aws cognito-idp list-users --user-pool-id us-east-1_rsin8LPL2 --region us-east-1 | \
-  jq -r '.Users[].Username' | \
-  while read username; do
-    echo "Deleting $username"
-    aws cognito-idp admin-delete-user \
-      --user-pool-id us-east-1_rsin8LPL2 \
-      --username "$username" \
-      --region us-east-1
-  done
-```
 
 ### Testing Commands
 
@@ -512,14 +431,6 @@ const response = await fetch(`${process.env.NEXT_PUBLIC_API_GATEWAY_URL}/users/$
 - `PROD_AWS_REGION` - us-east-1
 - `PROD_NEXT_PUBLIC_API_GATEWAY_URL` - Prod API Gateway URL
 
-### Deployment Workflow
-
-1. Code pushed to `develop` branch
-2. GitHub Actions runs tests and linting
-3. CDK deploys infrastructure to dev
-4. Frontend builds with API Gateway URL
-5. Static assets deployed to S3/CloudFront
-
 ## Future Enhancements
 
 - Social login providers (Google, Apple, Facebook) - OAuth secrets provisioned
@@ -532,50 +443,6 @@ const response = await fetch(`${process.env.NEXT_PUBLIC_API_GATEWAY_URL}/users/$
 - Ephemeris calculations for astrology
 - Global Secondary Indexes for additional query patterns
 - DynamoDB Streams for real-time updates
-
-6. **DynamoDB Undefined Values Error**
-   - **Cause**: DynamoDB SDK doesn't allow undefined values in item attributes
-   - **Error**: "Pass options.removeUndefinedValues=true to remove undefined values"
-   - **Solution**: Build objects conditionally, only including fields with defined values
-   - **Example**:
-
-     ```typescript
-     const profile: any = {
-       birthName: profileData.birthName,
-       birthDate: profileData.birthDate,
-       // Required fields...
-     };
-
-     // Only add optional fields if they have values
-     if (profileData.birthTime) {
-       profile.birthTime = profileData.birthTime;
-     }
-     ```
-
-7. **Cognito Custom Attributes Immutability**
-   - **Issue**: Once custom attributes are added to a Cognito User Pool, they cannot be removed
-   - **Impact**: Schema changes require complete stack deletion and recreation
-   - **Solution**: Delete stack, clean up resources, and redeploy with new schema
-   - **Prevention**: Carefully plan Cognito schema before production deployment
-
-## Migration from Cognito Custom Attributes to DynamoDB
-
-The project has migrated from storing user profile data in Cognito custom attributes to using DynamoDB with an API layer. This provides:
-
-1. **Flexibility**: Profile schema can be modified without recreating the User Pool
-2. **Scalability**: DynamoDB handles complex data structures better than Cognito attributes
-3. **Performance**: Direct database queries vs parsing JWT tokens
-4. **Cost Optimization**: Pay-per-request billing for DynamoDB
-5. **Future-proofing**: Easier to add features like user history, preferences, etc.
-
-### Migration Steps Taken
-
-1. Removed Cognito custom attributes from CDK stack
-2. Created DynamoDB table with userId/createdAt composite key
-3. Implemented API Gateway with Lambda functions
-4. Updated frontend to call API instead of Cognito UpdateUserAttributes
-5. Added API Gateway URL to GitHub Actions secrets
-6. Deployed to both dev and prod environments
 
 ---
 
