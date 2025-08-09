@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/use-auth';
 import { UserApi, UserProfileResponse } from '@/lib/api/user-api';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import NatalChartTab from './natal-chart-tab';
 
 export default function DashboardPage() {
   const { user, loading, authService } = useAuth();
@@ -60,11 +62,6 @@ export default function DashboardPage() {
   if (!user) {
     return null;
   }
-
-  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-  import NatalChartTab from './natal-chart-tab';
-
-  // ... (imports and existing component logic)
 
   return (
     <div className="container mx-auto max-w-4xl p-8">
