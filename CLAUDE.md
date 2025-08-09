@@ -128,9 +128,11 @@ aura28cdk/
    - Ensures the project builds successfully and catches TypeScript compilation errors.
    - **This step must be run BEFORE formatting**, as it generates declaration files (`.d.ts`) that also need to be formatted.
 
-4. **Run formatting**: `npm run format` (at root level)
-   - This ensures all source code AND build artifacts (like `.d.ts` files) follow consistent formatting rules.
-   - Run this _after_ the build to prevent CI/CD failures due to formatting.
+4. **Run formatting**: `npm run format` followed by `npm run format:check` (at root level)
+   - First run `npm run format` to fix any formatting issues
+   - Then run `npm run format:check` to verify formatting matches CI/CD expectations
+   - This ensures all source code AND build artifacts (like `.d.ts` files) follow consistent formatting rules
+   - Run these _after_ the build to prevent CI/CD failures due to formatting of generated files
 
 5. **Verify no untracked files**: `git status`
    - Ensure all necessary files, including newly formatted build artifacts, are staged for commit.
