@@ -131,6 +131,70 @@ describe('OnboardingPage', () => {
     });
   });
 
+  it('validates birth time is required on step 3', async () => {
+    const mockAuthService = {
+      getIdToken: jest.fn().mockResolvedValue('mock-token'),
+    };
+
+    // Mock UserApi
+    const mockHasCompletedOnboarding = jest.fn().mockResolvedValue(false);
+    (UserApi as jest.Mock).mockImplementation(() => ({
+      hasCompletedOnboarding: mockHasCompletedOnboarding,
+    }));
+
+    (useAuth as jest.Mock).mockReturnValue({
+      user: mockUser,
+      loading: false,
+      refreshUser: jest.fn(),
+      authService: mockAuthService,
+    });
+
+    render(<OnboardingPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('City')).toBeInTheDocument();
+    });
+
+    // Navigate through steps 1 and 2
+    // Step 1
+    fireEvent.change(screen.getByLabelText('City'), {
+      target: { value: 'San Francisco' },
+    });
+    fireEvent.change(screen.getByLabelText('State/Province'), {
+      target: { value: 'California' },
+    });
+    fireEvent.change(screen.getByLabelText('Country'), {
+      target: { value: 'United States' },
+    });
+    fireEvent.click(screen.getByText('Next'));
+
+    // Step 2
+    await waitFor(() => screen.getByLabelText('Month'));
+    fireEvent.change(screen.getByLabelText('Month'), {
+      target: { value: '7' },
+    });
+    fireEvent.change(screen.getByLabelText('Day'), {
+      target: { value: '15' },
+    });
+    fireEvent.change(screen.getByLabelText('Year'), {
+      target: { value: '1990' },
+    });
+    fireEvent.click(screen.getByText('Next'));
+
+    // Step 3 - Try to proceed without entering birth time
+    await waitFor(() => {
+      expect(screen.getByText('Birth Time')).toBeInTheDocument();
+    });
+
+    const nextButton = screen.getByText('Next');
+    fireEvent.click(nextButton);
+
+    // Should show validation error
+    await waitFor(() => {
+      expect(screen.getByText('Birth time is required')).toBeInTheDocument();
+    });
+  });
+
   it('validates required fields on step 1', async () => {
     const mockAuthService = {
       getIdToken: jest.fn().mockResolvedValue('mock-token'),
@@ -273,9 +337,13 @@ describe('OnboardingPage', () => {
     });
     fireEvent.click(screen.getByText('Next'));
 
-    // Step 3: Birth Time (optional)
+    // Step 3: Birth Time (required)
     await waitFor(() => {
       expect(screen.getByText('Birth Time')).toBeInTheDocument();
+    });
+    // Now birth time is required, add a time value
+    fireEvent.change(screen.getByLabelText('Time of Birth'), {
+      target: { value: '14:30' },
     });
     fireEvent.click(screen.getByText('Next'));
 
@@ -296,7 +364,7 @@ describe('OnboardingPage', () => {
         email: 'test@example.com',
         birthName: 'John Michael Smith',
         birthDate: '1990-07-15',
-        birthTime: undefined,
+        birthTime: '14:30',
         birthCity: 'San Francisco',
         birthState: 'California',
         birthCountry: 'United States',
@@ -367,8 +435,11 @@ describe('OnboardingPage', () => {
     });
     fireEvent.click(screen.getByText('Next'));
 
-    // Step 3
-    await waitFor(() => screen.getByText('Next'));
+    // Step 3 - Birth time is now required
+    await waitFor(() => screen.getByLabelText('Time of Birth'));
+    fireEvent.change(screen.getByLabelText('Time of Birth'), {
+      target: { value: '10:15' },
+    });
     fireEvent.click(screen.getByText('Next'));
 
     // Step 4

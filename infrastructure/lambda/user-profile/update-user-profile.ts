@@ -18,7 +18,7 @@ interface ProfileData {
   email: string;
   birthName: string;
   birthDate: string;
-  birthTime?: string;
+  birthTime: string;
   birthCity: string;
   birthState: string;
   birthCountry: string;
@@ -117,11 +117,11 @@ const validateBirthData = (data: any): ValidationError[] => {
     }
   }
 
-  // Birth time validation (optional)
-  if (data.birthTime && typeof data.birthTime === 'string') {
-    if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(data.birthTime)) {
-      errors.push({ field: 'birthTime', message: 'Birth time must be in HH:MM format (24-hour)' });
-    }
+  // Birth time validation (required)
+  if (!data.birthTime || typeof data.birthTime !== 'string') {
+    errors.push({ field: 'birthTime', message: 'Birth time is required' });
+  } else if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(data.birthTime)) {
+    errors.push({ field: 'birthTime', message: 'Birth time must be in HH:MM format (24-hour)' });
   }
 
   // Location validation
@@ -280,15 +280,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const profile: any = {
       birthName: profileData.birthName.trim(),
       birthDate: profileData.birthDate,
+      birthTime: profileData.birthTime.trim(),
       birthCity: profileData.birthCity.trim(),
       birthState: profileData.birthState.trim(),
       birthCountry: profileData.birthCountry.trim(),
     };
 
     // Only add optional fields if they have values
-    if (profileData.birthTime) {
-      profile.birthTime = profileData.birthTime.trim();
-    }
 
     if (profileData.birthLatitude !== undefined) {
       profile.birthLatitude = profileData.birthLatitude;

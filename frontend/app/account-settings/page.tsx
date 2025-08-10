@@ -108,7 +108,7 @@ export default function AccountSettingsPage() {
         email: user.email,
         birthName: formData.birthName,
         birthDate: formData.birthDate,
-        birthTime: formData.birthTime || undefined,
+        birthTime: formData.birthTime,
         birthCity: formData.birthCity,
         birthState: formData.birthState,
         birthCountry: formData.birthCountry,
@@ -199,13 +199,14 @@ export default function AccountSettingsPage() {
             </div>
 
             <div>
-              <Label htmlFor="birthTime">Time of Birth (optional)</Label>
+              <Label htmlFor="birthTime">Time of Birth</Label>
               <Input
                 id="birthTime"
                 type="time"
                 value={formData.birthTime}
                 onChange={(e) => handleInputChange('birthTime', e.target.value)}
                 placeholder="HH:MM"
+                required
               />
             </div>
 
@@ -257,7 +258,11 @@ export default function AccountSettingsPage() {
               </div>
             )}
 
-            <Button type="submit" disabled={isSubmitting || !isFormModified()} className="w-full">
+            <Button
+              type="submit"
+              disabled={isSubmitting || !isFormModified() || !formData.birthTime}
+              className="w-full"
+            >
               {isSubmitting ? 'Saving...' : 'Save Changes'}
             </Button>
           </form>

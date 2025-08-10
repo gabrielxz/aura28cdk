@@ -107,7 +107,7 @@ export default function OnboardingPage() {
         if (year < 1900 || year > new Date().getFullYear()) newErrors.birthYear = 'Invalid year';
         break;
       case 3:
-        // Birth time is optional, no validation needed
+        if (!formData.birthTime.trim()) newErrors.birthTime = 'Birth time is required';
         break;
       case 4:
         if (!formData.birthName.trim()) newErrors.birthName = 'Full name is required';
@@ -151,7 +151,7 @@ export default function OnboardingPage() {
         email: user.email,
         birthName: formData.birthName,
         birthDate: birthDate,
-        birthTime: formData.birthTime || undefined,
+        birthTime: formData.birthTime,
         birthCity: formData.birthCity,
         birthState: formData.birthState,
         birthCountry: formData.birthCountry,
@@ -326,18 +326,21 @@ export default function OnboardingPage() {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Birth Time</h3>
               <p className="text-sm text-gray-600">
-                Your birth time helps us create more accurate readings. If you don&apos;t know your
-                exact birth time, you can leave this blank.
+                Your exact birth time is required for accurate astrological calculations.
               </p>
               <div>
-                <Label htmlFor="birthTime">Time of Birth (optional)</Label>
+                <Label htmlFor="birthTime">Time of Birth</Label>
                 <Input
                   id="birthTime"
                   type="time"
                   value={formData.birthTime}
                   onChange={(e) => updateFormData('birthTime', e.target.value)}
                   placeholder="HH:MM"
+                  className={errors.birthTime ? 'border-red-500' : ''}
                 />
+                {errors.birthTime && (
+                  <p className="mt-1 text-sm text-red-500">{errors.birthTime}</p>
+                )}
               </div>
             </div>
           )}
