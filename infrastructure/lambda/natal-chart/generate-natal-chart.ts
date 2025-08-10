@@ -320,8 +320,9 @@ export const handler = async (event: any): Promise<void> => {
 
   // Calculate timezone offset
   const timezoneOffsetInHours =
-    new Date(birthDateTime.toLocaleString('en-US', { timeZone: ianaTimeZone })).getTimezoneOffset() /
-    -60;
+    new Date(
+      birthDateTime.toLocaleString('en-US', { timeZone: ianaTimeZone }),
+    ).getTimezoneOffset() / -60;
 
   try {
     // Calculate planetary positions using existing ephemeris library
