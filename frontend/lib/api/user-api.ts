@@ -29,6 +29,21 @@ export interface UpdateProfileResponse {
   profile: UserProfileResponse;
 }
 
+export interface HouseData {
+  houseNumber: number;
+  cuspDegree: number;
+  cuspSign: string;
+  cuspDegreeInSign: number;
+  cuspMinutes: number;
+}
+
+export interface AngleData {
+  degree: number;
+  sign: string;
+  degreeInSign: number;
+  minutes: number;
+}
+
 export interface NatalChart {
   userId: string;
   chartType: 'natal';
@@ -41,6 +56,14 @@ export interface NatalChart {
       name: string;
     };
   };
+  houses?: {
+    status: 'success' | 'failed';
+    data?: HouseData[];
+    error?: string;
+  };
+  ascendant?: AngleData;
+  midheaven?: AngleData;
+  planetHouses?: Record<string, number>;
   isTimeEstimated: boolean;
   birthInfo?: {
     birthDate: string;
@@ -48,6 +71,13 @@ export interface NatalChart {
     latitude: number;
     longitude: number;
     ianaTimeZone: string;
+  };
+  metadata?: {
+    calculationTimestamp: string;
+    algoVersion: string;
+    ephemerisVersion: string;
+    swetestVersion: string;
+    inputHash: string;
   };
 }
 
