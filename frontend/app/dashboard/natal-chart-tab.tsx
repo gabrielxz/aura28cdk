@@ -89,8 +89,9 @@ export default function NatalChartTab({ userApi, userId }: NatalChartTabProps) {
           {chart.isTimeEstimated && (
             <div className="mb-4 rounded-lg border border-yellow-500/50 bg-yellow-50 p-4 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400">
               <p>
-                <strong>Note:</strong> This chart was calculated with an estimated birth time of 12:00
-                PM (noon). For a more accurate chart, please add your birth time in your profile.
+                <strong>Note:</strong> This chart was calculated with an estimated birth time of
+                12:00 PM (noon). For a more accurate chart, please add your birth time in your
+                profile.
               </p>
             </div>
           )}
@@ -157,7 +158,10 @@ export default function NatalChartTab({ userApi, userId }: NatalChartTabProps) {
               <tbody>
                 {chart.planets &&
                   Object.entries(chart.planets).map(([planetKey, planetData]) => (
-                    <tr key={planetKey} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <tr
+                      key={planetKey}
+                      className="border-b hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
                       <td className="p-2 font-medium capitalize">{planetData.name || planetKey}</td>
                       <td className="p-2">{planetData.longitudeDms.split(' ')[1] || ''}</td>
                       <td className="p-2 text-sm text-gray-600 dark:text-gray-400">

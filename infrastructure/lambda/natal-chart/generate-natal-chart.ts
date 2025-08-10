@@ -10,11 +10,11 @@ const docClient = DynamoDBDocumentClient.from(dynamoClient);
 let swisseph: any;
 try {
   swisseph = require('/opt/nodejs/node_modules/swisseph');
-} catch (error) {
+} catch (_error) {
   console.warn('Swiss Ephemeris not available from layer, falling back to local if available');
   try {
     swisseph = require('swisseph');
-  } catch (e) {
+  } catch (_e) {
     console.error('Swiss Ephemeris not available');
   }
 }
