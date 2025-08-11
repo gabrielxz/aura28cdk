@@ -1,1 +1,11 @@
-npx lint-staged
+#!/bin/bash
+
+# Run pre-commit validation
+echo "🔍 Running pre-commit validation..."
+if ./scripts/pre-commit-check.sh; then
+    # If validation passes, run lint-staged
+    npx lint-staged
+else
+    echo "❌ Pre-commit validation failed. Please fix the issues before committing."
+    exit 1
+fi

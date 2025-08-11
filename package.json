@@ -14,11 +14,15 @@
     "test": "npm run test --workspaces",
     "build": "npm run build --workspaces",
     "lint:frontend": "ESLINT_USE_FLAT_CONFIG=false eslint \"frontend/**/*.{ts,tsx}\" --max-warnings=0",
-    "lint:infrastructure": "ESLINT_USE_FLAT_CONFIG=false eslint \"infrastructure/**/*.ts\"",
+    "lint:infrastructure": "ESLINT_USE_FLAT_CONFIG=false eslint \"infrastructure/**/*.ts\" --max-warnings=0",
     "test:frontend": "npm run test --workspace=frontend",
     "test:infrastructure": "npm run test --workspace=infrastructure",
     "build:frontend": "npm run build --workspace=frontend",
     "build:infrastructure": "npm run build --workspace=infrastructure",
+    "ci:check": "./scripts/pre-commit-check.sh",
+    "ci:simulate": "./scripts/ci-local.sh",
+    "ci:status": "./scripts/check-ci-status.sh",
+    "precommit": "./scripts/pre-commit-check.sh",
     "prepare": "husky"
   },
   "devDependencies": {

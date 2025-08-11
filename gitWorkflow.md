@@ -6,6 +6,18 @@
 
 **⚠️ WARNING**: The order of these steps is CRITICAL. Running them out of order will cause CI/CD failures!
 
+### Quick Validation (Recommended)
+
+For a comprehensive check that matches CI exactly, run:
+
+```bash
+./scripts/pre-commit-check.sh
+```
+
+This script runs all the checks below automatically with the same flags as CI.
+
+### Manual Steps (if not using the script)
+
 ### 1. Run linting
 
 ```bash
@@ -154,6 +166,26 @@ git commit -m "Your commit message"
 # Push to develop
 git push origin develop
 ```
+
+## CI Simulation
+
+Before pushing, you can simulate the entire CI pipeline locally:
+
+```bash
+./scripts/ci-local.sh
+```
+
+This runs all CI jobs in parallel (just like GitHub Actions) and shows you exactly what would fail.
+
+## Pre-Push Validation
+
+Check recent CI status before pushing:
+
+```bash
+./scripts/check-ci-status.sh
+```
+
+This uses GitHub CLI to check if recent builds have been failing and warns you about potential issues.
 
 ## Common CI/CD Failures and Solutions
 
