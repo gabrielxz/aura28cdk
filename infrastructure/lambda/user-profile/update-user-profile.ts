@@ -333,8 +333,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       ianaTimeZone: profileData.ianaTimeZone,
     };
 
-    console.log('Invoking natal chart generation with payload:', invocationPayload);
-    console.log('Function name:', GENERATE_NATAL_CHART_FUNCTION_NAME);
+    console.info('Invoking natal chart generation with payload:', invocationPayload);
+    console.info('Function name:', GENERATE_NATAL_CHART_FUNCTION_NAME);
 
     try {
       const invocationResponse = await lambdaClient.send(
@@ -345,7 +345,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         }),
       );
 
-      console.log('Natal chart generation invoked successfully:', {
+      console.info('Natal chart generation invoked successfully:', {
         statusCode: invocationResponse.StatusCode,
         functionError: invocationResponse.FunctionError,
       });

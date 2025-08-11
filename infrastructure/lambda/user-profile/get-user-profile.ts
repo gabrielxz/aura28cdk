@@ -8,8 +8,7 @@ const docClient = DynamoDBDocumentClient.from(dynamoClient);
 const TABLE_NAME = process.env.TABLE_NAME!;
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  // eslint-disable-next-line no-console
-  console.log('Event:', JSON.stringify(event, null, 2));
+  console.info('Event:', JSON.stringify(event, null, 2));
 
   try {
     // Extract userId from path parameters

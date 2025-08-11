@@ -266,7 +266,7 @@ const getCachedHouseData = async (cacheKey: string): Promise<any | null> => {
     );
 
     if (result.Item) {
-      console.log('Cache hit for house calculations');
+      console.info('Cache hit for house calculations');
       return result.Item.houseData;
     }
   } catch (error) {
@@ -301,7 +301,7 @@ const saveCachedHouseData = async (cacheKey: string, houseData: any): Promise<vo
 
 export const handler = async (event: any): Promise<void> => {
   const NATAL_CHART_TABLE_NAME = process.env.NATAL_CHART_TABLE_NAME!;
-  console.log('Received event:', JSON.stringify(event, null, 2));
+  console.info('Received event:', JSON.stringify(event, null, 2));
 
   const validatedEvent = validateEvent(event);
   const { userId, birthDate, latitude, longitude, ianaTimeZone } = validatedEvent;
@@ -414,7 +414,7 @@ export const handler = async (event: any): Promise<void> => {
       }),
     );
 
-    console.log(`Successfully generated and stored natal chart for userId: ${userId}`);
+    console.info(`Successfully generated and stored natal chart for userId: ${userId}`);
   } catch (error) {
     console.error('Error calculating or storing natal chart:', error);
     throw error;
