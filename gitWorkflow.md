@@ -2,7 +2,7 @@
 
 ## Pre-Commit Checklist
 
-**IMPORTANT**: Before committing or pushing any changes, you MUST complete ALL of the following steps IN THIS EXACT ORDER:
+**IMPORTANT**: Before pushing any changes to GitHub, you MUST complete ALL of the following steps IN THIS EXACT ORDER:
 
 **⚠️ WARNING**: The order of these steps is CRITICAL. Running them out of order will cause CI/CD failures!
 
@@ -84,9 +84,38 @@ git diff --staged
 - Look for any debug code or temporary changes
 - Verify all formatted files are included
 
+### 8. Stage and commit changes
+
+```bash
+git add .  # Stage all changes (or use specific file paths)
+git commit -m "Your descriptive commit message
+
+🤖 Generated with Claude Code (https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+```
+
+- **IMPORTANT**: Always include a descriptive commit message
+- Include Claude Code attribution in commit messages when using Claude Code
+- Husky pre-commit hooks will automatically run linting and formatting
+- If pre-commit hooks fail, fix the issues and try again
+
+### 9. Push to remote repository
+
+```bash
+git push origin develop  # Push to develop branch
+```
+
+- **CRITICAL**: This step triggers GitHub Actions workflows
+- Always verify the push succeeded with `git status`
+- Check GitHub Actions tab to monitor workflow execution
+- If push is rejected, pull latest changes first: `git pull origin develop --rebase`
+
 ## Why This Order Matters
 
 The build step (step 3) generates TypeScript declaration files (`.d.ts`). These files MUST exist before formatting (step 4) can format them. If you format before building, the CI/CD pipeline will fail because it will find unformatted declaration files.
+
+**Note on Steps 8-9**: Commit and push are now explicit steps to ensure changes are actually pushed to GitHub and workflows are triggered. Previously, these were implicit, which could lead to commits being made locally but not pushed to the remote repository.
 
 For detailed explanation, see the "Pre-Commit Checklist" section in CLAUDE.md.
 
@@ -104,9 +133,8 @@ For detailed explanation, see the "Pre-Commit Checklist" section in CLAUDE.md.
 ### Commit Workflow
 
 1. Make changes in develop branch
-2. Run pre-commit checklist (all 7 steps above IN ORDER)
-3. Commit and push to develop
-4. Only merge to main when explicitly requested by user
+2. Run pre-commit checklist (all 9 steps above IN ORDER)
+3. Only merge to main when explicitly requested by user
 
 ### Quick Reference Commands
 
