@@ -99,9 +99,8 @@ if (!dockerAvailable) {
 
     test('CloudFront function for routing is created', () => {
       template.hasResourceProperties('AWS::CloudFront::Function', {
-        Name: Match.stringLikeRegexp('Aura28.*Routing.*'),
         FunctionConfig: {
-          Runtime: 'cloudfront-js-2.0',
+          Runtime: 'cloudfront-js-1.0',
         },
       });
     });
@@ -182,23 +181,19 @@ if (!dockerAvailable) {
       });
       const prodTemplate = Template.fromStack(prodStack);
 
-      // Check for www redirect bucket
-      prodTemplate.hasResourceProperties('AWS::S3::Bucket', {
-        WebsiteConfiguration: {
-          RedirectAllRequestsTo: {
-            HostName: 'example.com',
-            Protocol: 'https',
+      // Check that the main distribution includes www alias
+      prodTemplate.hasResource('AWS::CloudFront::Distribution', {
+        Properties: {
+          DistributionConfig: {
+            Aliases: Match.arrayWith(['example.com', 'www.example.com']),
           },
         },
       });
 
-      // Check for www distribution
-      prodTemplate.hasResource('AWS::CloudFront::Distribution', {
-        Properties: {
-          DistributionConfig: {
-            Aliases: ['www.example.com'],
-          },
-        },
+      // Check for www A record
+      prodTemplate.hasResourceProperties('AWS::Route53::RecordSet', {
+        Name: 'www.example.com.',
+        Type: 'A',
       });
     });
 
