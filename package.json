@@ -39,7 +39,7 @@
       "prettier --write"
     ],
     "infrastructure/**/*.ts": [
-      "ESLINT_USE_FLAT_CONFIG=false eslint --fix"
+      "sh -c 'ESLINT_USE_FLAT_CONFIG=false eslint --fix \"$@\"' --"
     ]
   }
 }
