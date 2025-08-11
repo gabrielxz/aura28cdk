@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import { TimePicker } from '@/components/ui/time-picker';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -14,9 +16,7 @@ interface FormData {
   birthCity: string;
   birthState: string;
   birthCountry: string;
-  birthMonth: string;
-  birthDay: string;
-  birthYear: string;
+  birthDate: string;
   birthTime: string;
   birthName: string;
 }
@@ -25,9 +25,7 @@ const INITIAL_FORM_DATA: FormData = {
   birthCity: '',
   birthState: '',
   birthCountry: '',
-  birthMonth: '',
-  birthDay: '',
-  birthYear: '',
+  birthDate: '',
   birthTime: '',
   birthName: '',
 };
@@ -93,18 +91,7 @@ export default function OnboardingPage() {
         if (!formData.birthCountry.trim()) newErrors.birthCountry = 'Country is required';
         break;
       case 2:
-        if (!formData.birthMonth) newErrors.birthMonth = 'Month is required';
-        if (!formData.birthDay) newErrors.birthDay = 'Day is required';
-        if (!formData.birthYear) newErrors.birthYear = 'Year is required';
-
-        // Validate date
-        const month = parseInt(formData.birthMonth);
-        const day = parseInt(formData.birthDay);
-        const year = parseInt(formData.birthYear);
-
-        if (month < 1 || month > 12) newErrors.birthMonth = 'Invalid month';
-        if (day < 1 || day > 31) newErrors.birthDay = 'Invalid day';
-        if (year < 1900 || year > new Date().getFullYear()) newErrors.birthYear = 'Invalid year';
+        if (!formData.birthDate) newErrors.birthDate = 'Date is required';
         break;
       case 3:
         if (!formData.birthTime.trim()) newErrors.birthTime = 'Birth time is required';
@@ -143,8 +130,8 @@ export default function OnboardingPage() {
         throw new Error('User not authenticated');
       }
 
-      // Format birth date as ISO string
-      const birthDate = `${formData.birthYear}-${formData.birthMonth.padStart(2, '0')}-${formData.birthDay.padStart(2, '0')}`;
+      // Birth date is already in ISO format from DatePicker
+      const birthDate = formData.birthDate;
 
       // Prepare profile data for API
       const profileData = {
@@ -269,55 +256,19 @@ export default function OnboardingPage() {
           {currentStep === 2 && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Birth Date</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="birthMonth">Month</Label>
-                  <Input
-                    id="birthMonth"
-                    type="number"
-                    min="1"
-                    max="12"
-                    value={formData.birthMonth}
-                    onChange={(e) => updateFormData('birthMonth', e.target.value)}
-                    placeholder="MM"
-                    className={errors.birthMonth ? 'border-red-500' : ''}
-                  />
-                  {errors.birthMonth && (
-                    <p className="mt-1 text-sm text-red-500">{errors.birthMonth}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="birthDay">Day</Label>
-                  <Input
-                    id="birthDay"
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={formData.birthDay}
-                    onChange={(e) => updateFormData('birthDay', e.target.value)}
-                    placeholder="DD"
-                    className={errors.birthDay ? 'border-red-500' : ''}
-                  />
-                  {errors.birthDay && (
-                    <p className="mt-1 text-sm text-red-500">{errors.birthDay}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="birthYear">Year</Label>
-                  <Input
-                    id="birthYear"
-                    type="number"
-                    min="1900"
-                    max={new Date().getFullYear()}
-                    value={formData.birthYear}
-                    onChange={(e) => updateFormData('birthYear', e.target.value)}
-                    placeholder="YYYY"
-                    className={errors.birthYear ? 'border-red-500' : ''}
-                  />
-                  {errors.birthYear && (
-                    <p className="mt-1 text-sm text-red-500">{errors.birthYear}</p>
-                  )}
-                </div>
+              <div>
+                <Label htmlFor="birthDate">Date of Birth</Label>
+                <DatePicker
+                  id="birthDate"
+                  value={formData.birthDate}
+                  onChange={(date) => updateFormData('birthDate', date || '')}
+                  placeholder="Select your birth date"
+                  required
+                  className={errors.birthDate ? 'border-red-500' : ''}
+                />
+                {errors.birthDate && (
+                  <p className="mt-1 text-sm text-red-500">{errors.birthDate}</p>
+                )}
               </div>
             </div>
           )}
@@ -330,12 +281,12 @@ export default function OnboardingPage() {
               </p>
               <div>
                 <Label htmlFor="birthTime">Time of Birth</Label>
-                <Input
+                <TimePicker
                   id="birthTime"
-                  type="time"
                   value={formData.birthTime}
-                  onChange={(e) => updateFormData('birthTime', e.target.value)}
-                  placeholder="HH:MM"
+                  onChange={(time) => updateFormData('birthTime', time)}
+                  placeholder="Select birth time"
+                  required
                   className={errors.birthTime ? 'border-red-500' : ''}
                 />
                 {errors.birthTime && (

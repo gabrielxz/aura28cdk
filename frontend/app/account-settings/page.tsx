@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import { TimePicker } from '@/components/ui/time-picker';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserApi, UserProfile } from '@/lib/api/user-api';
@@ -189,23 +191,22 @@ export default function AccountSettingsPage() {
 
             <div>
               <Label htmlFor="birthDate">Date of Birth</Label>
-              <Input
+              <DatePicker
                 id="birthDate"
-                type="date"
                 value={formData.birthDate}
-                onChange={(e) => handleInputChange('birthDate', e.target.value)}
+                onChange={(date) => handleInputChange('birthDate', date || '')}
+                placeholder="Select your birth date"
                 required
               />
             </div>
 
             <div>
               <Label htmlFor="birthTime">Time of Birth</Label>
-              <Input
+              <TimePicker
                 id="birthTime"
-                type="time"
                 value={formData.birthTime}
-                onChange={(e) => handleInputChange('birthTime', e.target.value)}
-                placeholder="HH:MM"
+                onChange={(time) => handleInputChange('birthTime', time)}
+                placeholder="Select birth time"
                 required
               />
             </div>
