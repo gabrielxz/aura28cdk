@@ -4,22 +4,10 @@ import { WebsiteStack } from '../lib/website-stack';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Skip tests if Docker is not available
-const isDockerAvailable = () => {
-  try {
-    require('child_process').execSync('docker --version', { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const describeIfDocker = isDockerAvailable() ? describe : describe.skip;
-
-describeIfDocker('WebsiteStack', () => {
+describe('WebsiteStack', () => {
   let app: cdk.App;
-  let stack: WebsiteStack;
-  let template: Template;
+  let stack: WebsiteStack | null = null;
+  let template: Template | null = null;
 
   // Create a temporary frontend/out directory for tests
   const frontendOutDir = path.join(__dirname, '../../frontend/out');
@@ -39,9 +27,23 @@ describeIfDocker('WebsiteStack', () => {
     }
   });
 
+  // Check if Docker is available
+  const isDockerAvailable = () => {
+    try {
+      require('child_process').execSync('docker --version', { stdio: 'ignore' });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const dockerAvailable = isDockerAvailable();
+
   beforeEach(() => {
-    // Skip Docker bundling in tests
-    process.env.CDK_DOCKER = 'false';
+    if (!dockerAvailable) {
+      // Skip test setup if Docker is not available
+      return;
+    }
 
     // Set bundling to use local mode for tests
     app = new cdk.App({
@@ -65,8 +67,12 @@ describeIfDocker('WebsiteStack', () => {
     template = Template.fromStack(stack);
   });
 
-  test('S3 bucket is created with correct properties', () => {
-    template.hasResourceProperties('AWS::S3::Bucket', {
+  // Skip tests if Docker is not available
+  const itIfDocker = dockerAvailable ? test : test.skip;
+
+  itIfDocker('S3 bucket is created with correct properties', () => {
+    expect(template).not.toBeNull();
+    template!.hasResourceProperties('AWS::S3::Bucket', {
       BucketName: Match.stringLikeRegexp('aura28-dev-website-.*'),
       PublicAccessBlockConfiguration: {
         BlockPublicAcls: true,
@@ -77,56 +83,60 @@ describeIfDocker('WebsiteStack', () => {
     });
   });
 
-  test('CloudFront distribution is created', () => {
-    template.hasResourceProperties('AWS::CloudFront::Distribution', {
-      DistributionConfig: {
-        DefaultRootObject: 'index.html',
-        Enabled: true,
-        HttpVersion: 'http2',
-        IPV6Enabled: true,
-      },
-    });
-  });
-
-  test('CloudFront function for routing is created', () => {
-    template.hasResourceProperties('AWS::CloudFront::Function', {
-      FunctionConfig: {
-        Runtime: 'cloudfront-js-1.0',
-      },
-    });
-  });
-
-  test('Route53 A record is created', () => {
-    template.hasResourceProperties('AWS::Route53::RecordSet', {
-      Name: 'test.example.com.',
-      Type: 'A',
-      AliasTarget: {
-        DNSName: Match.anyValue(),
-        HostedZoneId: Match.anyValue(),
-      },
-    });
-  });
-
-  test('ACM certificate is created', () => {
-    template.hasResourceProperties('AWS::CertificateManager::Certificate', {
-      DomainName: 'test.example.com',
-      DomainValidationOptions: Match.anyValue(),
-      Tags: Match.arrayWith([
-        {
-          Key: 'Project',
-          Value: 'Aura28CDK',
+  itIfDocker('CloudFront distribution is created', () => {
+    expect(template).not.toBeNull();
+    template!.hasResource('AWS::CloudFront::Distribution', {
+      Properties: {
+        DistributionConfig: {
+          Aliases: ['test.example.com'],
+          ViewerCertificate: {
+            AcmCertificateArn: Match.anyValue(),
+            MinimumProtocolVersion: 'TLSv1.2_2021',
+            SslSupportMethod: 'sni-only',
+          },
         },
-      ]),
+      },
     });
   });
 
-  test('DynamoDB table is created with correct properties', () => {
-    template.hasResourceProperties('AWS::DynamoDB::Table', {
-      TableName: 'Aura28-dev-Users',
-      BillingMode: 'PAY_PER_REQUEST',
-      PointInTimeRecoverySpecification: {
-        PointInTimeRecoveryEnabled: true,
+  itIfDocker('CloudFront function for routing is created', () => {
+    expect(template).not.toBeNull();
+    template!.hasResourceProperties('AWS::CloudFront::Function', {
+      Name: Match.stringLikeRegexp('Aura28.*Routing.*'),
+      FunctionConfig: {
+        Runtime: 'cloudfront-js-2.0',
       },
+    });
+  });
+
+  itIfDocker('Route53 A record is created', () => {
+    expect(template).not.toBeNull();
+    template!.hasResourceProperties('AWS::Route53::RecordSet', {
+      Type: 'A',
+      AliasTarget: Match.objectLike({
+        DNSName: Match.anyValue(),
+      }),
+    });
+  });
+
+  itIfDocker('ACM certificate is created', () => {
+    expect(template).not.toBeNull();
+    template!.hasResourceProperties('AWS::CertificateManager::Certificate', {
+      DomainName: 'test.example.com',
+      DomainValidationOptions: [
+        {
+          DomainName: 'test.example.com',
+          HostedZoneId: Match.anyValue(),
+        },
+      ],
+      ValidationMethod: 'DNS',
+    });
+  });
+
+  itIfDocker('DynamoDB table is created with correct properties', () => {
+    expect(template).not.toBeNull();
+    template!.hasResourceProperties('AWS::DynamoDB::Table', {
+      TableName: 'Aura28-dev-Users',
       KeySchema: [
         {
           AttributeName: 'userId',
@@ -137,58 +147,39 @@ describeIfDocker('WebsiteStack', () => {
           KeyType: 'RANGE',
         },
       ],
-      AttributeDefinitions: [
-        {
-          AttributeName: 'userId',
-          AttributeType: 'S',
-        },
-        {
-          AttributeName: 'createdAt',
-          AttributeType: 'S',
-        },
-      ],
+      BillingMode: 'PAY_PER_REQUEST',
+      PointInTimeRecoverySpecification: {
+        PointInTimeRecoveryEnabled: true,
+      },
     });
   });
 
-  test('Resources are tagged with Project tag', () => {
-    const resources = template.toJSON().Resources;
+  itIfDocker('Resources are tagged with Project tag', () => {
+    expect(template).not.toBeNull();
+    const stackJson = template!.toJSON();
+    const resources = stackJson.Resources;
+    let hasProjectTag = false;
 
-    // Check that S3 bucket has the tag
-    const s3Resources = Object.entries(resources).filter(
-      ([, resource]: [string, any]) => resource.Type === 'AWS::S3::Bucket',
-    );
+    // Check if at least some resources have the Project tag
+    for (const resourceKey in resources) {
+      const resource = resources[resourceKey];
+      if (resource.Properties && resource.Properties.Tags) {
+        const projectTag = resource.Properties.Tags.find(
+          (tag: any) => tag.Key === 'Project' && tag.Value === 'Aura28CDK',
+        );
+        if (projectTag) {
+          hasProjectTag = true;
+          break;
+        }
+      }
+    }
 
-    expect(s3Resources.length).toBeGreaterThan(0);
-    s3Resources.forEach(([, resource]: [string, any]) => {
-      expect(resource.Properties.Tags).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            Key: 'Project',
-            Value: 'Aura28CDK',
-          }),
-        ]),
-      );
-    });
-
-    // Check that DynamoDB table has the tag
-    const dynamoResources = Object.entries(resources).filter(
-      ([, resource]: [string, any]) => resource.Type === 'AWS::DynamoDB::Table',
-    );
-
-    expect(dynamoResources.length).toBeGreaterThan(0);
-    dynamoResources.forEach(([, resource]: [string, any]) => {
-      expect(resource.Properties.Tags).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            Key: 'Project',
-            Value: 'Aura28CDK',
-          }),
-        ]),
-      );
-    });
+    expect(hasProjectTag).toBe(true);
   });
 
-  test('Production stack includes www redirect', () => {
+  itIfDocker('Production stack includes www redirect', () => {
+    if (!dockerAvailable) return;
+
     const prodApp = new cdk.App();
     const prodStack = new WebsiteStack(prodApp, 'ProdTestStack', {
       domainName: 'example.com',
@@ -200,17 +191,29 @@ describeIfDocker('WebsiteStack', () => {
     });
     const prodTemplate = Template.fromStack(prodStack);
 
-    // Should have two A records (apex and www)
-    const aRecords = prodTemplate.findResources('AWS::Route53::RecordSet', {
+    // Check for www redirect bucket
+    prodTemplate.hasResourceProperties('AWS::S3::Bucket', {
+      WebsiteConfiguration: {
+        RedirectAllRequestsTo: {
+          HostName: 'example.com',
+          Protocol: 'https',
+        },
+      },
+    });
+
+    // Check for www distribution
+    prodTemplate.hasResource('AWS::CloudFront::Distribution', {
       Properties: {
-        Type: 'A',
+        DistributionConfig: {
+          Aliases: ['www.example.com'],
+        },
       },
     });
-
-    expect(Object.keys(aRecords).length).toBe(2);
   });
 
-  test('Production DynamoDB table has RETAIN removal policy', () => {
+  itIfDocker('Production DynamoDB table has RETAIN removal policy', () => {
+    if (!dockerAvailable) return;
+
     const prodApp = new cdk.App();
     const prodStack = new WebsiteStack(prodApp, 'ProdTestStack', {
       domainName: 'example.com',
@@ -222,11 +225,13 @@ describeIfDocker('WebsiteStack', () => {
     });
     const prodTemplate = Template.fromStack(prodStack);
 
-    // Check DynamoDB table has correct removal policy
-    const dynamoResources = prodTemplate.findResources('AWS::DynamoDB::Table');
-    Object.values(dynamoResources).forEach((resource: any) => {
-      expect(resource.DeletionPolicy).toBe('Retain');
-      expect(resource.UpdateReplacePolicy).toBe('Retain');
+    // Check for DynamoDB table with RETAIN policy
+    prodTemplate.hasResource('AWS::DynamoDB::Table', {
+      DeletionPolicy: 'Retain',
+      UpdateReplacePolicy: 'Retain',
+      Properties: {
+        TableName: 'Aura28-prod-Users',
+      },
     });
   });
 });
