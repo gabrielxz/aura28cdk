@@ -13,21 +13,33 @@
     "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces",
     "build": "npm run build --workspaces",
-    "lint:frontend": "npm run lint --workspace=frontend",
-    "lint:infrastructure": "npm run lint --workspace=infrastructure",
+    "lint:frontend": "ESLINT_USE_FLAT_CONFIG=false eslint \"frontend/**/*.{ts,tsx}\" --max-warnings=0",
+    "lint:infrastructure": "ESLINT_USE_FLAT_CONFIG=false eslint \"infrastructure/**/*.ts\"",
     "test:frontend": "npm run test --workspace=frontend",
     "test:infrastructure": "npm run test --workspace=infrastructure",
     "build:frontend": "npm run build --workspace=frontend",
-    "build:infrastructure": "npm run build --workspace=infrastructure"
+    "build:infrastructure": "npm run build --workspace=infrastructure",
+    "prepare": "husky"
   },
   "devDependencies": {
     "esbuild": "^0.25.8",
+    "eslint": "^9.33.0",
     "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.4.2"
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.5",
+    "prettier": "^3.6.2"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gabrielxz/aura28cdk.git"
   },
-  "license": "ISC"
+  "license": "ISC",
+  "lint-staged": {
+    "*.{ts,tsx,js,css,md,json,yml,yaml}": [
+      "prettier --write"
+    ],
+    "infrastructure/**/*.ts": [
+      "ESLINT_USE_FLAT_CONFIG=false eslint --fix"
+    ]
+  }
 }

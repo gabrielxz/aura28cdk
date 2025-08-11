@@ -6,6 +6,26 @@ on:
       - main
 
 jobs:
+  format-check:
+    name: Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prettier Check
+        run: npm run format:check
+
   lint-frontend:
     name: Lint Frontend
     runs-on: ubuntu-latest
@@ -23,12 +43,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run frontend linting
+      - name: Lint Frontend
         run: npm run lint:frontend
-
-      - name: Check frontend formatting
-        run: npm run format:check
-        working-directory: ./frontend
+        env:
+          ESLINT_USE_FLAT_CONFIG: false
 
   lint-infrastructure:
     name: Lint Infrastructure
@@ -47,12 +65,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run infrastructure linting
+      - name: Lint Infrastructure
         run: npm run lint:infrastructure
-
-      - name: Check infrastructure formatting
-        run: npm run format:check
-        working-directory: ./infrastructure
+        env:
+          ESLINT_USE_FLAT_CONFIG: false
 
   test-frontend:
     name: Test Frontend

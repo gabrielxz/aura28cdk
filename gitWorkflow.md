@@ -136,6 +136,7 @@ git push origin develop
 **Cause**: Declaration files (`.d.ts`) were not formatted after build.
 
 **Solution**:
+
 1. Run `npm run build` at root
 2. Run `npm run format` at root
 3. Run `npm run format:check` at root AND `cd infrastructure && npm run format:check`
