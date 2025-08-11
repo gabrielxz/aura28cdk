@@ -58,14 +58,14 @@ describe('Generate Natal Chart Lambda', () => {
         chartType: 'natal',
         planets: expect.objectContaining({
           sun: expect.objectContaining({
-            longitude: 10.0,
-            longitudeDms: '10°00\'00"',
+            longitude: 10,
             name: 'sun',
+            sign: 'Aries',
           }),
           moon: expect.objectContaining({
             longitude: 45.5,
-            longitudeDms: '45°30\'00"',
             name: 'moon',
+            sign: 'Taurus',
           }),
         }),
       }),
