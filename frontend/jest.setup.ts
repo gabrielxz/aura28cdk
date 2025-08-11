@@ -14,7 +14,7 @@ global.fetch = jest.fn(() =>
 // Suppress expected console errors in tests
 const originalError = console.error;
 beforeAll(() => {
-  console.error = (...args: unknown[]) => {
+  console.error = (...args: Parameters<typeof console.error>) => {
     // Suppress expected API Gateway URL warning in tests
     if (typeof args[0] === 'string' && args[0].includes('API Gateway URL not configured')) {
       return;
@@ -34,7 +34,7 @@ afterAll(() => {
 // Suppress expected console.info messages
 const originalInfo = console.info;
 beforeAll(() => {
-  console.info = (...args: unknown[]) => {
+  console.info = (...args: Parameters<typeof console.info>) => {
     // Suppress expected profile fetch info in tests
     if (typeof args[0] === 'string' && args[0].includes('Could not fetch profile')) {
       return;
