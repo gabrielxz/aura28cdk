@@ -16,9 +16,7 @@ infrastructure/.cdk.staging/
 
 # Compiled files
 *.js
-*.d.ts
 infrastructure/*.js
-infrastructure/*.d.ts
 
 # Keep source files
 !infrastructure/**/*.ts
