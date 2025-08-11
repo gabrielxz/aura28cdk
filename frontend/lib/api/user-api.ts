@@ -198,7 +198,7 @@ export class UserApi {
       return profile.onboardingCompleted === true;
     } catch (error) {
       // If profile doesn't exist or there's an error, onboarding is not completed
-      console.log('Profile not found or error checking onboarding status:', error);
+      console.info('Profile not found or error checking onboarding status:', error);
       return false;
     }
   }

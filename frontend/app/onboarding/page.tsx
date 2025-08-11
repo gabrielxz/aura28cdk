@@ -61,7 +61,7 @@ export default function OnboardingPage() {
           }
         } catch {
           // If error checking, assume onboarding not completed
-          console.log('Proceeding with onboarding');
+          console.info('Proceeding with onboarding');
         }
       }
     };

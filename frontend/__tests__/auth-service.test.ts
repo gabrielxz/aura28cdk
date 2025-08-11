@@ -117,7 +117,12 @@ describe('AuthService', () => {
     it('successfully updates user attributes', async () => {
       mockSend.mockResolvedValueOnce({});
       // Mock refreshToken to simulate successful refresh
-      jest.spyOn(authService as any, 'refreshToken').mockResolvedValueOnce(mockTokens);
+      jest
+        .spyOn(
+          authService as unknown as { refreshToken: () => Promise<typeof mockTokens> },
+          'refreshToken',
+        )
+        .mockResolvedValueOnce(mockTokens);
 
       const attributes = {
         'custom:birthCity': 'San Francisco',
@@ -146,7 +151,10 @@ describe('AuthService', () => {
     it('refreshes token after successful update', async () => {
       mockSend.mockResolvedValueOnce({});
       const refreshTokenSpy = jest
-        .spyOn(authService as any, 'refreshToken')
+        .spyOn(
+          authService as unknown as { refreshToken: () => Promise<typeof mockTokens> },
+          'refreshToken',
+        )
         .mockResolvedValueOnce(mockTokens);
 
       await authService.updateUserAttributes({ 'custom:birthName': 'John Doe' });
