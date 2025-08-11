@@ -44,17 +44,22 @@ export interface AngleData {
   minutes: number;
 }
 
+export interface PlanetData {
+  longitude: number;
+  longitudeDms: string;
+  distanceKm: number;
+  name: string;
+  sign: string;
+  degreeInSign: number;
+  minutes: number;
+}
+
 export interface NatalChart {
   userId: string;
   chartType: 'natal';
   createdAt: string;
   planets: {
-    [key: string]: {
-      longitude: number;
-      longitudeDms: string;
-      distanceKm: number;
-      name: string;
-    };
+    [key: string]: PlanetData;
   };
   houses?: {
     status: 'success' | 'failed';

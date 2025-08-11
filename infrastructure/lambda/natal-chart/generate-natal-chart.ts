@@ -333,12 +333,24 @@ export const handler = async (event: any): Promise<void> => {
     if (chartData.observed) {
       Object.keys(chartData.observed).forEach((planetName) => {
         const planetData = chartData.observed[planetName];
-        if (planetData) {
+        if (planetData && planetName !== 'sirius') {
+          const longitude = planetData.apparentLongitudeDd || 0;
+          // Calculate zodiac sign information
+          const normalizedLongitude = ((longitude % 360) + 360) % 360;
+          const signIndex = Math.floor(normalizedLongitude / 30);
+          const sign = ZODIAC_SIGNS[signIndex];
+          const degreeInSign = normalizedLongitude - signIndex * 30;
+          const wholeDegrees = Math.floor(degreeInSign);
+          const minutes = Math.round((degreeInSign - wholeDegrees) * 60);
+
           planets[planetName] = {
-            longitude: planetData.apparentLongitudeDd || 0,
-            longitudeDms: planetData.apparentLongitudeDms360 || '',
+            longitude: longitude,
+            longitudeDms: `${wholeDegrees.toString().padStart(2, '0')}°${minutes.toString().padStart(2, '0')}' ${sign}`,
             distanceKm: planetData.geocentricDistanceKm || 0,
             name: planetData.name || planetName,
+            sign: sign,
+            degreeInSign: wholeDegrees,
+            minutes: minutes,
           };
         }
       });

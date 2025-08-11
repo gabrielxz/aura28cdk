@@ -163,9 +163,13 @@ export default function NatalChartTab({ userApi, userId }: NatalChartTabProps) {
                       className="border-b hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
                       <td className="p-2 font-medium capitalize">{planetData.name || planetKey}</td>
-                      <td className="p-2">{planetData.longitudeDms.split(' ')[1] || ''}</td>
+                      <td className="p-2">{planetData.sign || ''}</td>
                       <td className="p-2 text-sm text-gray-600 dark:text-gray-400">
-                        {planetData.longitudeDms.split(' ')[0] || ''}
+                        {planetData.degreeInSign !== undefined && planetData.minutes !== undefined
+                          ? `${planetData.degreeInSign.toString().padStart(2, '0')}°${planetData.minutes
+                              .toString()
+                              .padStart(2, '0')}'`
+                          : ''}
                       </td>
                       {chart.planetHouses && (
                         <td className="p-2 text-center">{chart.planetHouses[planetKey] || '-'}</td>
