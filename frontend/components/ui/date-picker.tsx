@@ -27,7 +27,7 @@ export function DatePicker({
   disabled,
   className,
 }: DatePickerProps) {
-  const date = value ? new Date(value + 'T00:00:00') : undefined;
+  const date = value ? new Date(value) : undefined;
 
   const handleSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
