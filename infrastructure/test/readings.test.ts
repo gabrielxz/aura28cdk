@@ -29,6 +29,11 @@ describe('Readings Lambda Functions', () => {
     process.env.USER_TABLE_NAME = 'test-user-table';
     process.env.NATAL_CHART_TABLE_NAME = 'test-natal-chart-table';
     process.env.OPENAI_API_KEY_PARAMETER_NAME = '/test/openai-key';
+    process.env.OPENAI_MODEL_PARAMETER_NAME = '/test/openai-model';
+    process.env.OPENAI_TEMPERATURE_PARAMETER_NAME = '/test/openai-temperature';
+    process.env.OPENAI_MAX_TOKENS_PARAMETER_NAME = '/test/openai-max-tokens';
+    process.env.OPENAI_SYSTEM_PROMPT_PARAMETER_NAME = '/test/openai-system-prompt';
+    process.env.OPENAI_USER_PROMPT_TEMPLATE_PARAMETER_NAME = '/test/openai-user-prompt-template';
   });
 
   describe('generateReadingHandler', () => {
@@ -80,12 +85,66 @@ describe('Readings Lambda Functions', () => {
           },
         });
 
-      // Mock SSM parameter (OpenAI API key)
-      ssmMock.on(GetParameterCommand).resolves({
-        Parameter: {
-          Value: 'test-api-key',
-        },
-      });
+      // Mock SSM parameters for OpenAI configuration
+      ssmMock
+        .on(GetParameterCommand, {
+          Name: '/test/openai-key',
+        })
+        .resolves({
+          Parameter: {
+            Value: 'test-api-key',
+          },
+        });
+
+      ssmMock
+        .on(GetParameterCommand, {
+          Name: '/test/openai-model',
+        })
+        .resolves({
+          Parameter: {
+            Value: 'gpt-4-turbo-preview',
+          },
+        });
+
+      ssmMock
+        .on(GetParameterCommand, {
+          Name: '/test/openai-temperature',
+        })
+        .resolves({
+          Parameter: {
+            Value: '0.7',
+          },
+        });
+
+      ssmMock
+        .on(GetParameterCommand, {
+          Name: '/test/openai-max-tokens',
+        })
+        .resolves({
+          Parameter: {
+            Value: '2000',
+          },
+        });
+
+      ssmMock
+        .on(GetParameterCommand, {
+          Name: '/test/openai-system-prompt',
+        })
+        .resolves({
+          Parameter: {
+            Value: 'You are an expert astrologer providing Soul Blueprint readings.',
+          },
+        });
+
+      ssmMock
+        .on(GetParameterCommand, {
+          Name: '/test/openai-user-prompt-template',
+        })
+        .resolves({
+          Parameter: {
+            Value: 'Generate a Soul Blueprint reading for {{birthName}} born on {{birthDate}}.',
+          },
+        });
 
       // Mock OpenAI API response
       (global.fetch as jest.Mock).mockResolvedValueOnce({
