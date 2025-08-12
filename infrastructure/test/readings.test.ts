@@ -154,7 +154,8 @@ describe('Readings Lambda Functions', () => {
       const createS3Response = (content: string) => ({
         Body: {
           transformToString: async () => content,
-        } as { transformToString: () => Promise<string> },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any, // Type assertion needed for mock - S3 Body stream type is complex
         ETag: '"test-etag"',
       });
 
