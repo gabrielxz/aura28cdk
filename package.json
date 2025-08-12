@@ -11,18 +11,17 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md,yml,yaml}\"",
     "lint": "npm run lint --workspaces",
+    "lint:fix": "npm run lint -- --fix",
     "test": "npm run test --workspaces",
     "build": "npm run build --workspaces",
+    "type-check": "tsc --noEmit",
+    "verify": "npm run format:check && npm run lint && npm run type-check && npm test && npm run build",
     "lint:frontend": "ESLINT_USE_FLAT_CONFIG=false eslint \"frontend/**/*.{ts,tsx}\" --max-warnings=0",
     "lint:infrastructure": "ESLINT_USE_FLAT_CONFIG=false eslint \"infrastructure/**/*.ts\" --max-warnings=0",
     "test:frontend": "npm run test --workspace=frontend",
     "test:infrastructure": "npm run test --workspace=infrastructure",
     "build:frontend": "npm run build --workspace=frontend",
     "build:infrastructure": "npm run build --workspace=infrastructure",
-    "ci:check": "./scripts/pre-commit-check.sh",
-    "ci:simulate": "./scripts/ci-local.sh",
-    "ci:status": "./scripts/check-ci-status.sh",
-    "precommit": "./scripts/pre-commit-check.sh",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -39,10 +38,10 @@
   },
   "license": "ISC",
   "lint-staged": {
-    "*.{ts,tsx,js,css,md,json,yml,yaml}": [
+    "**/*.{ts,tsx,js,jsx,json,css,md,yml,yaml}": [
       "prettier --write"
     ],
-    "infrastructure/**/*.ts": [
+    "{frontend,infrastructure}/**/*.{ts,tsx}": [
       "sh -c 'ESLINT_USE_FLAT_CONFIG=false eslint --fix \"$@\"' --"
     ]
   }

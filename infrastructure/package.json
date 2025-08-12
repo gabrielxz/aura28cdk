@@ -37,7 +37,7 @@
     "@aws-sdk/lib-dynamodb": "^3.859.0",
     "aws-cdk-lib": "2.206.0",
     "constructs": "^10.0.0",
-    "ephemeris": "^2.0.0",
+    "date-fns-tz": "^3.2.0",
     "tz-lookup": "^6.1.25"
   }
 }
