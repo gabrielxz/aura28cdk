@@ -182,8 +182,8 @@ describe('OnboardingPage', () => {
       expect(screen.getByText('Birth Time')).toBeInTheDocument();
     });
 
-    // The TimePicker also shows as a button
-    expect(screen.getByText('Select birth time')).toBeInTheDocument();
+    // The TimePicker is now a native input field
+    expect(screen.getByPlaceholderText('Select birth time')).toBeInTheDocument();
 
     // Simulate time selection through localStorage
     savedProgress.formData.birthTime = '14:30';

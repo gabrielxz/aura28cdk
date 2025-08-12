@@ -19,6 +19,22 @@ interface DatePickerProps {
   className?: string;
 }
 
+// Helper function to create a local date from YYYY-MM-DD string
+// This avoids timezone issues by using local date constructor
+const toLocalDate = (yyyyMmDd: string | undefined): Date | undefined => {
+  if (!yyyyMmDd) return undefined;
+  const [y, m, d] = yyyyMmDd.split('-').map(Number);
+  return new Date(y, m - 1, d); // month is 0-indexed
+};
+
+// Helper function to format Date to YYYY-MM-DD string
+const toDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export function DatePicker({
   value,
   onChange,
@@ -27,21 +43,20 @@ export function DatePicker({
   disabled,
   className,
 }: DatePickerProps) {
-  const date = value ? new Date(value) : undefined;
+  const [open, setOpen] = React.useState(false);
+  const date = toLocalDate(value);
 
   const handleSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
-      const year = selectedDate.getFullYear();
-      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedDate.getDate()).padStart(2, '0');
-      onChange?.(`${year}-${month}-${day}`);
+      onChange?.(toDateString(selectedDate));
     } else {
       onChange?.(undefined);
     }
+    setOpen(false);
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           id={id}
