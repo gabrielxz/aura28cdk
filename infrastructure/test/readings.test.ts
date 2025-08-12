@@ -1,7 +1,7 @@
 import { handler as generateReadingHandler } from '../lambda/readings/generate-reading';
 import { handler as getReadingsHandler } from '../lambda/readings/get-readings';
 import { handler as getReadingDetailHandler } from '../lambda/readings/get-reading-detail';
-import { APIGatewayProxyEvent, APIGatewayRequestContext } from 'aws-lambda';
+import { APIGatewayProxyEvent } from 'aws-lambda';
 import {
   DynamoDBDocumentClient,
   GetCommand,
@@ -10,6 +10,14 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import { mockClient } from 'aws-sdk-client-mock';
+
+interface MockRequestContext {
+  authorizer?: {
+    claims?: {
+      sub?: string;
+    };
+  };
+}
 
 // Mock the DynamoDB and SSM clients
 const dynamoMock = mockClient(DynamoDBDocumentClient);
@@ -40,7 +48,7 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: userId },
           },
-        } as Partial<APIGatewayRequestContext>,
+        } as MockRequestContext,
       };
 
       // Mock user profile
@@ -119,7 +127,7 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: 'different-user' },
           },
-        } as Partial<APIGatewayRequestContext>,
+        } as MockRequestContext,
       };
 
       const response = await generateReadingHandler(event as APIGatewayProxyEvent);
@@ -137,7 +145,7 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: userId },
           },
-        } as Partial<APIGatewayRequestContext>,
+        } as MockRequestContext,
       };
 
       // Mock user profile
@@ -178,7 +186,7 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: userId },
           },
-        } as Partial<APIGatewayRequestContext>,
+        } as MockRequestContext,
       };
 
       const mockReadings = [
@@ -219,7 +227,7 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: userId },
           },
-        } as Partial<APIGatewayRequestContext>,
+        } as MockRequestContext,
       };
 
       dynamoMock.on(QueryCommand).resolves({
@@ -245,7 +253,7 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: userId },
           },
-        } as Partial<APIGatewayRequestContext>,
+        } as MockRequestContext,
       };
 
       const mockReading = {
@@ -279,7 +287,7 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: userId },
           },
-        } as Partial<APIGatewayRequestContext>,
+        } as MockRequestContext,
       };
 
       dynamoMock.on(GetCommand).resolves({
@@ -300,7 +308,7 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: 'different-user' },
           },
-        } as Partial<APIGatewayRequestContext>,
+        } as MockRequestContext,
       };
 
       const response = await getReadingDetailHandler(event as APIGatewayProxyEvent);

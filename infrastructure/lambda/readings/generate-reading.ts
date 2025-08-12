@@ -89,7 +89,7 @@ async function callOpenAI(prompt: string, apiKey: string): Promise<string> {
     throw new Error(`OpenAI API error: ${response.status} - ${error}`);
   }
 
-  const data: { choices: Array<{ message: { content: string } }> } = await response.json();
+  const data = (await response.json()) as { choices: Array<{ message: { content: string } }> };
   return data.choices[0].message.content;
 }
 
