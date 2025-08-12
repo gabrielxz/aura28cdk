@@ -11,14 +11,6 @@ import {
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import { mockClient } from 'aws-sdk-client-mock';
 
-interface MockRequestContext {
-  authorizer?: {
-    claims?: {
-      sub?: string;
-    };
-  };
-}
-
 // Mock the DynamoDB and SSM clients
 const dynamoMock = mockClient(DynamoDBDocumentClient);
 const ssmMock = mockClient(SSMClient);
@@ -48,7 +40,8 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: userId },
           },
-        } as MockRequestContext,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       };
 
       // Mock user profile
@@ -127,7 +120,8 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: 'different-user' },
           },
-        } as MockRequestContext,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       };
 
       const response = await generateReadingHandler(event as APIGatewayProxyEvent);
@@ -145,7 +139,8 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: userId },
           },
-        } as MockRequestContext,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       };
 
       // Mock user profile
@@ -186,7 +181,8 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: userId },
           },
-        } as MockRequestContext,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       };
 
       const mockReadings = [
@@ -227,7 +223,8 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: userId },
           },
-        } as MockRequestContext,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       };
 
       dynamoMock.on(QueryCommand).resolves({
@@ -253,7 +250,8 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: userId },
           },
-        } as MockRequestContext,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       };
 
       const mockReading = {
@@ -287,7 +285,8 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: userId },
           },
-        } as MockRequestContext,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       };
 
       dynamoMock.on(GetCommand).resolves({
@@ -308,7 +307,8 @@ describe('Readings Lambda Functions', () => {
           authorizer: {
             claims: { sub: 'different-user' },
           },
-        } as MockRequestContext,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       };
 
       const response = await getReadingDetailHandler(event as APIGatewayProxyEvent);
