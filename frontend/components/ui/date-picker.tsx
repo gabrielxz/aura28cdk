@@ -14,7 +14,6 @@ interface DatePickerProps {
   onChange?: (date: string | undefined) => void;
   placeholder?: string;
   id?: string;
-  required?: boolean;
   disabled?: boolean;
   className?: string;
 }

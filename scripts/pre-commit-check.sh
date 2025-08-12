@@ -123,14 +123,7 @@ else
     FAILED=1
 fi
 
-# 7. Check for TypeScript 'any' types in critical files
-print_step "TypeScript Strict Type Check"
-if ! grep -r "any\[\]" frontend/jest.setup.ts 2>/dev/null; then
-    print_success "No unsafe 'any[]' types found"
-else
-    print_error "Found 'any[]' types in jest.setup.ts - use proper types"
-    FAILED=1
-fi
+# TypeScript strict checking is now handled by tsconfig.json and ESLint rules
 
 # 8. Check for uncommitted changes (excluding this check)
 print_step "Git Status"

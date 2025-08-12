@@ -39,11 +39,14 @@
   },
   "license": "ISC",
   "lint-staged": {
-    "*.{ts,tsx,js,css,md,json,yml,yaml}": [
+    "*.{ts,tsx,js,jsx,json,css,md,yml,yaml}": [
       "prettier --write"
     ],
+    "frontend/**/*.{ts,tsx}": [
+      "sh -c 'ESLINT_USE_FLAT_CONFIG=false eslint --max-warnings=0 --fix \"$@\"' --"
+    ],
     "infrastructure/**/*.ts": [
-      "sh -c 'ESLINT_USE_FLAT_CONFIG=false eslint --fix \"$@\"' --"
+      "sh -c 'ESLINT_USE_FLAT_CONFIG=false eslint --max-warnings=10 --fix \"$@\"' --"
     ]
   }
 }

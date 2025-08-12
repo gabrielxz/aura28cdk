@@ -226,7 +226,10 @@ export default function NatalChartTab({ userApi, userId }: NatalChartTabProps) {
           <CardContent>
             <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
               <p>
-                <strong>Algorithm Version:</strong> {chart.metadata.algoVersion}
+                <strong>House System:</strong> {chart.metadata.houseSystem || 'Placidus'}
+              </p>
+              <p>
+                <strong>Zodiac Type:</strong> {chart.metadata.zodiacType || 'Tropical'}
               </p>
               <p>
                 <strong>Ephemeris Version:</strong> {chart.metadata.ephemerisVersion}

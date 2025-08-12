@@ -1,133 +1,66 @@
 # Git Workflow Guide
 
-## Pre-Commit Checklist
+## Simplified Git Workflow
 
-**IMPORTANT**: Before pushing any changes to GitHub, you MUST complete ALL of the following steps IN THIS EXACT ORDER:
+The git workflow has been streamlined with automated hooks for efficiency:
 
-**⚠️ WARNING**: The order of these steps is CRITICAL. Running them out of order will cause CI/CD failures!
+### Pre-Commit (Automatic - Fast)
 
-### Quick Validation (Recommended)
+When you run `git commit`, the pre-commit hook automatically:
 
-For a comprehensive check that matches CI exactly, run:
+- Runs ESLint with auto-fix on staged files
+- Runs Prettier to format staged files
+- Takes only a few seconds
+
+### Pre-Push (Automatic - Comprehensive)
+
+When you run `git push`, the pre-push hook automatically:
+
+- Runs TypeScript type checking
+- Runs all tests
+- Verifies code formatting
+- Takes 30-60 seconds
+
+### Quick Commands
+
+```bash
+# Make your changes
+git add .
+git commit -m "Your descriptive commit message"  # Pre-commit hook runs automatically
+git push origin develop                          # Pre-push hook runs automatically
+```
+
+### If Hooks Fail
+
+**Pre-commit failures**: The changes are auto-fixed. Review them and commit again:
+
+```bash
+git add .
+git commit -m "Your message"
+```
+
+**Pre-push failures**: Fix the issues before pushing:
+
+```bash
+# For TypeScript errors
+npm run build
+
+# For test failures
+npm test
+
+# For format issues
+npm run format
+```
+
+### Manual Validation (Optional)
+
+If you want to manually run all checks before committing:
 
 ```bash
 ./scripts/pre-commit-check.sh
 ```
 
-This script runs all the checks below automatically with the same flags as CI.
-
-### Manual Steps (if not using the script)
-
-### 1. Run linting
-
-```bash
-npm run lint  # (at root level)
-```
-
-- Catches potential code quality issues early
-- Ensures TypeScript and ESLint rules are satisfied
-- Run this FIRST to catch issues before other checks
-
-### 2. Run tests
-
-```bash
-npm test  # (at root level)
-```
-
-- Verifies all tests pass
-- Prevents breaking existing functionality
-- **Important**: Also run `npm run test:frontend` and `npm run test:infrastructure` separately to ensure test output is clearly visible
-
-### 3. Build check (CRITICAL: Must come BEFORE formatting!)
-
-```bash
-npm run build  # (at root level)
-```
-
-- Ensures the project builds successfully
-- Catches TypeScript compilation errors
-- **CRITICAL**: This generates `.d.ts` declaration files that MUST be formatted
-- **MUST run BEFORE formatting** to ensure generated files exist
-
-### 4. Run formatting
-
-```bash
-npm run format  # (at root level)
-```
-
-- Formats all code including newly generated `.d.ts` files from the build
-- Ensures consistent code style
-- **MUST run AFTER build** to format generated declaration files
-
-### 5. Verify formatting (NEW - CRITICAL STEP!)
-
-```bash
-npm run format:check  # (at root level)
-```
-
-Then also verify from infrastructure directory:
-
-```bash
-cd infrastructure && npm run format:check
-```
-
-- **CRITICAL**: Both commands must show "All matched files use Prettier code style!"
-- CI/CD runs format:check from the infrastructure directory separately
-- If either fails, run `npm run format` again and re-check
-- This step prevents CI/CD formatting failures
-
-### 6. Verify no untracked files
-
-```bash
-git status
-```
-
-- Ensure all necessary files are staged (including formatted `.d.ts` files)
-- Check for any accidentally modified files
-- Look for any generated files that need to be committed
-
-### 7. Review changes
-
-```bash
-git diff --staged
-```
-
-- Double-check your changes are intentional
-- Look for any debug code or temporary changes
-- Verify all formatted files are included
-
-### 8. Stage and commit changes
-
-```bash
-git add .  # Stage all changes (or use specific file paths)
-git commit -m "Your descriptive commit message
-
-🤖 Generated with Claude Code (https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
-- **IMPORTANT**: Always include a descriptive commit message
-- Include Claude Code attribution in commit messages when using Claude Code
-- Husky pre-commit hooks will automatically run linting and formatting
-- If pre-commit hooks fail, fix the issues and try again
-
-### 9. Push to remote repository
-
-```bash
-git push origin develop  # Push to develop branch
-```
-
-- **CRITICAL**: This step triggers GitHub Actions workflows
-- Always verify the push succeeded with `git status`
-- Check GitHub Actions tab to monitor workflow execution
-- If push is rejected, pull latest changes first: `git pull origin develop --rebase`
-
-## Why This Order Matters
-
-The build step (step 3) generates TypeScript declaration files (`.d.ts`). These files MUST exist before formatting (step 4) can format them. If you format before building, the CI/CD pipeline will fail because it will find unformatted declaration files.
-
-**Note on Steps 8-9**: Commit and push are now explicit steps to ensure changes are actually pushed to GitHub and workflows are triggered. Previously, these were implicit, which could lead to commits being made locally but not pushed to the remote repository.
+This runs a comprehensive check similar to CI/CD.
 
 For detailed explanation, see the "Pre-Commit Checklist" section in CLAUDE.md.
 

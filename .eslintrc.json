@@ -18,6 +18,7 @@
       "extends": ["next/core-web-vitals", "next/typescript", "prettier"],
       "rules": {
         "@next/next/no-html-link-for-pages": "off",
+        "@typescript-eslint/no-explicit-any": "error",
         "no-console": ["warn", { "allow": ["info", "warn", "error"] }]
       }
     },
@@ -29,6 +30,7 @@
       },
       "plugins": ["@typescript-eslint"],
       "rules": {
+        "@typescript-eslint/no-explicit-any": "error",
         "@typescript-eslint/no-unused-vars": [
           "error",
           { "argsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }
@@ -39,7 +41,7 @@
     {
       "files": ["infrastructure/lambda/**/*.ts", "infrastructure/lambda/**/*.js"],
       "rules": {
-        "no-console": ["warn", { "allow": ["info", "warn", "error"] }]
+        "no-console": "off"
       }
     }
   ],

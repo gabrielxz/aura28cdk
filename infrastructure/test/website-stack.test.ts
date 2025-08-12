@@ -157,7 +157,8 @@ if (!dockerAvailable) {
         const resource = resources[resourceKey];
         if (resource.Properties && resource.Properties.Tags) {
           const projectTag = resource.Properties.Tags.find(
-            (tag: any) => tag.Key === 'Project' && tag.Value === 'Aura28CDK',
+            (tag: { Key: string; Value: string }) =>
+              tag.Key === 'Project' && tag.Value === 'Aura28CDK',
           );
           if (projectTag) {
             hasProjectTag = true;

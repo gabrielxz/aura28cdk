@@ -9,7 +9,6 @@ interface TimePickerProps {
   onChange?: (time: string) => void;
   placeholder?: string;
   id?: string;
-  required?: boolean;
   disabled?: boolean;
   className?: string;
 }

@@ -7,6 +7,7 @@ const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
 // Import swisseph from the Lambda Layer
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let swisseph: any;
 try {
   swisseph = require('/opt/nodejs/node_modules/swisseph');
@@ -58,6 +59,7 @@ const ZODIAC_SIGNS = [
   'Pisces',
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const validateEvent = (event: any): NatalChartEvent => {
   if (
     !event.userId ||
@@ -247,10 +249,27 @@ const generateCacheKey = (
   latitude: number,
   longitude: number,
 ): string => {
-  const input = `${birthDate}T${birthTime}:00Z_${latitude}_${longitude}_placidus_tropical_v2.10.03`;
+  // Only include inputs that affect calculations
+  const cacheData = {
+    birthDateTime: `${birthDate}T${birthTime}:00Z`, // UTC ISO format
+    lat: latitude,
+    lon: longitude,
+    houseSystem: 'placidus',
+    zodiacType: 'tropical',
+    ephemerisVersion: '2.10.03', // Only change when ephemeris data changes
+  };
+
+  // Use stable JSON stringification (keys in alphabetical order)
+  const sortedKeys = Object.keys(cacheData).sort();
+  const stableJson = sortedKeys
+    .map((key) => `"${key}":${JSON.stringify(cacheData[key as keyof typeof cacheData])}`)
+    .join(',');
+  const input = `{${stableJson}}`;
+
   return crypto.createHash('sha256').update(input).digest('hex');
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getCachedHouseData = async (cacheKey: string): Promise<any | null> => {
   const NATAL_CHART_TABLE_NAME = process.env.NATAL_CHART_TABLE_NAME!;
 
@@ -276,6 +295,7 @@ const getCachedHouseData = async (cacheKey: string): Promise<any | null> => {
   return null;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const saveCachedHouseData = async (cacheKey: string, houseData: any): Promise<void> => {
   const NATAL_CHART_TABLE_NAME = process.env.NATAL_CHART_TABLE_NAME!;
 
@@ -299,6 +319,7 @@ const saveCachedHouseData = async (cacheKey: string, houseData: any): Promise<vo
   }
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const handler = async (event: any): Promise<void> => {
   const NATAL_CHART_TABLE_NAME = process.env.NATAL_CHART_TABLE_NAME!;
   console.info('Received event:', JSON.stringify(event, null, 2));
@@ -329,6 +350,7 @@ export const handler = async (event: any): Promise<void> => {
     const chartData = getAllPlanets(birthDateTime, longitude, latitude, timezoneOffsetInHours);
 
     // Extract planetary positions from the observed namespace
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const planets: Record<string, any> = {};
     if (chartData.observed) {
       Object.keys(chartData.observed).forEach((planetName) => {
@@ -371,6 +393,7 @@ export const handler = async (event: any): Promise<void> => {
     }
 
     // Prepare the item to store
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const item: any = {
       userId,
       chartType: 'natal',
@@ -383,10 +406,10 @@ export const handler = async (event: any): Promise<void> => {
       planets,
       metadata: {
         calculationTimestamp: new Date().toISOString(),
-        algoVersion: '2.0.0',
         ephemerisVersion: '2.10.03',
         swetestVersion: '2.10.03',
-        inputHash: cacheKey,
+        houseSystem: 'placidus',
+        zodiacType: 'tropical',
       },
     };
 
