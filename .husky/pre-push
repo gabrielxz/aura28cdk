@@ -13,12 +13,12 @@ NC='\033[0m' # No Color
 # Track if any check fails
 FAILED=0
 
-# 1. TypeScript type checking
-echo -e "${BLUE}[CHECKING]${NC} TypeScript types..."
-if npm run build --workspace=frontend -- --noEmit 2>/dev/null && npm run build --workspace=infrastructure 2>/dev/null; then
-    echo -e "${GREEN}[✓]${NC} TypeScript checks passed"
+# 1. TypeScript type checking and build
+echo -e "${BLUE}[CHECKING]${NC} TypeScript types and build..."
+if npm run build 2>/dev/null; then
+    echo -e "${GREEN}[✓]${NC} TypeScript checks and build passed"
 else
-    echo -e "${RED}[✗]${NC} TypeScript type errors found"
+    echo -e "${RED}[✗]${NC} TypeScript type errors or build errors found"
     FAILED=1
 fi
 
