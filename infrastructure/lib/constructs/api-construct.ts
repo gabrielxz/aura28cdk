@@ -32,13 +32,86 @@ export class ApiConstruct extends Construct {
   constructor(scope: Construct, id: string, props: ApiConstructProps) {
     super(scope, id);
 
-    // Create SSM Parameter for OpenAI API Key
+    // Create SSM Parameters for OpenAI Configuration
     const openAiApiKeyParameter = new ssm.StringParameter(this, 'OpenAiApiKeyParameter', {
       parameterName: `/aura28/${props.environment}/openai-api-key`,
       description: `OpenAI API key for ${props.environment} environment`,
       stringValue: 'PLACEHOLDER_TO_BE_REPLACED_MANUALLY',
       tier: ssm.ParameterTier.STANDARD,
     });
+
+    const openAiModelParameter = new ssm.StringParameter(this, 'OpenAiModelParameter', {
+      parameterName: `/aura28/${props.environment}/openai-model`,
+      description: `OpenAI model for ${props.environment} environment`,
+      stringValue: 'gpt-4-turbo-preview',
+      tier: ssm.ParameterTier.STANDARD,
+    });
+
+    const openAiTemperatureParameter = new ssm.StringParameter(this, 'OpenAiTemperatureParameter', {
+      parameterName: `/aura28/${props.environment}/openai-temperature`,
+      description: `OpenAI temperature for ${props.environment} environment`,
+      stringValue: '0.7',
+      tier: ssm.ParameterTier.STANDARD,
+    });
+
+    const openAiMaxTokensParameter = new ssm.StringParameter(this, 'OpenAiMaxTokensParameter', {
+      parameterName: `/aura28/${props.environment}/openai-max-tokens`,
+      description: `OpenAI max tokens for ${props.environment} environment`,
+      stringValue: '2000',
+      tier: ssm.ParameterTier.STANDARD,
+    });
+
+    const openAiSystemPromptParameter = new ssm.StringParameter(
+      this,
+      'OpenAiSystemPromptParameter',
+      {
+        parameterName: `/aura28/${props.environment}/openai-system-prompt`,
+        description: `OpenAI system prompt for ${props.environment} environment`,
+        stringValue:
+          'You are an expert astrologer providing Soul Blueprint readings based on natal charts. Always echo back the natal chart data you receive as part of your response to confirm you have the correct information.',
+        tier: ssm.ParameterTier.STANDARD,
+      },
+    );
+
+    const openAiUserPromptTemplateParameter = new ssm.StringParameter(
+      this,
+      'OpenAiUserPromptTemplateParameter',
+      {
+        parameterName: `/aura28/${props.environment}/openai-user-prompt-template`,
+        description: `OpenAI user prompt template for ${props.environment} environment`,
+        stringValue: `Generate a Soul Blueprint reading for the following individual:
+
+Birth Information:
+- Name: {{birthName}}
+- Birth Date: {{birthDate}}
+- Birth Time: {{birthTime}}
+- Birth Location: {{birthCity}}, {{birthState}}, {{birthCountry}}
+
+Natal Chart Data:
+{{natalChartData}}
+
+Please provide a comprehensive Soul Blueprint reading that includes:
+
+1. First, echo back the natal chart information above to confirm you have received it correctly.
+
+2. Sun Sign Analysis - Core identity and life purpose
+
+3. Moon Sign Analysis - Emotional nature and inner self
+
+4. Rising Sign Analysis - How you present to the world
+
+5. Key Planetary Aspects - Major influences and challenges
+
+6. Life Path Insights - Your soul's journey and lessons
+
+7. Strengths and Gifts - Your natural talents
+
+8. Growth Areas - Where to focus your development
+
+Please make the reading personal, insightful, and actionable while maintaining a warm and encouraging tone.`,
+        tier: ssm.ParameterTier.STANDARD,
+      },
+    );
 
     // Create Swiss Ephemeris Lambda Layer
     const swissEphemerisLayer = new lambda.LayerVersion(this, 'SwissEphemerisLayer', {
@@ -165,6 +238,12 @@ export class ApiConstruct extends Construct {
           NATAL_CHART_TABLE_NAME: props.natalChartTable.tableName,
           USER_TABLE_NAME: props.userTable.tableName,
           OPENAI_API_KEY_PARAMETER_NAME: openAiApiKeyParameter.parameterName,
+          OPENAI_MODEL_PARAMETER_NAME: openAiModelParameter.parameterName,
+          OPENAI_TEMPERATURE_PARAMETER_NAME: openAiTemperatureParameter.parameterName,
+          OPENAI_MAX_TOKENS_PARAMETER_NAME: openAiMaxTokensParameter.parameterName,
+          OPENAI_SYSTEM_PROMPT_PARAMETER_NAME: openAiSystemPromptParameter.parameterName,
+          OPENAI_USER_PROMPT_TEMPLATE_PARAMETER_NAME:
+            openAiUserPromptTemplateParameter.parameterName,
         },
         timeout: cdk.Duration.seconds(60), // Longer timeout for OpenAI API calls
         memorySize: 512,
@@ -220,6 +299,11 @@ export class ApiConstruct extends Construct {
 
     // Grant SSM parameter read permissions to generate reading function
     openAiApiKeyParameter.grantRead(this.generateReadingFunction);
+    openAiModelParameter.grantRead(this.generateReadingFunction);
+    openAiTemperatureParameter.grantRead(this.generateReadingFunction);
+    openAiMaxTokensParameter.grantRead(this.generateReadingFunction);
+    openAiSystemPromptParameter.grantRead(this.generateReadingFunction);
+    openAiUserPromptTemplateParameter.grantRead(this.generateReadingFunction);
 
     // Grant Location Service permissions
     this.updateUserProfileFunction.addToRolePolicy(

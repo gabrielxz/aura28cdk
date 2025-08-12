@@ -8,30 +8,72 @@ const dynamoClient = new DynamoDBClient({});
 const dynamoDoc = DynamoDBDocumentClient.from(dynamoClient);
 const ssmClient = new SSMClient({});
 
-let openAiApiKey: string | undefined;
+interface OpenAIConfig {
+  apiKey: string;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  systemPrompt: string;
+  userPromptTemplate: string;
+}
 
-async function getOpenAiApiKey(): Promise<string> {
-  if (!openAiApiKey) {
-    const parameterName = process.env.OPENAI_API_KEY_PARAMETER_NAME;
-    if (!parameterName) {
-      throw new Error('OPENAI_API_KEY_PARAMETER_NAME environment variable not set');
-    }
+async function getOpenAIConfig(): Promise<OpenAIConfig> {
+  const parameterNames = [
+    process.env.OPENAI_API_KEY_PARAMETER_NAME,
+    process.env.OPENAI_MODEL_PARAMETER_NAME,
+    process.env.OPENAI_TEMPERATURE_PARAMETER_NAME,
+    process.env.OPENAI_MAX_TOKENS_PARAMETER_NAME,
+    process.env.OPENAI_SYSTEM_PROMPT_PARAMETER_NAME,
+    process.env.OPENAI_USER_PROMPT_TEMPLATE_PARAMETER_NAME,
+  ];
 
-    const response = await ssmClient.send(
-      new GetParameterCommand({
-        Name: parameterName,
-        WithDecryption: true,
-      }),
-    );
+  // Validate all parameter names are present
+  const missingParams = parameterNames
+    .map((name, index) => {
+      const labels = [
+        'OPENAI_API_KEY_PARAMETER_NAME',
+        'OPENAI_MODEL_PARAMETER_NAME',
+        'OPENAI_TEMPERATURE_PARAMETER_NAME',
+        'OPENAI_MAX_TOKENS_PARAMETER_NAME',
+        'OPENAI_SYSTEM_PROMPT_PARAMETER_NAME',
+        'OPENAI_USER_PROMPT_TEMPLATE_PARAMETER_NAME',
+      ];
+      return name ? null : labels[index];
+    })
+    .filter(Boolean);
 
-    if (!response.Parameter?.Value) {
-      throw new Error('OpenAI API key not found in SSM');
-    }
-
-    openAiApiKey = response.Parameter.Value;
+  if (missingParams.length > 0) {
+    throw new Error(`Missing environment variables: ${missingParams.join(', ')}`);
   }
 
-  return openAiApiKey;
+  // Fetch all parameters in parallel
+  const parameterPromises = parameterNames.map((name) =>
+    ssmClient.send(
+      new GetParameterCommand({
+        Name: name!,
+        WithDecryption: true,
+      }),
+    ),
+  );
+
+  const responses = await Promise.all(parameterPromises);
+
+  // Extract values
+  const values = responses.map((response, index) => {
+    if (!response.Parameter?.Value) {
+      throw new Error(`Parameter ${parameterNames[index]} not found in SSM`);
+    }
+    return response.Parameter.Value;
+  });
+
+  return {
+    apiKey: values[0],
+    model: values[1],
+    temperature: parseFloat(values[2]),
+    maxTokens: parseInt(values[3], 10),
+    systemPrompt: values[4],
+    userPromptTemplate: values[5],
+  };
 }
 
 async function getUserProfile(userId: string) {
@@ -59,28 +101,27 @@ async function getNatalChart(userId: string) {
   return response.Item;
 }
 
-async function callOpenAI(prompt: string, apiKey: string): Promise<string> {
+async function callOpenAI(prompt: string, config: OpenAIConfig): Promise<string> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${config.apiKey}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4-turbo-preview',
+      model: config.model,
       messages: [
         {
           role: 'system',
-          content:
-            'You are an expert astrologer providing Soul Blueprint readings based on natal charts. Always echo back the natal chart data you receive as part of your response to confirm you have the correct information.',
+          content: config.systemPrompt,
         },
         {
           role: 'user',
           content: prompt,
         },
       ],
-      temperature: 0.7,
-      max_tokens: 2000,
+      temperature: config.temperature,
+      max_tokens: config.maxTokens,
     }),
   });
 
@@ -171,45 +212,21 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     );
 
     try {
-      // Get OpenAI API key
-      const apiKey = await getOpenAiApiKey();
+      // Get OpenAI configuration
+      const openAIConfig = await getOpenAIConfig();
 
-      // Prepare prompt for OpenAI
-      const prompt = `
-Generate a Soul Blueprint reading for the following individual:
-
-Birth Information:
-- Name: ${userProfile.profile?.birthName || 'Unknown'}
-- Birth Date: ${userProfile.profile?.birthDate || 'Unknown'}
-- Birth Time: ${userProfile.profile?.birthTime || 'Unknown'}
-- Birth Location: ${userProfile.profile?.birthCity}, ${userProfile.profile?.birthState}, ${userProfile.profile?.birthCountry}
-
-Natal Chart Data:
-${JSON.stringify(natalChart, null, 2)}
-
-Please provide a comprehensive Soul Blueprint reading that includes:
-
-1. First, echo back the natal chart information above to confirm you have received it correctly.
-
-2. Sun Sign Analysis - Core identity and life purpose
-
-3. Moon Sign Analysis - Emotional nature and inner self
-
-4. Rising Sign Analysis - How you present to the world
-
-5. Key Planetary Aspects - Major influences and challenges
-
-6. Life Path Insights - Your soul's journey and lessons
-
-7. Strengths and Gifts - Your natural talents
-
-8. Growth Areas - Where to focus your development
-
-Please make the reading personal, insightful, and actionable while maintaining a warm and encouraging tone.
-`;
+      // Build user prompt from template
+      const userPrompt = openAIConfig.userPromptTemplate
+        .replace('{{birthName}}', userProfile.profile?.birthName || 'Unknown')
+        .replace('{{birthDate}}', userProfile.profile?.birthDate || 'Unknown')
+        .replace('{{birthTime}}', userProfile.profile?.birthTime || 'Unknown')
+        .replace('{{birthCity}}', userProfile.profile?.birthCity || 'Unknown')
+        .replace('{{birthState}}', userProfile.profile?.birthState || 'Unknown')
+        .replace('{{birthCountry}}', userProfile.profile?.birthCountry || 'Unknown')
+        .replace('{{natalChartData}}', JSON.stringify(natalChart, null, 2));
 
       // Call OpenAI API
-      const content = await callOpenAI(prompt, apiKey);
+      const content = await callOpenAI(userPrompt, openAIConfig);
 
       // Update reading with content and status
       const updatedReading = {
