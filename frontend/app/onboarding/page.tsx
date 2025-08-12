@@ -263,7 +263,6 @@ export default function OnboardingPage() {
                   value={formData.birthDate}
                   onChange={(date) => updateFormData('birthDate', date || '')}
                   placeholder="Select your birth date"
-                  required
                   className={errors.birthDate ? 'border-red-500' : ''}
                 />
                 {errors.birthDate && (
@@ -286,7 +285,6 @@ export default function OnboardingPage() {
                   value={formData.birthTime}
                   onChange={(time) => updateFormData('birthTime', time)}
                   placeholder="Select birth time"
-                  required
                   className={errors.birthTime ? 'border-red-500' : ''}
                 />
                 {errors.birthTime && (

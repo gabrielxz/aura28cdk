@@ -79,10 +79,10 @@ export interface NatalChart {
   };
   metadata?: {
     calculationTimestamp: string;
-    algoVersion: string;
     ephemerisVersion: string;
     swetestVersion: string;
-    inputHash: string;
+    houseSystem: string;
+    zodiacType: string;
   };
 }
 

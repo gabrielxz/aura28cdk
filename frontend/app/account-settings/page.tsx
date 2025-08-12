@@ -196,7 +196,6 @@ export default function AccountSettingsPage() {
                 value={formData.birthDate}
                 onChange={(date) => handleInputChange('birthDate', date || '')}
                 placeholder="Select your birth date"
-                required
               />
             </div>
 
@@ -207,7 +206,6 @@ export default function AccountSettingsPage() {
                 value={formData.birthTime}
                 onChange={(time) => handleInputChange('birthTime', time)}
                 placeholder="Select birth time"
-                required
               />
             </div>
 
