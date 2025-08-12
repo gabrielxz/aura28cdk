@@ -77,9 +77,9 @@ export function DatePicker({
           mode="single"
           selected={date}
           onSelect={handleSelect}
-          captionLayout="dropdown"  // Enable month/year dropdowns
-          fromYear={1900}          // Start from year 1900
-          toYear={new Date().getFullYear()}  // Up to current year
+          captionLayout="dropdown" // Enable month/year dropdowns
+          fromYear={1900} // Start from year 1900
+          toYear={new Date().getFullYear()} // Up to current year
           initialFocus
           disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
         />
