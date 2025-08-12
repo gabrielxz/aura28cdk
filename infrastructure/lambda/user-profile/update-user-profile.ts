@@ -79,7 +79,20 @@ interface ValidationError {
   message: string;
 }
 
-const validateBirthData = (data: any): ValidationError[] => {
+interface UserProfile {
+  birthName: string;
+  birthDate: string;
+  birthTime: string;
+  birthCity: string;
+  birthState: string;
+  birthCountry: string;
+  birthLatitude?: number;
+  birthLongitude?: number;
+  ianaTimeZone?: string;
+  standardizedLocationName?: string;
+}
+
+const validateBirthData = (data: ProfileData): ValidationError[] => {
   const errors: ValidationError[] = [];
 
   // Email validation
@@ -153,14 +166,14 @@ const validateBirthData = (data: any): ValidationError[] => {
 
   // Future lat/long validation (when provided)
   if (data.birthLatitude !== undefined) {
-    const lat = parseFloat(data.birthLatitude);
+    const lat = data.birthLatitude;
     if (isNaN(lat) || lat < -90 || lat > 90) {
       errors.push({ field: 'birthLatitude', message: 'Invalid latitude' });
     }
   }
 
   if (data.birthLongitude !== undefined) {
-    const lng = parseFloat(data.birthLongitude);
+    const lng = data.birthLongitude;
     if (isNaN(lng) || lng < -180 || lng > 180) {
       errors.push({ field: 'birthLongitude', message: 'Invalid longitude' });
     }
@@ -277,7 +290,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const now = new Date().toISOString();
 
     // Build profile object without undefined values
-    const profile: any = {
+    const profile: UserProfile = {
       birthName: profileData.birthName.trim(),
       birthDate: profileData.birthDate,
       birthTime: profileData.birthTime.trim(),
