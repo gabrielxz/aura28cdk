@@ -96,6 +96,31 @@ export interface ApiError {
   validationErrors?: ValidationError[];
 }
 
+export interface Reading {
+  readingId: string;
+  type: string;
+  status: 'Processing' | 'Ready' | 'Failed' | 'In Review';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReadingDetail extends Reading {
+  content?: string;
+  error?: string;
+  userId: string;
+}
+
+export interface ReadingsListResponse {
+  readings: Reading[];
+  count: number;
+}
+
+export interface GenerateReadingResponse {
+  message: string;
+  readingId: string;
+  status: string;
+}
+
 export class UserApi {
   private baseUrl: string;
   private authService: AuthService;
@@ -205,6 +230,72 @@ export class UserApi {
       // If profile doesn't exist or there's an error, onboarding is not completed
       console.info('Profile not found or error checking onboarding status:', error);
       return false;
+    }
+  }
+
+  async getReadings(userId: string): Promise<ReadingsListResponse> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${this.baseUrl}api/users/${userId}/readings`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.error || 'Failed to fetch readings');
+      }
+
+      const data: ReadingsListResponse = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching readings:', error);
+      throw error;
+    }
+  }
+
+  async getReadingDetail(userId: string, readingId: string): Promise<ReadingDetail> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${this.baseUrl}api/users/${userId}/readings/${readingId}`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.error || 'Failed to fetch reading detail');
+      }
+
+      const reading: ReadingDetail = await response.json();
+      return reading;
+    } catch (error) {
+      console.error('Error fetching reading detail:', error);
+      throw error;
+    }
+  }
+
+  async generateReading(userId: string): Promise<GenerateReadingResponse> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${this.baseUrl}api/users/${userId}/readings`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          type: 'Soul Blueprint',
+        }),
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.error || 'Failed to generate reading');
+      }
+
+      const data: GenerateReadingResponse = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error generating reading:', error);
+      throw error;
     }
   }
 }
