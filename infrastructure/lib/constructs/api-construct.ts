@@ -36,8 +36,8 @@ export class ApiConstruct extends Construct {
     const openAiApiKeyParameter = new ssm.StringParameter(this, 'OpenAiApiKeyParameter', {
       parameterName: `/aura28/${props.environment}/openai-api-key`,
       description: `OpenAI API key for ${props.environment} environment`,
-      type: ssm.ParameterType.SECURE_STRING,
       stringValue: 'PLACEHOLDER_TO_BE_REPLACED_MANUALLY',
+      tier: ssm.ParameterTier.STANDARD,
     });
 
     // Create Swiss Ephemeris Lambda Layer
