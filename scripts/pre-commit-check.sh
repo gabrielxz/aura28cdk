@@ -95,6 +95,16 @@ else
     FAILED=1
 fi
 
+# 5a. Auto-format generated files after build
+print_step "Auto-formatting generated files"
+if npm run format 2>/dev/null; then
+    print_success "Generated files formatted"
+    # Stage any formatting changes to generated files
+    git add "*.d.ts" 2>/dev/null
+else
+    print_warning "Could not format generated files"
+fi
+
 # 6. Format Check (both root and infrastructure)
 print_step "Format Check (Root)"
 if npm run format:check 2>/dev/null; then
