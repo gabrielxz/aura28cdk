@@ -17,6 +17,8 @@ FAILED=0
 echo -e "${BLUE}[CHECKING]${NC} TypeScript types and build..."
 if npm run build 2>/dev/null; then
     echo -e "${GREEN}[✓]${NC} TypeScript checks and build passed"
+    # Format any generated files from the build
+    npm run format 2>/dev/null
 else
     echo -e "${RED}[✗]${NC} TypeScript type errors or build errors found"
     FAILED=1
