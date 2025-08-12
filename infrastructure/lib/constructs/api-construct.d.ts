@@ -7,6 +7,7 @@ export interface ApiConstructProps {
   environment: 'dev' | 'prod';
   userTable: dynamodb.Table;
   natalChartTable: dynamodb.Table;
+  readingsTable: dynamodb.Table;
   userPool: cognito.UserPool;
   placeIndexName: string;
   allowedOrigins: string[];
@@ -17,5 +18,8 @@ export declare class ApiConstruct extends Construct {
   readonly updateUserProfileFunction: lambda.Function;
   readonly generateNatalChartFunction: lambda.Function;
   readonly getNatalChartFunction: lambda.Function;
+  readonly generateReadingFunction: lambda.Function;
+  readonly getReadingsFunction: lambda.Function;
+  readonly getReadingDetailFunction: lambda.Function;
   constructor(scope: Construct, id: string, props: ApiConstructProps);
 }

@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth/use-auth';
 import { UserApi, UserProfileResponse } from '@/lib/api/user-api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import NatalChartTab from './natal-chart-tab';
+import ReadingsTab from './readings-tab';
 
 export default function DashboardPage() {
   const { user, loading, authService } = useAuth();
@@ -71,9 +72,10 @@ export default function DashboardPage() {
       </h2>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="natal-chart">Natal Chart</TabsTrigger>
+          <TabsTrigger value="readings">Readings</TabsTrigger>
         </TabsList>
         <TabsContent value="profile">
           <div className="mt-6 rounded-lg bg-gray-50 p-6 dark:bg-gray-900">
@@ -127,6 +129,9 @@ export default function DashboardPage() {
         </TabsContent>
         <TabsContent value="natal-chart">
           <NatalChartTab userApi={userApi} userId={user.sub} />
+        </TabsContent>
+        <TabsContent value="readings">
+          <ReadingsTab userApi={userApi} userId={user.sub} />
         </TabsContent>
       </Tabs>
     </div>

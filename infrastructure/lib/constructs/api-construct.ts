@@ -6,12 +6,14 @@ import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as path from 'path';
 
 export interface ApiConstructProps {
   environment: 'dev' | 'prod';
   userTable: dynamodb.Table;
   natalChartTable: dynamodb.Table;
+  readingsTable: dynamodb.Table;
   userPool: cognito.UserPool;
   placeIndexName: string;
   allowedOrigins: string[];
@@ -23,9 +25,20 @@ export class ApiConstruct extends Construct {
   public readonly updateUserProfileFunction: lambda.Function;
   public readonly generateNatalChartFunction: lambda.Function;
   public readonly getNatalChartFunction: lambda.Function;
+  public readonly generateReadingFunction: lambda.Function;
+  public readonly getReadingsFunction: lambda.Function;
+  public readonly getReadingDetailFunction: lambda.Function;
 
   constructor(scope: Construct, id: string, props: ApiConstructProps) {
     super(scope, id);
+
+    // Create SSM Parameter for OpenAI API Key
+    const openAiApiKeyParameter = new ssm.StringParameter(this, 'OpenAiApiKeyParameter', {
+      parameterName: `/aura28/${props.environment}/openai-api-key`,
+      description: `OpenAI API key for ${props.environment} environment`,
+      type: ssm.ParameterType.SECURE_STRING,
+      stringValue: 'PLACEHOLDER_TO_BE_REPLACED_MANUALLY',
+    });
 
     // Create Swiss Ephemeris Lambda Layer
     const swissEphemerisLayer = new lambda.LayerVersion(this, 'SwissEphemerisLayer', {
@@ -138,6 +151,76 @@ export class ApiConstruct extends Construct {
     // Grant invocation permission
     this.generateNatalChartFunction.grantInvoke(this.updateUserProfileFunction);
 
+    // Create Lambda functions for readings
+    this.generateReadingFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'GenerateReadingFunction',
+      {
+        functionName: `aura28-${props.environment}-generate-reading`,
+        entry: path.join(__dirname, '../../lambda/readings/generate-reading.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_18_X,
+        environment: {
+          READINGS_TABLE_NAME: props.readingsTable.tableName,
+          NATAL_CHART_TABLE_NAME: props.natalChartTable.tableName,
+          USER_TABLE_NAME: props.userTable.tableName,
+          OPENAI_API_KEY_PARAMETER_NAME: openAiApiKeyParameter.parameterName,
+        },
+        timeout: cdk.Duration.seconds(60), // Longer timeout for OpenAI API calls
+        memorySize: 512,
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
+    this.getReadingsFunction = new lambdaNodeJs.NodejsFunction(this, 'GetReadingsFunction', {
+      functionName: `aura28-${props.environment}-get-readings`,
+      entry: path.join(__dirname, '../../lambda/readings/get-readings.ts'),
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_18_X,
+      environment: {
+        READINGS_TABLE_NAME: props.readingsTable.tableName,
+      },
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      bundling: {
+        externalModules: ['@aws-sdk/*'],
+        forceDockerBundling: false,
+      },
+    });
+
+    this.getReadingDetailFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'GetReadingDetailFunction',
+      {
+        functionName: `aura28-${props.environment}-get-reading-detail`,
+        entry: path.join(__dirname, '../../lambda/readings/get-reading-detail.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_18_X,
+        environment: {
+          READINGS_TABLE_NAME: props.readingsTable.tableName,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
+    // Grant DynamoDB permissions for readings
+    props.readingsTable.grantReadWriteData(this.generateReadingFunction);
+    props.readingsTable.grantReadData(this.getReadingsFunction);
+    props.readingsTable.grantReadData(this.getReadingDetailFunction);
+    props.natalChartTable.grantReadData(this.generateReadingFunction);
+    props.userTable.grantReadData(this.generateReadingFunction);
+
+    // Grant SSM parameter read permissions to generate reading function
+    openAiApiKeyParameter.grantRead(this.generateReadingFunction);
+
     // Grant Location Service permissions
     this.updateUserProfileFunction.addToRolePolicy(
       new iam.PolicyStatement({
@@ -163,7 +246,7 @@ export class ApiConstruct extends Construct {
       },
       defaultCorsPreflightOptions: {
         allowOrigins: props.allowedOrigins,
-        allowMethods: ['GET', 'PUT', 'OPTIONS'],
+        allowMethods: ['GET', 'PUT', 'POST', 'OPTIONS'],
         allowHeaders: [
           'Content-Type',
           'X-Amz-Date',
@@ -212,6 +295,38 @@ export class ApiConstruct extends Construct {
     profileResource.addMethod(
       'PUT',
       new apigateway.LambdaIntegration(this.updateUserProfileFunction),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      },
+    );
+
+    // Add /api/users/{userId}/readings resource
+    const readingsResource = userIdResource.addResource('readings');
+
+    // GET /api/users/{userId}/readings - List user's readings
+    readingsResource.addMethod('GET', new apigateway.LambdaIntegration(this.getReadingsFunction), {
+      authorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
+
+    // POST /api/users/{userId}/readings - Generate a new reading
+    readingsResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(this.generateReadingFunction),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      },
+    );
+
+    // Add /api/users/{userId}/readings/{readingId} resource
+    const readingIdResource = readingsResource.addResource('{readingId}');
+
+    // GET /api/users/{userId}/readings/{readingId} - Get reading detail
+    readingIdResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(this.getReadingDetailFunction),
       {
         authorizer,
         authorizationType: apigateway.AuthorizationType.COGNITO,

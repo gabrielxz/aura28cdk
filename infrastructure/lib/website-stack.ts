@@ -86,11 +86,31 @@ export class WebsiteStack extends cdk.Stack {
       },
     });
 
+    // Create DynamoDB table for readings
+    const readingsTable = new dynamodb.Table(this, 'ReadingsTable', {
+      tableName: `Aura28-${props.environment}-Readings`,
+      partitionKey: {
+        name: 'userId',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'readingId',
+        type: dynamodb.AttributeType.STRING,
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy:
+        props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: true,
+      },
+    });
+
     // Create API Gateway and Lambda functions
     this.api = new ApiConstruct(this, 'Api', {
       environment: props.environment,
       userTable: this.userTable,
-      natalChartTable: natalChartTable, // Pass the new table
+      natalChartTable: natalChartTable,
+      readingsTable: readingsTable,
       userPool: this.auth.userPool,
       placeIndexName: placeIndex.indexName,
       allowedOrigins: [
