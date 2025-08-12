@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Run lint-staged for fast pre-commit checks (lint and format)
+npx lint-staged

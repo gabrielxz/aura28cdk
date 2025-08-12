@@ -18,7 +18,7 @@ interface ProfileData {
   email: string;
   birthName: string;
   birthDate: string;
-  birthTime?: string;
+  birthTime: string;
   birthCity: string;
   birthState: string;
   birthCountry: string;
@@ -79,7 +79,20 @@ interface ValidationError {
   message: string;
 }
 
-const validateBirthData = (data: any): ValidationError[] => {
+interface UserProfile {
+  birthName: string;
+  birthDate: string;
+  birthTime: string;
+  birthCity: string;
+  birthState: string;
+  birthCountry: string;
+  birthLatitude?: number;
+  birthLongitude?: number;
+  ianaTimeZone?: string;
+  standardizedLocationName?: string;
+}
+
+const validateBirthData = (data: ProfileData): ValidationError[] => {
   const errors: ValidationError[] = [];
 
   // Email validation
@@ -117,11 +130,11 @@ const validateBirthData = (data: any): ValidationError[] => {
     }
   }
 
-  // Birth time validation (optional)
-  if (data.birthTime && typeof data.birthTime === 'string') {
-    if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(data.birthTime)) {
-      errors.push({ field: 'birthTime', message: 'Birth time must be in HH:MM format (24-hour)' });
-    }
+  // Birth time validation (required)
+  if (!data.birthTime || typeof data.birthTime !== 'string') {
+    errors.push({ field: 'birthTime', message: 'Birth time is required' });
+  } else if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(data.birthTime)) {
+    errors.push({ field: 'birthTime', message: 'Birth time must be in HH:MM format (24-hour)' });
   }
 
   // Location validation
@@ -153,14 +166,14 @@ const validateBirthData = (data: any): ValidationError[] => {
 
   // Future lat/long validation (when provided)
   if (data.birthLatitude !== undefined) {
-    const lat = parseFloat(data.birthLatitude);
+    const lat = data.birthLatitude;
     if (isNaN(lat) || lat < -90 || lat > 90) {
       errors.push({ field: 'birthLatitude', message: 'Invalid latitude' });
     }
   }
 
   if (data.birthLongitude !== undefined) {
-    const lng = parseFloat(data.birthLongitude);
+    const lng = data.birthLongitude;
     if (isNaN(lng) || lng < -180 || lng > 180) {
       errors.push({ field: 'birthLongitude', message: 'Invalid longitude' });
     }
@@ -277,18 +290,16 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const now = new Date().toISOString();
 
     // Build profile object without undefined values
-    const profile: any = {
+    const profile: UserProfile = {
       birthName: profileData.birthName.trim(),
       birthDate: profileData.birthDate,
+      birthTime: profileData.birthTime.trim(),
       birthCity: profileData.birthCity.trim(),
       birthState: profileData.birthState.trim(),
       birthCountry: profileData.birthCountry.trim(),
     };
 
     // Only add optional fields if they have values
-    if (profileData.birthTime) {
-      profile.birthTime = profileData.birthTime.trim();
-    }
 
     if (profileData.birthLatitude !== undefined) {
       profile.birthLatitude = profileData.birthLatitude;
@@ -335,8 +346,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       ianaTimeZone: profileData.ianaTimeZone,
     };
 
-    console.log('Invoking natal chart generation with payload:', invocationPayload);
-    console.log('Function name:', GENERATE_NATAL_CHART_FUNCTION_NAME);
+    console.info('Invoking natal chart generation with payload:', invocationPayload);
+    console.info('Function name:', GENERATE_NATAL_CHART_FUNCTION_NAME);
 
     try {
       const invocationResponse = await lambdaClient.send(
@@ -347,7 +358,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         }),
       );
 
-      console.log('Natal chart generation invoked successfully:', {
+      console.info('Natal chart generation invoked successfully:', {
         statusCode: invocationResponse.StatusCode,
         functionError: invocationResponse.FunctionError,
       });

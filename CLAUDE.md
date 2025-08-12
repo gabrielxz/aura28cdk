@@ -111,11 +111,28 @@ aura28cdk/
 4. Format code: `npm run format` (at root)
 5. Lint code: `npm run lint` (at root)
 
-<<<<<<< Updated upstream
+## CRITICAL: Git Commit Workflow - USE git-workflow-executor AGENT
 
-### Pre-Commit Checklist
+**ALWAYS use the git-workflow-executor agent for ANY git commit operations.**
 
-**IMPORTANT**: Before committing or pushing any changes, you MUST complete ALL of the following steps in this specific order.
+DO NOT manually run git commands for committing. Instead, after making code changes:
+
+1. Complete all code modifications
+2. Use the Task tool with subagent_type: "git-workflow-executor"
+3. The agent will handle all pre-commit checks according to gitWorkflow.md
+
+Example usage:
+
+```
+"I'll use the git-workflow-executor agent to commit these changes"
+[Task tool: subagent_type="git-workflow-executor"]
+```
+
+This ensures consistent adherence to the project's git workflow without deviation or missing steps.
+
+### Pre-Commit Checklist (Handled Automatically by git-workflow-executor)
+
+**IMPORTANT**: The git-workflow-executor agent will handle these steps automatically. This checklist is for reference only.
 
 1. **Run linting**: `npm run lint` (at root level)
    - Catches potential code quality issues before spending time on other checks.

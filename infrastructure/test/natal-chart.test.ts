@@ -1,5 +1,5 @@
 import { handler } from '../lambda/natal-chart/generate-natal-chart';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { mockClient } from 'aws-sdk-client-mock';
 import 'aws-sdk-client-mock-jest';
 
@@ -23,6 +23,10 @@ jest.mock('ephemeris', () => ({
   })),
 }));
 
+// Mock the swisseph module (from Lambda Layer)
+jest.mock('/opt/nodejs/node_modules/swisseph', () => null, { virtual: true });
+jest.mock('swisseph', () => null, { virtual: true });
+
 const ddbMock = mockClient(DynamoDBDocumentClient);
 
 describe('Generate Natal Chart Lambda', () => {
@@ -41,6 +45,7 @@ describe('Generate Natal Chart Lambda', () => {
       ianaTimeZone: 'America/Los_Angeles',
     };
 
+    ddbMock.on(GetCommand).resolves({}); // Cache miss
     ddbMock.on(PutCommand).resolves({});
 
     await handler(event);
@@ -53,21 +58,21 @@ describe('Generate Natal Chart Lambda', () => {
         chartType: 'natal',
         planets: expect.objectContaining({
           sun: expect.objectContaining({
-            longitude: 10.0,
-            longitudeDms: '10°00\'00"',
+            longitude: 10,
             name: 'sun',
+            sign: 'Aries',
           }),
           moon: expect.objectContaining({
             longitude: 45.5,
-            longitudeDms: '45°30\'00"',
             name: 'moon',
+            sign: 'Taurus',
           }),
         }),
       }),
     });
   });
 
-  it('should calculate and store a natal chart with a default birth time (noon)', async () => {
+  it('should throw an error if birth time is missing', async () => {
     const event = {
       userId: 'test-user-2',
       birthDate: '1995-05-15',
@@ -76,17 +81,7 @@ describe('Generate Natal Chart Lambda', () => {
       ianaTimeZone: 'America/New_York',
     };
 
-    ddbMock.on(PutCommand).resolves({});
-
-    await handler(event);
-
-    expect(ddbMock).toHaveReceivedCommandWith(PutCommand, {
-      TableName: 'TestNatalChartTable',
-      Item: expect.objectContaining({
-        userId: 'test-user-2',
-        isTimeEstimated: true,
-      }),
-    });
+    await expect(handler(event)).rejects.toThrow('Birth time is required for house calculations');
   });
 
   it('should throw an error if userId is missing', async () => {

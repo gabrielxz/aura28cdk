@@ -1,9 +1,24 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { getAllPlanets } from 'ephemeris';
+import * as crypto from 'crypto';
 
 const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
+
+// Import swisseph from the Lambda Layer
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let swisseph: any;
+try {
+  swisseph = require('/opt/nodejs/node_modules/swisseph');
+} catch (_error) {
+  console.warn('Swiss Ephemeris not available from layer, falling back to local if available');
+  try {
+    swisseph = require('swisseph');
+  } catch (_e) {
+    console.error('Swiss Ephemeris not available');
+  }
+}
 
 interface NatalChartEvent {
   userId: string;
@@ -14,6 +29,37 @@ interface NatalChartEvent {
   ianaTimeZone: string;
 }
 
+interface HouseData {
+  houseNumber: number;
+  cuspDegree: number;
+  cuspSign: string;
+  cuspDegreeInSign: number;
+  cuspMinutes: number;
+}
+
+interface AngleData {
+  degree: number;
+  sign: string;
+  degreeInSign: number;
+  minutes: number;
+}
+
+const ZODIAC_SIGNS = [
+  'Aries',
+  'Taurus',
+  'Gemini',
+  'Cancer',
+  'Leo',
+  'Virgo',
+  'Libra',
+  'Scorpio',
+  'Sagittarius',
+  'Capricorn',
+  'Aquarius',
+  'Pisces',
+];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const validateEvent = (event: any): NatalChartEvent => {
   if (
     !event.userId ||
@@ -24,68 +70,366 @@ const validateEvent = (event: any): NatalChartEvent => {
   ) {
     throw new Error('Missing required event properties');
   }
+
+  // Validate coordinates
+  if (event.latitude < -90 || event.latitude > 90) {
+    throw new Error('Invalid latitude: must be between -90 and 90');
+  }
+  if (event.longitude < -180 || event.longitude > 180) {
+    throw new Error('Invalid longitude: must be between -180 and 180');
+  }
+
   return event;
 };
 
+const getDegreeInfo = (degree: number): { sign: string; degreeInSign: number; minutes: number } => {
+  const normalizedDegree = degree % 360;
+  const signIndex = Math.floor(normalizedDegree / 30);
+  const degreeInSign = normalizedDegree % 30;
+  const wholeDegrees = Math.floor(degreeInSign);
+  const minutes = Math.round((degreeInSign - wholeDegrees) * 60);
+
+  return {
+    sign: ZODIAC_SIGNS[signIndex],
+    degreeInSign: wholeDegrees,
+    minutes,
+  };
+};
+
+const calculateHousesWithSwisseph = async (
+  birthDateTime: Date,
+  latitude: number,
+  longitude: number,
+): Promise<{
+  houses: HouseData[];
+  ascendant: AngleData;
+  midheaven: AngleData;
+  planetHouses: Record<string, number>;
+} | null> => {
+  if (!swisseph) {
+    console.warn('Swiss Ephemeris not available, skipping house calculations');
+    return null;
+  }
+
+  try {
+    // Set ephemeris path if provided
+    const ephePath = process.env.EPHEMERIS_PATH || '/opt/nodejs/node_modules/swisseph/ephe';
+    swisseph.swe_set_ephe_path(ephePath);
+
+    // Calculate Julian Day
+    const year = birthDateTime.getUTCFullYear();
+    const month = birthDateTime.getUTCMonth() + 1;
+    const day = birthDateTime.getUTCDate();
+    const hour =
+      birthDateTime.getUTCHours() +
+      birthDateTime.getUTCMinutes() / 60 +
+      birthDateTime.getUTCSeconds() / 3600;
+
+    const julianDay = swisseph.swe_julday(year, month, day, hour, swisseph.SE_GREG_CAL);
+
+    // Calculate houses using Placidus system
+    const houseData = swisseph.swe_houses(
+      julianDay,
+      latitude,
+      longitude,
+      'P', // Placidus house system
+    );
+
+    if (!houseData || !houseData.house || !houseData.ascendant || !houseData.mc) {
+      throw new Error('Failed to calculate houses');
+    }
+
+    // Process house cusps
+    const houses: HouseData[] = [];
+    for (let i = 0; i < 12; i++) {
+      const cuspDegree = houseData.house[i];
+      const degreeInfo = getDegreeInfo(cuspDegree);
+      houses.push({
+        houseNumber: i + 1,
+        cuspDegree,
+        cuspSign: degreeInfo.sign,
+        cuspDegreeInSign: degreeInfo.degreeInSign,
+        cuspMinutes: degreeInfo.minutes,
+      });
+    }
+
+    // Process Ascendant
+    const ascInfo = getDegreeInfo(houseData.ascendant);
+    const ascendant: AngleData = {
+      degree: houseData.ascendant,
+      sign: ascInfo.sign,
+      degreeInSign: ascInfo.degreeInSign,
+      minutes: ascInfo.minutes,
+    };
+
+    // Process Midheaven
+    const mcInfo = getDegreeInfo(houseData.mc);
+    const midheaven: AngleData = {
+      degree: houseData.mc,
+      sign: mcInfo.sign,
+      degreeInSign: mcInfo.degreeInSign,
+      minutes: mcInfo.minutes,
+    };
+
+    // Calculate planet positions using Swiss Ephemeris for accuracy
+    const planetHouses: Record<string, number> = {};
+    const planetIds = [
+      swisseph.SE_SUN,
+      swisseph.SE_MOON,
+      swisseph.SE_MERCURY,
+      swisseph.SE_VENUS,
+      swisseph.SE_MARS,
+      swisseph.SE_JUPITER,
+      swisseph.SE_SATURN,
+      swisseph.SE_URANUS,
+      swisseph.SE_NEPTUNE,
+      swisseph.SE_PLUTO,
+    ];
+    const planetNames = [
+      'sun',
+      'moon',
+      'mercury',
+      'venus',
+      'mars',
+      'jupiter',
+      'saturn',
+      'uranus',
+      'neptune',
+      'pluto',
+    ];
+
+    for (let i = 0; i < planetIds.length; i++) {
+      const planetData = swisseph.swe_calc_ut(julianDay, planetIds[i], swisseph.SEFLG_SPEED);
+      if (planetData && planetData.longitude !== undefined) {
+        const planetLongitude = planetData.longitude;
+        // Determine which house the planet is in
+        for (let h = 0; h < 12; h++) {
+          const currentCusp = houses[h].cuspDegree;
+          const nextCusp = houses[(h + 1) % 12].cuspDegree;
+
+          // Handle cusp wrap-around at 360 degrees
+          if (currentCusp > nextCusp) {
+            // House spans 0 degrees
+            if (planetLongitude >= currentCusp || planetLongitude < nextCusp) {
+              planetHouses[planetNames[i]] = h + 1;
+              break;
+            }
+          } else {
+            if (planetLongitude >= currentCusp && planetLongitude < nextCusp) {
+              planetHouses[planetNames[i]] = h + 1;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Close Swiss Ephemeris
+    swisseph.swe_close();
+
+    return {
+      houses,
+      ascendant,
+      midheaven,
+      planetHouses,
+    };
+  } catch (error) {
+    console.error('Error calculating houses with Swiss Ephemeris:', error);
+    // Close Swiss Ephemeris on error
+    if (swisseph && swisseph.swe_close) {
+      swisseph.swe_close();
+    }
+    return null;
+  }
+};
+
+const generateCacheKey = (
+  birthDate: string,
+  birthTime: string,
+  latitude: number,
+  longitude: number,
+): string => {
+  // Only include inputs that affect calculations
+  const cacheData = {
+    birthDateTime: `${birthDate}T${birthTime}:00Z`, // UTC ISO format
+    lat: latitude,
+    lon: longitude,
+    houseSystem: 'placidus',
+    zodiacType: 'tropical',
+    ephemerisVersion: '2.10.03', // Only change when ephemeris data changes
+  };
+
+  // Use stable JSON stringification (keys in alphabetical order)
+  const sortedKeys = Object.keys(cacheData).sort();
+  const stableJson = sortedKeys
+    .map((key) => `"${key}":${JSON.stringify(cacheData[key as keyof typeof cacheData])}`)
+    .join(',');
+  const input = `{${stableJson}}`;
+
+  return crypto.createHash('sha256').update(input).digest('hex');
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getCachedHouseData = async (cacheKey: string): Promise<any | null> => {
+  const NATAL_CHART_TABLE_NAME = process.env.NATAL_CHART_TABLE_NAME!;
+
+  try {
+    const result = await docClient.send(
+      new GetCommand({
+        TableName: NATAL_CHART_TABLE_NAME,
+        Key: {
+          userId: `CACHE#${cacheKey}`,
+          chartType: 'house_cache',
+        },
+      }),
+    );
+
+    if (result.Item) {
+      console.info('Cache hit for house calculations');
+      return result.Item.houseData;
+    }
+  } catch (error) {
+    console.error('Error retrieving cached data:', error);
+  }
+
+  return null;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const saveCachedHouseData = async (cacheKey: string, houseData: any): Promise<void> => {
+  const NATAL_CHART_TABLE_NAME = process.env.NATAL_CHART_TABLE_NAME!;
+
+  try {
+    const ttl = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60; // 30 days TTL
+
+    await docClient.send(
+      new PutCommand({
+        TableName: NATAL_CHART_TABLE_NAME,
+        Item: {
+          userId: `CACHE#${cacheKey}`,
+          chartType: 'house_cache',
+          houseData,
+          ttl,
+          createdAt: new Date().toISOString(),
+        },
+      }),
+    );
+  } catch (error) {
+    console.error('Error saving cached data:', error);
+  }
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const handler = async (event: any): Promise<void> => {
   const NATAL_CHART_TABLE_NAME = process.env.NATAL_CHART_TABLE_NAME!;
-  console.log('Received event:', JSON.stringify(event, null, 2));
+  console.info('Received event:', JSON.stringify(event, null, 2));
 
   const validatedEvent = validateEvent(event);
   const { userId, birthDate, latitude, longitude, ianaTimeZone } = validatedEvent;
 
-  const isTimeEstimated = !validatedEvent.birthTime;
-  const birthTime = validatedEvent.birthTime || '12:00';
+  // Birth time is now required per KAN-7
+  if (!validatedEvent.birthTime) {
+    throw new Error('Birth time is required for house calculations');
+  }
 
-  // The ephemeris library expects date and time to be combined.
-  // It also needs the timezone offset. We can create a date object
-  // in the target timezone and then get the UTC offset.
-  const birthDateTimeStr = `${birthDate}T${birthTime}:00`;
+  const birthTime = validatedEvent.birthTime;
+  const isTimeEstimated = false; // Since birth time is now required
 
   // Create a date object that represents the local time at the birth location
+  const birthDateTimeStr = `${birthDate}T${birthTime}:00`;
   const birthDateTime = new Date(birthDateTimeStr);
 
-  // This is a simplified way to get timezone offset. A robust solution would use a library
-  // that handles historical timezone changes, but for this scope, this is sufficient.
+  // Calculate timezone offset
   const timezoneOffsetInHours =
     new Date(
       birthDateTime.toLocaleString('en-US', { timeZone: ianaTimeZone }),
     ).getTimezoneOffset() / -60;
 
   try {
-    // The ephemeris library expects a Date object, not a string
+    // Calculate planetary positions using existing ephemeris library
     const chartData = getAllPlanets(birthDateTime, longitude, latitude, timezoneOffsetInHours);
 
     // Extract planetary positions from the observed namespace
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const planets: Record<string, any> = {};
     if (chartData.observed) {
-      // The ephemeris library returns data in the 'observed' property
       Object.keys(chartData.observed).forEach((planetName) => {
         const planetData = chartData.observed[planetName];
-        if (planetData) {
+        if (planetData && planetName !== 'sirius') {
+          const longitude = planetData.apparentLongitudeDd || 0;
+          // Calculate zodiac sign information
+          const normalizedLongitude = ((longitude % 360) + 360) % 360;
+          const signIndex = Math.floor(normalizedLongitude / 30);
+          const sign = ZODIAC_SIGNS[signIndex];
+          const degreeInSign = normalizedLongitude - signIndex * 30;
+          const wholeDegrees = Math.floor(degreeInSign);
+          const minutes = Math.round((degreeInSign - wholeDegrees) * 60);
+
           planets[planetName] = {
-            longitude: planetData.apparentLongitudeDd || 0,
-            longitudeDms: planetData.apparentLongitudeDms360 || '',
+            longitude: longitude,
+            longitudeDms: `${wholeDegrees.toString().padStart(2, '0')}°${minutes.toString().padStart(2, '0')}' ${sign}`,
             distanceKm: planetData.geocentricDistanceKm || 0,
             name: planetData.name || planetName,
+            sign: sign,
+            degreeInSign: wholeDegrees,
+            minutes: minutes,
           };
         }
       });
     }
 
-    const item = {
+    // Check cache for house calculations
+    const cacheKey = generateCacheKey(birthDate, birthTime, latitude, longitude);
+    let houseData = await getCachedHouseData(cacheKey);
+
+    if (!houseData) {
+      // Calculate houses using Swiss Ephemeris
+      houseData = await calculateHousesWithSwisseph(birthDateTime, latitude, longitude);
+
+      if (houseData) {
+        // Save to cache
+        await saveCachedHouseData(cacheKey, houseData);
+      }
+    }
+
+    // Prepare the item to store
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const item: any = {
       userId,
       chartType: 'natal',
       createdAt: new Date().toISOString(),
       isTimeEstimated,
       birthInfo: {
         ...validatedEvent,
-        birthTime, // ensure birthTime is stored even if estimated
+        birthTime,
       },
       planets,
-      // Note: The ephemeris library doesn't calculate astrological houses
+      metadata: {
+        calculationTimestamp: new Date().toISOString(),
+        ephemerisVersion: '2.10.03',
+        swetestVersion: '2.10.03',
+        houseSystem: 'placidus',
+        zodiacType: 'tropical',
+      },
     };
 
+    // Add house data if available
+    if (houseData) {
+      item.houses = {
+        status: 'success',
+        data: houseData.houses,
+      };
+      item.ascendant = houseData.ascendant;
+      item.midheaven = houseData.midheaven;
+      item.planetHouses = houseData.planetHouses;
+    } else {
+      item.houses = {
+        status: 'failed',
+        error: 'House calculations unavailable',
+      };
+    }
+
+    // Store the natal chart
     await docClient.send(
       new PutCommand({
         TableName: NATAL_CHART_TABLE_NAME,
@@ -93,10 +437,9 @@ export const handler = async (event: any): Promise<void> => {
       }),
     );
 
-    console.log(`Successfully generated and stored natal chart for userId: ${userId}`);
+    console.info(`Successfully generated and stored natal chart for userId: ${userId}`);
   } catch (error) {
     console.error('Error calculating or storing natal chart:', error);
-    // Depending on requirements, might add to a DLQ or re-throw
     throw error;
   }
 };

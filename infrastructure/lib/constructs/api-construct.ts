@@ -27,6 +27,29 @@ export class ApiConstruct extends Construct {
   constructor(scope: Construct, id: string, props: ApiConstructProps) {
     super(scope, id);
 
+    // Create Swiss Ephemeris Lambda Layer
+    const swissEphemerisLayer = new lambda.LayerVersion(this, 'SwissEphemerisLayer', {
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../layers/swetest'), {
+        bundling: {
+          image: lambda.Runtime.NODEJS_18_X.bundlingImage,
+          user: 'root',
+          command: [
+            'bash',
+            '-c',
+            [
+              'mkdir -p /asset-output/nodejs',
+              'cp package.json package-lock.json /asset-output/nodejs/',
+              'cd /asset-output/nodejs',
+              'npm install',
+            ].join(' && '),
+          ],
+        },
+      }),
+      compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
+      description: 'Swiss Ephemeris library for house calculations',
+      layerVersionName: `aura28-${props.environment}-swisseph`,
+    });
+
     // Create Lambda functions
     this.getUserProfileFunction = new lambdaNodeJs.NodejsFunction(this, 'GetUserProfileFunction', {
       functionName: `aura28-${props.environment}-get-user-profile`,
@@ -53,13 +76,15 @@ export class ApiConstruct extends Construct {
         entry: path.join(__dirname, '../../lambda/natal-chart/generate-natal-chart.ts'),
         handler: 'handler',
         runtime: lambda.Runtime.NODEJS_18_X,
+        layers: [swissEphemerisLayer],
         environment: {
           NATAL_CHART_TABLE_NAME: props.natalChartTable.tableName,
+          EPHEMERIS_PATH: '/opt/nodejs/node_modules/swisseph/ephe',
         },
-        timeout: cdk.Duration.seconds(30),
+        timeout: cdk.Duration.seconds(10), // 10 seconds for house calculations
         memorySize: 512, // Increased memory for ephemeris calculations
         bundling: {
-          externalModules: ['@aws-sdk/*'],
+          externalModules: ['@aws-sdk/*', 'swisseph'], // Exclude swisseph since it's in the layer
           forceDockerBundling: false,
         },
       },

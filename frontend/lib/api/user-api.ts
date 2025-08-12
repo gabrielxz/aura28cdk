@@ -29,18 +29,46 @@ export interface UpdateProfileResponse {
   profile: UserProfileResponse;
 }
 
+export interface HouseData {
+  houseNumber: number;
+  cuspDegree: number;
+  cuspSign: string;
+  cuspDegreeInSign: number;
+  cuspMinutes: number;
+}
+
+export interface AngleData {
+  degree: number;
+  sign: string;
+  degreeInSign: number;
+  minutes: number;
+}
+
+export interface PlanetData {
+  longitude: number;
+  longitudeDms: string;
+  distanceKm: number;
+  name: string;
+  sign: string;
+  degreeInSign: number;
+  minutes: number;
+}
+
 export interface NatalChart {
   userId: string;
   chartType: 'natal';
   createdAt: string;
   planets: {
-    [key: string]: {
-      longitude: number;
-      longitudeDms: string;
-      distanceKm: number;
-      name: string;
-    };
+    [key: string]: PlanetData;
   };
+  houses?: {
+    status: 'success' | 'failed';
+    data?: HouseData[];
+    error?: string;
+  };
+  ascendant?: AngleData;
+  midheaven?: AngleData;
+  planetHouses?: Record<string, number>;
   isTimeEstimated: boolean;
   birthInfo?: {
     birthDate: string;
@@ -48,6 +76,13 @@ export interface NatalChart {
     latitude: number;
     longitude: number;
     ianaTimeZone: string;
+  };
+  metadata?: {
+    calculationTimestamp: string;
+    ephemerisVersion: string;
+    swetestVersion: string;
+    houseSystem: string;
+    zodiacType: string;
   };
 }
 
@@ -168,7 +203,7 @@ export class UserApi {
       return profile.onboardingCompleted === true;
     } catch (error) {
       // If profile doesn't exist or there's an error, onboarding is not completed
-      console.log('Profile not found or error checking onboarding status:', error);
+      console.info('Profile not found or error checking onboarding status:', error);
       return false;
     }
   }

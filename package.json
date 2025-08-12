@@ -13,21 +13,40 @@
     "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces",
     "build": "npm run build --workspaces",
-    "lint:frontend": "npm run lint --workspace=frontend",
-    "lint:infrastructure": "npm run lint --workspace=infrastructure",
+    "lint:frontend": "ESLINT_USE_FLAT_CONFIG=false eslint \"frontend/**/*.{ts,tsx}\" --max-warnings=0",
+    "lint:infrastructure": "ESLINT_USE_FLAT_CONFIG=false eslint \"infrastructure/**/*.ts\" --max-warnings=0",
     "test:frontend": "npm run test --workspace=frontend",
     "test:infrastructure": "npm run test --workspace=infrastructure",
     "build:frontend": "npm run build --workspace=frontend",
-    "build:infrastructure": "npm run build --workspace=infrastructure"
+    "build:infrastructure": "npm run build --workspace=infrastructure",
+    "ci:check": "./scripts/pre-commit-check.sh",
+    "ci:simulate": "./scripts/ci-local.sh",
+    "ci:status": "./scripts/check-ci-status.sh",
+    "precommit": "./scripts/pre-commit-check.sh",
+    "prepare": "husky"
   },
   "devDependencies": {
     "esbuild": "^0.25.8",
+    "eslint": "^9.33.0",
     "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.4.2"
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.5",
+    "prettier": "^3.6.2"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gabrielxz/aura28cdk.git"
   },
-  "license": "ISC"
+  "license": "ISC",
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,css,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "frontend/**/*.{ts,tsx}": [
+      "sh -c 'ESLINT_USE_FLAT_CONFIG=false eslint --max-warnings=0 --fix \"$@\"' --"
+    ],
+    "infrastructure/**/*.ts": [
+      "sh -c 'ESLINT_USE_FLAT_CONFIG=false eslint --max-warnings=10 --fix \"$@\"' --"
+    ]
+  }
 }

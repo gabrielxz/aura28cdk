@@ -1,5 +1,4 @@
 import { AuthService } from '@/lib/auth/auth-service';
-import { getCognitoConfig } from '@/lib/auth/cognito-config';
 
 // Mock jwt-decode
 jest.mock('jwt-decode', () => ({

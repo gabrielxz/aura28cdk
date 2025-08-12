@@ -30,7 +30,7 @@ export function Header() {
           const userProfile = await userApi.getUserProfile(user.sub);
           setProfile(userProfile);
         } catch (error) {
-          console.log('Could not fetch profile:', error);
+          console.info('Could not fetch profile:', error);
         }
       }
     };

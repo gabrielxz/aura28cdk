@@ -9,7 +9,7 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "lint": "eslint . --ext .ts -c ../.eslintrc.json",
+    "lint": "cd .. && ESLINT_USE_FLAT_CONFIG=false npx eslint infrastructure/**/*.ts",
     "format": "prettier --write \"**/*.{ts,js,json,md}\" --ignore-path ../.prettierignore",
     "format:check": "prettier --check \"**/*.{ts,js,json,md}\" --ignore-path ../.prettierignore"
   },

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import { TimePicker } from '@/components/ui/time-picker';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserApi, UserProfile } from '@/lib/api/user-api';
@@ -108,7 +110,7 @@ export default function AccountSettingsPage() {
         email: user.email,
         birthName: formData.birthName,
         birthDate: formData.birthDate,
-        birthTime: formData.birthTime || undefined,
+        birthTime: formData.birthTime,
         birthCity: formData.birthCity,
         birthState: formData.birthState,
         birthCountry: formData.birthCountry,
@@ -189,23 +191,21 @@ export default function AccountSettingsPage() {
 
             <div>
               <Label htmlFor="birthDate">Date of Birth</Label>
-              <Input
+              <DatePicker
                 id="birthDate"
-                type="date"
                 value={formData.birthDate}
-                onChange={(e) => handleInputChange('birthDate', e.target.value)}
-                required
+                onChange={(date) => handleInputChange('birthDate', date || '')}
+                placeholder="Select your birth date"
               />
             </div>
 
             <div>
-              <Label htmlFor="birthTime">Time of Birth (optional)</Label>
-              <Input
+              <Label htmlFor="birthTime">Time of Birth</Label>
+              <TimePicker
                 id="birthTime"
-                type="time"
                 value={formData.birthTime}
-                onChange={(e) => handleInputChange('birthTime', e.target.value)}
-                placeholder="HH:MM"
+                onChange={(time) => handleInputChange('birthTime', time)}
+                placeholder="Select birth time"
               />
             </div>
 
@@ -257,7 +257,11 @@ export default function AccountSettingsPage() {
               </div>
             )}
 
-            <Button type="submit" disabled={isSubmitting || !isFormModified()} className="w-full">
+            <Button
+              type="submit"
+              disabled={isSubmitting || !isFormModified() || !formData.birthTime}
+              className="w-full"
+            >
               {isSubmitting ? 'Saving...' : 'Save Changes'}
             </Button>
           </form>
