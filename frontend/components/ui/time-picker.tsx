@@ -6,6 +6,13 @@ import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 
 interface TimePickerProps {
@@ -104,7 +111,7 @@ export function TimePicker({
           {formatDisplayTime() || <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-4" align="start">
+      <PopoverContent className="w-auto p-4" align="start">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label>Select Time</Label>
@@ -112,42 +119,45 @@ export function TimePicker({
           <div className="flex space-x-2">
             <div className="flex-1">
               <Label className="text-xs">Hour</Label>
-              <select
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-              >
-                {generateHours().map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
-              </select>
+              <Select value={hours} onValueChange={setHours}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {generateHours().map((h) => (
+                    <SelectItem key={h} value={h}>
+                      {h}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex-1">
               <Label className="text-xs">Minute</Label>
-              <select
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={minutes}
-                onChange={(e) => setMinutes(e.target.value)}
-              >
-                {generateMinutes().map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
+              <Select value={minutes} onValueChange={setMinutes}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {generateMinutes().map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex-1">
               <Label className="text-xs">Period</Label>
-              <select
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={period}
-                onChange={(e) => setPeriod(e.target.value as 'AM' | 'PM')}
-              >
-                <option value="AM">AM</option>
-                <option value="PM">PM</option>
-              </select>
+              <Select value={period} onValueChange={(value) => setPeriod(value as 'AM' | 'PM')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="AM">AM</SelectItem>
+                  <SelectItem value="PM">PM</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <Button className="w-full" onClick={handleTimeChange}>
