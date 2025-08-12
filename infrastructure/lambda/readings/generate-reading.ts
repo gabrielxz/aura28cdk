@@ -2,11 +2,13 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 
 const dynamoClient = new DynamoDBClient({});
 const dynamoDoc = DynamoDBDocumentClient.from(dynamoClient);
 const ssmClient = new SSMClient({});
+const s3Client = new S3Client({});
 
 interface OpenAIConfig {
   apiKey: string;
@@ -17,26 +19,84 @@ interface OpenAIConfig {
   userPromptTemplate: string;
 }
 
+interface CachedConfig {
+  config: OpenAIConfig;
+  systemPromptETag?: string;
+  userPromptETag?: string;
+}
+
+// Cache configuration on cold start
+let cachedConfig: CachedConfig | null = null;
+
+// Fallback prompts in case S3 fails
+const FALLBACK_SYSTEM_PROMPT =
+  'You are an expert astrologer providing Soul Blueprint readings based on natal charts.';
+const FALLBACK_USER_TEMPLATE = `Generate a Soul Blueprint reading for:
+Name: {{birthName}}
+Birth: {{birthDate}} {{birthTime}}
+Location: {{birthCity}}, {{birthState}}, {{birthCountry}}
+
+Natal Chart:
+{{natalChartData}}
+
+Provide insights on sun sign, moon sign, rising sign, and life path.`;
+
+async function fetchS3Content(
+  bucket: string,
+  key: string,
+): Promise<{ content: string; etag?: string }> {
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      }),
+    );
+
+    const content = (await response.Body?.transformToString()) || '';
+    console.log(`Fetched S3 object: ${key}, ETag: ${response.ETag}`);
+
+    return { content, etag: response.ETag };
+  } catch (error) {
+    console.error(`Failed to fetch S3 object ${key}:`, error);
+    throw error;
+  }
+}
+
 async function getOpenAIConfig(): Promise<OpenAIConfig> {
+  // Return cached config if available
+  if (cachedConfig) {
+    console.log('Using cached configuration');
+    return cachedConfig.config;
+  }
+
+  console.log('Loading configuration from SSM and S3...');
+
   const parameterNames = [
     process.env.OPENAI_API_KEY_PARAMETER_NAME,
-    process.env.OPENAI_MODEL_PARAMETER_NAME,
-    process.env.OPENAI_TEMPERATURE_PARAMETER_NAME,
-    process.env.OPENAI_MAX_TOKENS_PARAMETER_NAME,
-    process.env.OPENAI_SYSTEM_PROMPT_PARAMETER_NAME,
-    process.env.OPENAI_USER_PROMPT_TEMPLATE_PARAMETER_NAME,
+    process.env.READING_MODEL_PARAMETER_NAME,
+    process.env.READING_TEMPERATURE_PARAMETER_NAME,
+    process.env.READING_MAX_TOKENS_PARAMETER_NAME,
+    process.env.SYSTEM_PROMPT_S3KEY_PARAMETER_NAME,
+    process.env.USER_PROMPT_S3KEY_PARAMETER_NAME,
   ];
+
+  const bucketName = process.env.CONFIG_BUCKET_NAME;
+
+  if (!bucketName) {
+    throw new Error('CONFIG_BUCKET_NAME environment variable not set');
+  }
 
   // Validate all parameter names are present
   const missingParams = parameterNames
     .map((name, index) => {
       const labels = [
         'OPENAI_API_KEY_PARAMETER_NAME',
-        'OPENAI_MODEL_PARAMETER_NAME',
-        'OPENAI_TEMPERATURE_PARAMETER_NAME',
-        'OPENAI_MAX_TOKENS_PARAMETER_NAME',
-        'OPENAI_SYSTEM_PROMPT_PARAMETER_NAME',
-        'OPENAI_USER_PROMPT_TEMPLATE_PARAMETER_NAME',
+        'READING_MODEL_PARAMETER_NAME',
+        'READING_TEMPERATURE_PARAMETER_NAME',
+        'READING_MAX_TOKENS_PARAMETER_NAME',
+        'SYSTEM_PROMPT_S3KEY_PARAMETER_NAME',
+        'USER_PROMPT_S3KEY_PARAMETER_NAME',
       ];
       return name ? null : labels[index];
     })
@@ -46,7 +106,7 @@ async function getOpenAIConfig(): Promise<OpenAIConfig> {
     throw new Error(`Missing environment variables: ${missingParams.join(', ')}`);
   }
 
-  // Fetch all parameters in parallel
+  // Fetch all SSM parameters in parallel
   const parameterPromises = parameterNames.map((name) =>
     ssmClient.send(
       new GetParameterCommand({
@@ -58,22 +118,60 @@ async function getOpenAIConfig(): Promise<OpenAIConfig> {
 
   const responses = await Promise.all(parameterPromises);
 
-  // Extract values
-  const values = responses.map((response, index) => {
+  // Extract SSM values
+  const ssmValues = responses.map((response, index) => {
     if (!response.Parameter?.Value) {
       throw new Error(`Parameter ${parameterNames[index]} not found in SSM`);
     }
     return response.Parameter.Value;
   });
 
-  return {
-    apiKey: values[0],
-    model: values[1],
-    temperature: parseFloat(values[2]),
-    maxTokens: parseInt(values[3], 10),
-    systemPrompt: values[4],
-    userPromptTemplate: values[5],
+  // Log parameter names (not values) for debugging
+  console.log('Loaded SSM parameters:', {
+    model: process.env.READING_MODEL_PARAMETER_NAME,
+    temperature: process.env.READING_TEMPERATURE_PARAMETER_NAME,
+    maxTokens: process.env.READING_MAX_TOKENS_PARAMETER_NAME,
+    systemPromptKey: ssmValues[4],
+    userPromptKey: ssmValues[5],
+  });
+
+  // Fetch prompts from S3
+  let systemPrompt = FALLBACK_SYSTEM_PROMPT;
+  let userPromptTemplate = FALLBACK_USER_TEMPLATE;
+  let systemETag: string | undefined;
+  let userETag: string | undefined;
+
+  try {
+    const [systemResult, userResult] = await Promise.all([
+      fetchS3Content(bucketName, ssmValues[4]),
+      fetchS3Content(bucketName, ssmValues[5]),
+    ]);
+
+    systemPrompt = systemResult.content || FALLBACK_SYSTEM_PROMPT;
+    userPromptTemplate = userResult.content || FALLBACK_USER_TEMPLATE;
+    systemETag = systemResult.etag;
+    userETag = userResult.etag;
+  } catch (error) {
+    console.error('Failed to fetch prompts from S3, using fallback prompts:', error);
+  }
+
+  const config: OpenAIConfig = {
+    apiKey: ssmValues[0],
+    model: ssmValues[1],
+    temperature: parseFloat(ssmValues[2]),
+    maxTokens: parseInt(ssmValues[3], 10),
+    systemPrompt,
+    userPromptTemplate,
   };
+
+  // Cache the configuration
+  cachedConfig = {
+    config,
+    systemPromptETag: systemETag,
+    userPromptETag: userETag,
+  };
+
+  return config;
 }
 
 async function getUserProfile(userId: string) {

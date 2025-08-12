@@ -7,6 +7,8 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as path from 'path';
 
 export interface ApiConstructProps {
@@ -32,6 +34,34 @@ export class ApiConstruct extends Construct {
   constructor(scope: Construct, id: string, props: ApiConstructProps) {
     super(scope, id);
 
+    // Create S3 bucket for configuration files
+    const configBucket = new s3.Bucket(this, 'ConfigBucket', {
+      bucketName: `aura28-${props.environment}-config`,
+      versioned: true,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      removalPolicy:
+        props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: props.environment !== 'prod',
+      lifecycleRules: [
+        {
+          id: 'delete-old-versions',
+          noncurrentVersionExpiration: cdk.Duration.days(30),
+        },
+      ],
+    });
+
+    // Deploy prompt files to S3
+    new s3deploy.BucketDeployment(this, 'DeployPrompts', {
+      sources: [
+        s3deploy.Source.asset(path.join(__dirname, '../../assets/prompts', props.environment)),
+      ],
+      destinationBucket: configBucket,
+      destinationKeyPrefix: `prompts/${props.environment}`,
+      prune: false,
+      retainOnDelete: props.environment === 'prod',
+    });
+
     // Create SSM Parameters for OpenAI Configuration
     const openAiApiKeyParameter = new ssm.StringParameter(this, 'OpenAiApiKeyParameter', {
       parameterName: `/aura28/${props.environment}/openai-api-key`,
@@ -40,78 +70,45 @@ export class ApiConstruct extends Construct {
       tier: ssm.ParameterTier.STANDARD,
     });
 
-    const openAiModelParameter = new ssm.StringParameter(this, 'OpenAiModelParameter', {
-      parameterName: `/aura28/${props.environment}/openai-model`,
-      description: `OpenAI model for ${props.environment} environment`,
+    // Simplified SSM parameters pointing to S3 keys
+    const readingModelParameter = new ssm.StringParameter(this, 'ReadingModelParameter', {
+      parameterName: `/aura28/${props.environment}/reading/model`,
+      description: `OpenAI model for readings in ${props.environment} environment`,
       stringValue: 'gpt-4-turbo-preview',
       tier: ssm.ParameterTier.STANDARD,
     });
 
-    const openAiTemperatureParameter = new ssm.StringParameter(this, 'OpenAiTemperatureParameter', {
-      parameterName: `/aura28/${props.environment}/openai-temperature`,
-      description: `OpenAI temperature for ${props.environment} environment`,
-      stringValue: '0.7',
-      tier: ssm.ParameterTier.STANDARD,
-    });
+    const readingTemperatureParameter = new ssm.StringParameter(
+      this,
+      'ReadingTemperatureParameter',
+      {
+        parameterName: `/aura28/${props.environment}/reading/temperature`,
+        description: `Temperature for readings in ${props.environment} environment`,
+        stringValue: '0.7',
+        tier: ssm.ParameterTier.STANDARD,
+      },
+    );
 
-    const openAiMaxTokensParameter = new ssm.StringParameter(this, 'OpenAiMaxTokensParameter', {
-      parameterName: `/aura28/${props.environment}/openai-max-tokens`,
-      description: `OpenAI max tokens for ${props.environment} environment`,
+    const readingMaxTokensParameter = new ssm.StringParameter(this, 'ReadingMaxTokensParameter', {
+      parameterName: `/aura28/${props.environment}/reading/max_tokens`,
+      description: `Max tokens for readings in ${props.environment} environment`,
       stringValue: '2000',
       tier: ssm.ParameterTier.STANDARD,
     });
 
-    const openAiSystemPromptParameter = new ssm.StringParameter(
-      this,
-      'OpenAiSystemPromptParameter',
-      {
-        parameterName: `/aura28/${props.environment}/openai-system-prompt`,
-        description: `OpenAI system prompt for ${props.environment} environment`,
-        stringValue:
-          'You are an expert astrologer providing Soul Blueprint readings based on natal charts. Always echo back the natal chart data you receive as part of your response to confirm you have the correct information.',
-        tier: ssm.ParameterTier.STANDARD,
-      },
-    );
+    const systemPromptS3KeyParameter = new ssm.StringParameter(this, 'SystemPromptS3KeyParameter', {
+      parameterName: `/aura28/${props.environment}/reading/system_prompt_s3key`,
+      description: `S3 key for system prompt in ${props.environment} environment`,
+      stringValue: `prompts/${props.environment}/soul_blueprint/system.txt`,
+      tier: ssm.ParameterTier.STANDARD,
+    });
 
-    const openAiUserPromptTemplateParameter = new ssm.StringParameter(
-      this,
-      'OpenAiUserPromptTemplateParameter',
-      {
-        parameterName: `/aura28/${props.environment}/openai-user-prompt-template`,
-        description: `OpenAI user prompt template for ${props.environment} environment`,
-        stringValue: `Generate a Soul Blueprint reading for the following individual:
-
-Birth Information:
-- Name: {{birthName}}
-- Birth Date: {{birthDate}}
-- Birth Time: {{birthTime}}
-- Birth Location: {{birthCity}}, {{birthState}}, {{birthCountry}}
-
-Natal Chart Data:
-{{natalChartData}}
-
-Please provide a comprehensive Soul Blueprint reading that includes:
-
-1. First, echo back the natal chart information above to confirm you have received it correctly.
-
-2. Sun Sign Analysis - Core identity and life purpose
-
-3. Moon Sign Analysis - Emotional nature and inner self
-
-4. Rising Sign Analysis - How you present to the world
-
-5. Key Planetary Aspects - Major influences and challenges
-
-6. Life Path Insights - Your soul's journey and lessons
-
-7. Strengths and Gifts - Your natural talents
-
-8. Growth Areas - Where to focus your development
-
-Please make the reading personal, insightful, and actionable while maintaining a warm and encouraging tone.`,
-        tier: ssm.ParameterTier.STANDARD,
-      },
-    );
+    const userPromptS3KeyParameter = new ssm.StringParameter(this, 'UserPromptS3KeyParameter', {
+      parameterName: `/aura28/${props.environment}/reading/user_prompt_s3key`,
+      description: `S3 key for user prompt template in ${props.environment} environment`,
+      stringValue: `prompts/${props.environment}/soul_blueprint/user_template.md`,
+      tier: ssm.ParameterTier.STANDARD,
+    });
 
     // Create Swiss Ephemeris Lambda Layer
     const swissEphemerisLayer = new lambda.LayerVersion(this, 'SwissEphemerisLayer', {
@@ -237,13 +234,13 @@ Please make the reading personal, insightful, and actionable while maintaining a
           READINGS_TABLE_NAME: props.readingsTable.tableName,
           NATAL_CHART_TABLE_NAME: props.natalChartTable.tableName,
           USER_TABLE_NAME: props.userTable.tableName,
+          CONFIG_BUCKET_NAME: configBucket.bucketName,
           OPENAI_API_KEY_PARAMETER_NAME: openAiApiKeyParameter.parameterName,
-          OPENAI_MODEL_PARAMETER_NAME: openAiModelParameter.parameterName,
-          OPENAI_TEMPERATURE_PARAMETER_NAME: openAiTemperatureParameter.parameterName,
-          OPENAI_MAX_TOKENS_PARAMETER_NAME: openAiMaxTokensParameter.parameterName,
-          OPENAI_SYSTEM_PROMPT_PARAMETER_NAME: openAiSystemPromptParameter.parameterName,
-          OPENAI_USER_PROMPT_TEMPLATE_PARAMETER_NAME:
-            openAiUserPromptTemplateParameter.parameterName,
+          READING_MODEL_PARAMETER_NAME: readingModelParameter.parameterName,
+          READING_TEMPERATURE_PARAMETER_NAME: readingTemperatureParameter.parameterName,
+          READING_MAX_TOKENS_PARAMETER_NAME: readingMaxTokensParameter.parameterName,
+          SYSTEM_PROMPT_S3KEY_PARAMETER_NAME: systemPromptS3KeyParameter.parameterName,
+          USER_PROMPT_S3KEY_PARAMETER_NAME: userPromptS3KeyParameter.parameterName,
         },
         timeout: cdk.Duration.seconds(60), // Longer timeout for OpenAI API calls
         memorySize: 512,
@@ -297,13 +294,17 @@ Please make the reading personal, insightful, and actionable while maintaining a
     props.natalChartTable.grantReadData(this.generateReadingFunction);
     props.userTable.grantReadData(this.generateReadingFunction);
 
-    // Grant SSM parameter read permissions to generate reading function
+    // Grant permissions to generate reading function
+    // SSM parameter read permissions
     openAiApiKeyParameter.grantRead(this.generateReadingFunction);
-    openAiModelParameter.grantRead(this.generateReadingFunction);
-    openAiTemperatureParameter.grantRead(this.generateReadingFunction);
-    openAiMaxTokensParameter.grantRead(this.generateReadingFunction);
-    openAiSystemPromptParameter.grantRead(this.generateReadingFunction);
-    openAiUserPromptTemplateParameter.grantRead(this.generateReadingFunction);
+    readingModelParameter.grantRead(this.generateReadingFunction);
+    readingTemperatureParameter.grantRead(this.generateReadingFunction);
+    readingMaxTokensParameter.grantRead(this.generateReadingFunction);
+    systemPromptS3KeyParameter.grantRead(this.generateReadingFunction);
+    userPromptS3KeyParameter.grantRead(this.generateReadingFunction);
+
+    // S3 bucket read permissions for configuration files
+    configBucket.grantRead(this.generateReadingFunction);
 
     // Grant Location Service permissions
     this.updateUserProfileFunction.addToRolePolicy(

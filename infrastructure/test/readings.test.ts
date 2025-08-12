@@ -9,11 +9,13 @@ import {
   QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { mockClient } from 'aws-sdk-client-mock';
 
-// Mock the DynamoDB and SSM clients
+// Mock the DynamoDB, SSM, and S3 clients
 const dynamoMock = mockClient(DynamoDBDocumentClient);
 const ssmMock = mockClient(SSMClient);
+const s3Mock = mockClient(S3Client);
 
 // Mock fetch for OpenAI API calls
 global.fetch = jest.fn();
@@ -22,18 +24,20 @@ describe('Readings Lambda Functions', () => {
   beforeEach(() => {
     dynamoMock.reset();
     ssmMock.reset();
+    s3Mock.reset();
     (global.fetch as jest.Mock).mockReset();
 
     // Set required environment variables
     process.env.READINGS_TABLE_NAME = 'test-readings-table';
     process.env.USER_TABLE_NAME = 'test-user-table';
     process.env.NATAL_CHART_TABLE_NAME = 'test-natal-chart-table';
+    process.env.CONFIG_BUCKET_NAME = 'test-config-bucket';
     process.env.OPENAI_API_KEY_PARAMETER_NAME = '/test/openai-key';
-    process.env.OPENAI_MODEL_PARAMETER_NAME = '/test/openai-model';
-    process.env.OPENAI_TEMPERATURE_PARAMETER_NAME = '/test/openai-temperature';
-    process.env.OPENAI_MAX_TOKENS_PARAMETER_NAME = '/test/openai-max-tokens';
-    process.env.OPENAI_SYSTEM_PROMPT_PARAMETER_NAME = '/test/openai-system-prompt';
-    process.env.OPENAI_USER_PROMPT_TEMPLATE_PARAMETER_NAME = '/test/openai-user-prompt-template';
+    process.env.READING_MODEL_PARAMETER_NAME = '/test/reading-model';
+    process.env.READING_TEMPERATURE_PARAMETER_NAME = '/test/reading-temperature';
+    process.env.READING_MAX_TOKENS_PARAMETER_NAME = '/test/reading-max-tokens';
+    process.env.SYSTEM_PROMPT_S3KEY_PARAMETER_NAME = '/test/system-prompt-key';
+    process.env.USER_PROMPT_S3KEY_PARAMETER_NAME = '/test/user-prompt-key';
   });
 
   describe('generateReadingHandler', () => {
@@ -98,7 +102,7 @@ describe('Readings Lambda Functions', () => {
 
       ssmMock
         .on(GetParameterCommand, {
-          Name: '/test/openai-model',
+          Name: '/test/reading-model',
         })
         .resolves({
           Parameter: {
@@ -108,7 +112,7 @@ describe('Readings Lambda Functions', () => {
 
       ssmMock
         .on(GetParameterCommand, {
-          Name: '/test/openai-temperature',
+          Name: '/test/reading-temperature',
         })
         .resolves({
           Parameter: {
@@ -118,7 +122,7 @@ describe('Readings Lambda Functions', () => {
 
       ssmMock
         .on(GetParameterCommand, {
-          Name: '/test/openai-max-tokens',
+          Name: '/test/reading-max-tokens',
         })
         .resolves({
           Parameter: {
@@ -128,23 +132,51 @@ describe('Readings Lambda Functions', () => {
 
       ssmMock
         .on(GetParameterCommand, {
-          Name: '/test/openai-system-prompt',
+          Name: '/test/system-prompt-key',
         })
         .resolves({
           Parameter: {
-            Value: 'You are an expert astrologer providing Soul Blueprint readings.',
+            Value: 'prompts/test/soul_blueprint/system.txt',
           },
         });
 
       ssmMock
         .on(GetParameterCommand, {
-          Name: '/test/openai-user-prompt-template',
+          Name: '/test/user-prompt-key',
         })
         .resolves({
           Parameter: {
-            Value: 'Generate a Soul Blueprint reading for {{birthName}} born on {{birthDate}}.',
+            Value: 'prompts/test/soul_blueprint/user_template.md',
           },
         });
+
+      // Mock S3 responses for prompt files
+      const createS3Response = (content: string) => ({
+        Body: {
+          transformToString: async () => content,
+        } as { transformToString: () => Promise<string> },
+        ETag: '"test-etag"',
+      });
+
+      s3Mock
+        .on(GetObjectCommand, {
+          Bucket: 'test-config-bucket',
+          Key: 'prompts/test/soul_blueprint/system.txt',
+        })
+        .resolves(
+          createS3Response('You are an expert astrologer providing Soul Blueprint readings.'),
+        );
+
+      s3Mock
+        .on(GetObjectCommand, {
+          Bucket: 'test-config-bucket',
+          Key: 'prompts/test/soul_blueprint/user_template.md',
+        })
+        .resolves(
+          createS3Response(
+            'Generate a Soul Blueprint reading for {{birthName}} born on {{birthDate}}.',
+          ),
+        );
 
       // Mock OpenAI API response
       (global.fetch as jest.Mock).mockResolvedValueOnce({
