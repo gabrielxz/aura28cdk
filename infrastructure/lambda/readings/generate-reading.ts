@@ -10,6 +10,31 @@ const dynamoDoc = DynamoDBDocumentClient.from(dynamoClient);
 const ssmClient = new SSMClient({});
 const s3Client = new S3Client({});
 
+// Helper function to create sanitized error response
+const createErrorResponse = (
+  error: unknown,
+  corsHeaders: Record<string, string>,
+  context: Record<string, unknown> = {},
+): APIGatewayProxyResult => {
+  // Log detailed error to CloudWatch
+  console.error('Error generating reading:', {
+    error: error instanceof Error ? error.message : 'Unknown error',
+    stack: error instanceof Error ? error.stack : undefined,
+    ...context,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Return generic error message to user
+  return {
+    statusCode: 500,
+    headers: corsHeaders,
+    body: JSON.stringify({
+      message:
+        "We're sorry, but we couldn't generate your reading at this time. Please try again later.",
+    }),
+  };
+};
+
 interface OpenAIConfig {
   apiKey: string;
   model: string;
@@ -351,16 +376,23 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         }),
       };
     } catch (error) {
-      console.error('Error generating reading:', error);
+      // Log detailed error for debugging
+      console.error('Error during reading generation:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        userId,
+        readingId,
+        timestamp: new Date().toISOString(),
+      });
 
-      // Update reading status to Failed
+      // Update reading status to Failed with sanitized error
       await dynamoDoc.send(
         new PutCommand({
           TableName: process.env.READINGS_TABLE_NAME!,
           Item: {
             ...readingRecord,
             status: 'Failed',
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: 'GENERATION_FAILED', // Sanitized error indicator
             updatedAt: new Date().toISOString(),
           },
         }),
@@ -369,14 +401,11 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       throw error;
     }
   } catch (error) {
-    console.error('Error:', error);
-    return {
-      statusCode: 500,
-      headers: corsHeaders,
-      body: JSON.stringify({
-        message: 'Failed to generate reading',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      }),
-    };
+    // Use helper function to create sanitized error response
+    return createErrorResponse(error, corsHeaders, {
+      userId: event.pathParameters?.userId,
+      path: event.path,
+      method: event.httpMethod,
+    });
   }
 };

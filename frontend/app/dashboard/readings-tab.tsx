@@ -145,7 +145,10 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
             </div>
           ) : selectedReading.status === 'Failed' ? (
             <div className="rounded-lg bg-red-50 p-4 text-red-600 dark:bg-red-900/20">
-              <p>Failed to generate reading: {selectedReading.error || 'Unknown error'}</p>
+              <p>
+                We&apos;re sorry, but we couldn&apos;t generate your reading at this time. Please
+                try again later.
+              </p>
             </div>
           ) : selectedReading.status === 'Processing' ? (
             <div className="flex items-center justify-center py-12">
