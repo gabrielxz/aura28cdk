@@ -287,8 +287,8 @@ export class UserApi {
       });
 
       if (!response.ok) {
-        const error: ApiError = await response.json();
-        throw new Error(error.error || 'Failed to generate reading');
+        const data = await response.json();
+        throw new Error(data.message || data.error || 'Failed to generate reading');
       }
 
       const data: GenerateReadingResponse = await response.json();

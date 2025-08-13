@@ -1,140 +1,182 @@
-# Git Workflow Guide
+# Git Workflow Instructions for git-workflow-executor
 
-## Simplified Git Workflow
+## CRITICAL RULES
 
-The git workflow has been streamlined with automated hooks for efficiency:
+1. **NEVER commit directly to main branch**
+2. **FORBIDDEN**: Any push/commit to main branch
+3. **ALLOWED**: develop branch, feature/_ branches, fix/_ branches, chore/\* branches
 
-### Pre-Commit (Automatic - Fast)
+## PRE-COMMIT VALIDATION STEPS
 
-When you run `git commit`, the pre-commit hook automatically:
+Execute these steps IN ORDER before any commit:
 
-- Runs ESLint with auto-fix on staged files
-- Runs Prettier to format staged files
-- Takes only a few seconds
-
-### Pre-Push (Automatic - Comprehensive)
-
-When you run `git push`, the pre-push hook automatically:
-
-- Runs TypeScript type checking
-- Runs all tests
-- Verifies code formatting
-- Takes 30-60 seconds
-
-### Quick Commands
+### Step 1: Check Current Branch
 
 ```bash
-# Make your changes
-git add .
-git commit -m "Your descriptive commit message"  # Pre-commit hook runs automatically
-git push origin develop                          # Pre-push hook runs automatically
+git branch --show-current
 ```
 
-### If Hooks Fail
+- If branch is "main": ABORT with error "Cannot commit to main branch"
+- If branch is develop or feature/\*: CONTINUE
 
-**Pre-commit failures**: The changes are auto-fixed. Review them and commit again:
+### Step 2: Install Dependencies
 
 ```bash
-git add .
-git commit -m "Your message"
+npm ci
 ```
 
-**Pre-push failures**: Fix the issues before pushing:
+- This ensures Husky hooks are installed
+
+### Step 3: Run Linting
 
 ```bash
-# For TypeScript errors
-npm run build
+npm run lint
+```
 
-# For test failures
+- If FAILS: Continue to next step (will be fixed)
+- If PASSES: Continue
+
+### Step 4: Run Tests
+
+```bash
 npm test
-
-# For format issues
-npm run format
 ```
 
-### Manual Validation (Optional)
+- If FAILS: ABORT with error message and test output
+- If PASSES: Continue
 
-If you want to manually run all checks before committing:
+### Step 5: Run Build
 
 ```bash
-./scripts/pre-commit-check.sh
+npm run build
 ```
 
-This runs a comprehensive check similar to CI/CD.
+- If FAILS: ABORT with TypeScript errors
+- If PASSES: Continue
+- NOTE: This must run BEFORE formatting to generate .d.ts files
 
-For detailed explanation, see the "Pre-Commit Checklist" section in CLAUDE.md.
-
-## Git Workflow Rules
-
-**CRITICAL**: These rules MUST be followed at all times:
-
-### Branch Management
-
-- **NEVER push directly to main branch**
-- **ALWAYS work in the develop branch** unless explicitly instructed otherwise
-- **Production deployments** only happen via merging develop → main
-- **Default branch**: Always use `develop` for all changes
-
-### Commit Workflow
-
-1. Make changes in develop branch
-2. Run pre-commit checklist (all 9 steps above IN ORDER)
-3. Only merge to main when explicitly requested by user
-
-### Quick Reference Commands
+### Step 6: Auto-Fix Code Issues
 
 ```bash
-# Switch to develop branch
-git checkout develop
+npm run fix
+```
 
-# Check current branch
-git branch
+- This runs Prettier and ESLint fixes
+- Always succeeds
 
-# Stage all changes
+### Step 7: Verify Formatting
+
+```bash
+npm run format:check
+```
+
+- If FAILS: Run `npm run format` then retry once
+- If still FAILS: ABORT with format errors
+
+### Step 8: Stage All Changes
+
+```bash
 git add .
-
-# Commit with message
-git commit -m "Your commit message"
-
-# Push to develop
-git push origin develop
 ```
 
-## CI Simulation
+- Stage all changes including formatted files
 
-Before pushing, you can simulate the entire CI pipeline locally:
+### Step 9: Review Changes
 
 ```bash
-./scripts/ci-local.sh
+git status
+git diff --staged
 ```
 
-This runs all CI jobs in parallel (just like GitHub Actions) and shows you exactly what would fail.
+- Display for user review
 
-## Pre-Push Validation
+## COMMIT EXECUTION
 
-Check recent CI status before pushing:
+After all validation steps pass:
+
+### Step 10: Create Commit
 
 ```bash
-./scripts/check-ci-status.sh
+git commit -m "$(cat <<'EOF'
+<commit_message>
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
 ```
 
-This uses GitHub CLI to check if recent builds have been failing and warns you about potential issues.
+### Step 11: Verify Commit Success
 
-## Common CI/CD Failures and Solutions
+```bash
+git status
+```
 
-### Format Check Failure in Infrastructure
+- If uncommitted changes remain: Check if pre-commit hook modified files
+- If files were modified: Run `git add . && git commit --amend --no-edit`
 
-**Error**: `Code style issues found in X files. Run Prettier with --write to fix.`
+## ERROR HANDLING
 
-**Cause**: Declaration files (`.d.ts`) were not formatted after build.
+### If Any Step Fails
 
-**Solution**:
+1. Display the exact error message
+2. Display which step failed (e.g., "Step 4: Tests failed")
+3. If the failure is in steps 3-7, suggest running `npm run fix` manually
+4. ABORT the commit process
 
-1. Run `npm run build` at root
-2. Run `npm run format` at root
-3. Run `npm run format:check` at root AND `cd infrastructure && npm run format:check`
-4. Commit the formatted `.d.ts` files
+### Pre-commit Hook Modifications
 
----
+If files are modified by pre-commit hooks after commit:
 
-**Remember**: Following this workflow ensures code quality, prevents CI/CD failures, and maintains a stable production environment.
+1. Stage the modified files: `git add .`
+2. Amend the commit: `git commit --amend --no-edit`
+3. Maximum retry: 1 time
+
+## BRANCH DETECTION LOGIC
+
+```bash
+current_branch=$(git branch --show-current)
+
+if [[ "$current_branch" == "main" ]]; then
+    echo "ERROR: Cannot commit to main branch"
+    exit 1
+fi
+
+if [[ "$current_branch" == "develop" ]] || [[ "$current_branch" == feature/* ]] || [[ "$current_branch" == fix/* ]] || [[ "$current_branch" == chore/* ]]; then
+    echo "Working on branch: $current_branch"
+    # PROCEED WITH WORKFLOW
+else
+    echo "WARNING: Working on non-standard branch: $current_branch"
+    echo "Proceeding with caution..."
+    # PROCEED WITH WORKFLOW
+fi
+```
+
+## POST-COMMIT ACTIONS
+
+After successful commit:
+
+1. Display commit hash: `git rev-parse HEAD`
+2. Display commit message: `git log -1 --pretty=format:"%h %s"`
+3. Suggest next action: "Push with: `git push origin <branch_name>`"
+
+## FORBIDDEN OPERATIONS
+
+NEVER execute these commands:
+
+- `git push origin main`
+- `git checkout main && git merge`
+- `git commit` when on main branch
+- Any operation that modifies main branch
+
+## CI/CD ALIGNMENT
+
+These local checks mirror CI/CD pipeline:
+
+- Linting: `npm run lint`
+- Tests: `npm test`
+- Build: `npm run build`
+- Format: `npm run format:check`
+
+If all pass locally, CI/CD will pass.
