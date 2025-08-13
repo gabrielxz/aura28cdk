@@ -242,7 +242,7 @@ export class ApiConstruct extends Construct {
           SYSTEM_PROMPT_S3KEY_PARAMETER_NAME: systemPromptS3KeyParameter.parameterName,
           USER_PROMPT_S3KEY_PARAMETER_NAME: userPromptS3KeyParameter.parameterName,
         },
-        timeout: cdk.Duration.seconds(60), // Longer timeout for OpenAI API calls
+        timeout: cdk.Duration.seconds(120), // Extended timeout for OpenAI API calls
         memorySize: 512,
         bundling: {
           externalModules: ['@aws-sdk/*'],
