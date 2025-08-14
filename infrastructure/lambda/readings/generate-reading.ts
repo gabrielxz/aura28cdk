@@ -244,7 +244,7 @@ async function callOpenAI(prompt: string, config: OpenAIConfig): Promise<string>
         },
       ],
       temperature: config.temperature,
-      max_tokens: config.maxTokens,
+      max_completion_tokens: config.maxTokens,
     }),
   });
 
