@@ -177,7 +177,7 @@ export class AuthService {
   /**
    * Get tokens from storage
    */
-  private getTokens(): AuthTokens | null {
+  getTokens(): AuthTokens | null {
     if (typeof window === 'undefined') {
       return null;
     }
@@ -219,7 +219,7 @@ export class AuthService {
   /**
    * Check if token is expired
    */
-  private isTokenExpired(tokens: AuthTokens): boolean {
+  isTokenExpired(tokens: AuthTokens): boolean {
     return Date.now() >= tokens.expiresAt - 60000; // Consider expired 1 minute before actual expiry
   }
 
@@ -273,5 +273,56 @@ export class AuthService {
       console.error('Failed to update user attributes:', error);
       throw new Error('Failed to update user profile');
     }
+  }
+
+  /**
+   * Sync tokens from cookies to localStorage
+   * This is called after server-side authentication to make tokens available client-side
+   */
+  syncTokensFromCookies(): boolean {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    try {
+      // Check for auth complete flag in cookies
+      const cookies = document.cookie.split(';');
+      const authCompleteCookie = cookies.find((cookie) =>
+        cookie.trim().startsWith('aura28_auth_complete='),
+      );
+
+      if (!authCompleteCookie) {
+        return false;
+      }
+
+      // Parse tokens from HTTP-only cookie (if accessible) or wait for refresh
+      // Since HTTP-only cookies aren't accessible from JS, we'll need to refresh tokens
+      // This will be handled by the auth context on mount
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if there's a valid session (either from localStorage or needs sync from server)
+   */
+  hasValidSession(): boolean {
+    // First check localStorage
+    const tokens = this.getTokens();
+    if (tokens && !this.isTokenExpired(tokens)) {
+      return true;
+    }
+
+    // Then check for server-side auth flag
+    if (typeof window !== 'undefined') {
+      const cookies = document.cookie.split(';');
+      const authCompleteCookie = cookies.find((cookie) =>
+        cookie.trim().startsWith('aura28_auth_complete='),
+      );
+      return !!authCompleteCookie;
+    }
+
+    return false;
   }
 }

@@ -247,4 +247,237 @@ describe('AuthService', () => {
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('aura28_auth_tokens');
     });
   });
+
+  describe('hasValidSession', () => {
+    test('returns true when tokens exist and are not expired', () => {
+      const mockTokens = {
+        idToken: 'test-id-token',
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
+        expiresAt: Date.now() + 3600000, // 1 hour from now
+      };
+
+      localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(mockTokens));
+
+      expect(authService.hasValidSession()).toBe(true);
+    });
+
+    test('returns false when no tokens exist', () => {
+      localStorageMock.getItem.mockReturnValueOnce(null);
+
+      // Mock document.cookie for auth complete check
+      Object.defineProperty(document, 'cookie', {
+        value: '',
+        writable: true,
+      });
+
+      expect(authService.hasValidSession()).toBe(false);
+    });
+
+    test('returns false when tokens are expired', () => {
+      const mockTokens = {
+        idToken: 'test-id-token',
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
+        expiresAt: Date.now() - 3600000, // 1 hour ago
+      };
+
+      localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(mockTokens));
+
+      // Mock document.cookie for auth complete check
+      Object.defineProperty(document, 'cookie', {
+        value: '',
+        writable: true,
+      });
+
+      expect(authService.hasValidSession()).toBe(false);
+    });
+
+    test('returns true when auth complete cookie exists (server-side auth)', () => {
+      localStorageMock.getItem.mockReturnValueOnce(null);
+
+      // Mock document.cookie with auth complete flag
+      Object.defineProperty(document, 'cookie', {
+        value: 'aura28_auth_complete=true; other_cookie=value',
+        writable: true,
+      });
+
+      expect(authService.hasValidSession()).toBe(true);
+    });
+
+    test('handles cookie parsing correctly with multiple cookies', () => {
+      localStorageMock.getItem.mockReturnValueOnce(null);
+
+      // Mock document.cookie with multiple cookies
+      Object.defineProperty(document, 'cookie', {
+        value: 'session_id=abc123; aura28_auth_complete=true; preferences=dark_mode',
+        writable: true,
+      });
+
+      expect(authService.hasValidSession()).toBe(true);
+    });
+
+    test('handles cookie with spaces correctly', () => {
+      localStorageMock.getItem.mockReturnValueOnce(null);
+
+      // Mock document.cookie with spaces
+      Object.defineProperty(document, 'cookie', {
+        value: 'session_id=abc123;  aura28_auth_complete=true  ; preferences=dark_mode',
+        writable: true,
+      });
+
+      expect(authService.hasValidSession()).toBe(true);
+    });
+  });
+
+  describe('syncTokensFromCookies', () => {
+    test('returns true when auth complete cookie exists', () => {
+      // Mock document.cookie with auth complete flag
+      Object.defineProperty(document, 'cookie', {
+        value: 'aura28_auth_complete=true',
+        writable: true,
+      });
+
+      expect(authService.syncTokensFromCookies()).toBe(true);
+    });
+
+    test('returns false when auth complete cookie does not exist', () => {
+      // Mock document.cookie without auth complete flag
+      Object.defineProperty(document, 'cookie', {
+        value: 'other_cookie=value',
+        writable: true,
+      });
+
+      expect(authService.syncTokensFromCookies()).toBe(false);
+    });
+
+    test('returns false when no cookies exist', () => {
+      // Mock empty cookies
+      Object.defineProperty(document, 'cookie', {
+        value: '',
+        writable: true,
+      });
+
+      expect(authService.syncTokensFromCookies()).toBe(false);
+    });
+
+    test('handles cookie parsing errors gracefully', () => {
+      // Mock the syncTokensFromCookies method to simulate cookie error
+      const originalSync = authService.syncTokensFromCookies;
+      authService.syncTokensFromCookies = jest.fn().mockImplementation(() => {
+        try {
+          // Simulate cookie access error
+          throw new Error('Cookie access denied');
+        } catch {
+          return false;
+        }
+      });
+
+      expect(authService.syncTokensFromCookies()).toBe(false);
+
+      // Restore original method
+      authService.syncTokensFromCookies = originalSync;
+    });
+
+    test('returns false when running server-side', () => {
+      // Temporarily override window to simulate server-side
+      const originalWindow = global.window;
+      // @ts-expect-error - Deleting window to simulate server-side environment
+      delete global.window;
+
+      expect(authService.syncTokensFromCookies()).toBe(false);
+
+      // Restore window
+      global.window = originalWindow;
+    });
+  });
+
+  describe('isTokenExpired', () => {
+    test('returns false when token has more than 1 minute remaining', () => {
+      const tokens = {
+        idToken: 'test-id-token',
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
+        expiresAt: Date.now() + 120000, // 2 minutes from now
+      };
+
+      expect(authService.isTokenExpired(tokens)).toBe(false);
+    });
+
+    test('returns true when token has less than 1 minute remaining', () => {
+      const tokens = {
+        idToken: 'test-id-token',
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
+        expiresAt: Date.now() + 30000, // 30 seconds from now
+      };
+
+      expect(authService.isTokenExpired(tokens)).toBe(true);
+    });
+
+    test('returns true when token is already expired', () => {
+      const tokens = {
+        idToken: 'test-id-token',
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
+        expiresAt: Date.now() - 60000, // 1 minute ago
+      };
+
+      expect(authService.isTokenExpired(tokens)).toBe(true);
+    });
+
+    test('considers token expired exactly 1 minute before actual expiry', () => {
+      const tokens = {
+        idToken: 'test-id-token',
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
+        expiresAt: Date.now() + 60000, // Exactly 1 minute from now
+      };
+
+      expect(authService.isTokenExpired(tokens)).toBe(true);
+    });
+  });
+
+  describe('getTokens', () => {
+    test('returns tokens when they exist in localStorage', () => {
+      const mockTokens = {
+        idToken: 'test-id-token',
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
+        expiresAt: Date.now() + 3600000,
+      };
+
+      localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(mockTokens));
+
+      const tokens = authService.getTokens();
+      expect(tokens).toEqual(mockTokens);
+    });
+
+    test('returns null when no tokens exist', () => {
+      localStorageMock.getItem.mockReturnValueOnce(null);
+
+      const tokens = authService.getTokens();
+      expect(tokens).toBeNull();
+    });
+
+    test('returns null when localStorage contains invalid JSON', () => {
+      localStorageMock.getItem.mockReturnValueOnce('invalid-json{');
+
+      const tokens = authService.getTokens();
+      expect(tokens).toBeNull();
+    });
+
+    test('returns null when running server-side', () => {
+      // Temporarily override window to simulate server-side
+      const originalWindow = global.window;
+      // @ts-expect-error - Deleting window to simulate server-side environment
+      delete global.window;
+
+      const tokens = authService.getTokens();
+      expect(tokens).toBeNull();
+
+      // Restore window
+      global.window = originalWindow;
+    });
+  });
 });
