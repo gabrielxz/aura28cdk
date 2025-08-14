@@ -363,6 +363,274 @@ describe('AdminApi', () => {
     });
   });
 
+  describe('getReadingDetails', () => {
+    test('fetches reading details successfully', async () => {
+      const mockToken = 'test-id-token';
+      const mockResponse = {
+        readingId: 'reading-123',
+        userId: 'user-456',
+        userEmail: 'test@example.com',
+        type: 'Soul Blueprint',
+        status: 'Ready',
+        createdAt: '2024-01-15T10:30:00Z',
+        updatedAt: '2024-01-15T10:35:00Z',
+        content: {
+          interpretation: 'Test interpretation',
+          insights: ['Insight 1', 'Insight 2'],
+          recommendations: ['Recommendation 1'],
+        },
+        metadata: {
+          model: 'gpt-4',
+          temperature: 0.7,
+          maxTokens: 2000,
+          processingTime: 5432,
+        },
+      };
+
+      mockAuthService.getIdToken.mockResolvedValue(mockToken);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      const result = await adminApi.getReadingDetails('reading-123');
+
+      expect(mockAuthService.getIdToken).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api.example.com/api/admin/readings/reading-123',
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${mockToken}`,
+          },
+        },
+      );
+      expect(result).toEqual(mockResponse);
+    });
+
+    test('throws error when not authenticated', async () => {
+      mockAuthService.getIdToken.mockResolvedValue(null);
+
+      await expect(adminApi.getReadingDetails('reading-123')).rejects.toThrow('Not authenticated');
+    });
+
+    test('throws error with 403 response', async () => {
+      mockAuthService.getIdToken.mockResolvedValue('test-token');
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: 'Forbidden' }),
+      });
+
+      await expect(adminApi.getReadingDetails('reading-123')).rejects.toThrow(
+        'Access denied. Admin privileges required.',
+      );
+    });
+
+    test('throws error with 404 response', async () => {
+      mockAuthService.getIdToken.mockResolvedValue('test-token');
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: 'Not found' }),
+      });
+
+      await expect(adminApi.getReadingDetails('reading-123')).rejects.toThrow('Reading not found');
+    });
+
+    test('logs and re-throws network errors', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const networkError = new Error('Network error');
+
+      mockAuthService.getIdToken.mockResolvedValue('test-token');
+      (global.fetch as jest.Mock).mockRejectedValue(networkError);
+
+      await expect(adminApi.getReadingDetails('reading-123')).rejects.toThrow('Network error');
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error fetching reading details:', networkError);
+
+      consoleErrorSpy.mockRestore();
+    });
+  });
+
+  describe('updateReadingStatus', () => {
+    test('updates reading status successfully', async () => {
+      const mockToken = 'test-id-token';
+      const mockResponse = {
+        readingId: 'reading-123',
+        userId: 'user-456',
+        type: 'Soul Blueprint',
+        status: 'Processing',
+        createdAt: '2024-01-15T10:30:00Z',
+        updatedAt: '2024-01-15T10:40:00Z',
+      };
+
+      mockAuthService.getIdToken.mockResolvedValue(mockToken);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      const result = await adminApi.updateReadingStatus('reading-123', 'Processing');
+
+      expect(mockAuthService.getIdToken).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api.example.com/api/admin/readings/reading-123/status',
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${mockToken}`,
+          },
+          body: JSON.stringify({ status: 'Processing' }),
+        },
+      );
+      expect(result).toEqual(mockResponse);
+    });
+
+    test('throws error when not authenticated', async () => {
+      mockAuthService.getIdToken.mockResolvedValue(null);
+
+      await expect(adminApi.updateReadingStatus('reading-123', 'Ready')).rejects.toThrow(
+        'Not authenticated',
+      );
+    });
+
+    test('throws error with 400 response for invalid status', async () => {
+      mockAuthService.getIdToken.mockResolvedValue('test-token');
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: 'Invalid status' }),
+      });
+
+      await expect(
+        adminApi.updateReadingStatus('reading-123', 'InvalidStatus' as AdminReadingStatus),
+      ).rejects.toThrow('Invalid status');
+    });
+
+    test('throws error with 404 response', async () => {
+      mockAuthService.getIdToken.mockResolvedValue('test-token');
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: 'Not found' }),
+      });
+
+      await expect(adminApi.updateReadingStatus('reading-123', 'Ready')).rejects.toThrow(
+        'Reading not found',
+      );
+    });
+
+    test('logs and re-throws network errors', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const networkError = new Error('Connection timeout');
+
+      mockAuthService.getIdToken.mockResolvedValue('test-token');
+      (global.fetch as jest.Mock).mockRejectedValue(networkError);
+
+      await expect(adminApi.updateReadingStatus('reading-123', 'Failed')).rejects.toThrow(
+        'Connection timeout',
+      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error updating reading status:', networkError);
+
+      consoleErrorSpy.mockRestore();
+    });
+  });
+
+  describe('deleteReading', () => {
+    test('deletes reading successfully', async () => {
+      const mockToken = 'test-id-token';
+
+      mockAuthService.getIdToken.mockResolvedValue(mockToken);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 204,
+      });
+
+      await adminApi.deleteReading('reading-123');
+
+      expect(mockAuthService.getIdToken).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api.example.com/api/admin/readings/reading-123',
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${mockToken}`,
+          },
+        },
+      );
+    });
+
+    test('throws error when not authenticated', async () => {
+      mockAuthService.getIdToken.mockResolvedValue(null);
+
+      await expect(adminApi.deleteReading('reading-123')).rejects.toThrow('Not authenticated');
+    });
+
+    test('throws error with 403 response', async () => {
+      mockAuthService.getIdToken.mockResolvedValue('test-token');
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: 'Forbidden' }),
+      });
+
+      await expect(adminApi.deleteReading('reading-123')).rejects.toThrow(
+        'Access denied. Admin privileges required.',
+      );
+    });
+
+    test('throws error with 404 response', async () => {
+      mockAuthService.getIdToken.mockResolvedValue('test-token');
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: 'Not found' }),
+      });
+
+      await expect(adminApi.deleteReading('reading-123')).rejects.toThrow('Reading not found');
+    });
+
+    test('throws generic error for other error responses', async () => {
+      mockAuthService.getIdToken.mockResolvedValue('test-token');
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Internal server error' }),
+      });
+
+      await expect(adminApi.deleteReading('reading-123')).rejects.toThrow('Internal server error');
+    });
+
+    test('throws generic error when no error message in response', async () => {
+      mockAuthService.getIdToken.mockResolvedValue('test-token');
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({}),
+      });
+
+      await expect(adminApi.deleteReading('reading-123')).rejects.toThrow(
+        'Failed to delete reading',
+      );
+    });
+
+    test('logs and re-throws network errors', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const networkError = new Error('Network failure');
+
+      mockAuthService.getIdToken.mockResolvedValue('test-token');
+      (global.fetch as jest.Mock).mockRejectedValue(networkError);
+
+      await expect(adminApi.deleteReading('reading-123')).rejects.toThrow('Network failure');
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error deleting reading:', networkError);
+
+      consoleErrorSpy.mockRestore();
+    });
+  });
+
   describe('edge cases', () => {
     test('handles empty base URL gracefully', async () => {
       delete process.env.NEXT_PUBLIC_API_GATEWAY_URL;

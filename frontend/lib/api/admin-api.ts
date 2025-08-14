@@ -10,6 +10,22 @@ export interface AdminReading {
   updatedAt: string;
 }
 
+export interface AdminReadingDetails extends AdminReading {
+  content?: {
+    chartData?: Record<string, unknown>;
+    interpretation?: string;
+    insights?: string[];
+    recommendations?: string[];
+  };
+  error?: string;
+  metadata?: {
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+    processingTime?: number;
+  };
+}
+
 export interface AdminReadingsResponse {
   readings: AdminReading[];
   count: number;
@@ -132,6 +148,94 @@ export class AdminApi {
       return data;
     } catch (error) {
       console.error('Error fetching admin users:', error);
+      throw error;
+    }
+  }
+
+  async getReadingDetails(readingId: string): Promise<AdminReadingDetails> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const url = `${this.baseUrl}api/admin/readings/${readingId}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Access denied. Admin privileges required.');
+        }
+        if (response.status === 404) {
+          throw new Error('Reading not found');
+        }
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch reading details');
+      }
+
+      const data: AdminReadingDetails = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching reading details:', error);
+      throw error;
+    }
+  }
+
+  async updateReadingStatus(
+    readingId: string,
+    status: AdminReading['status'],
+  ): Promise<AdminReading> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const url = `${this.baseUrl}api/admin/readings/${readingId}/status`;
+
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ status }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Access denied. Admin privileges required.');
+        }
+        if (response.status === 404) {
+          throw new Error('Reading not found');
+        }
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update reading status');
+      }
+
+      const data: AdminReading = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error updating reading status:', error);
+      throw error;
+    }
+  }
+
+  async deleteReading(readingId: string): Promise<void> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const url = `${this.baseUrl}api/admin/readings/${readingId}`;
+
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Access denied. Admin privileges required.');
+        }
+        if (response.status === 404) {
+          throw new Error('Reading not found');
+        }
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete reading');
+      }
+    } catch (error) {
+      console.error('Error deleting reading:', error);
       throw error;
     }
   }

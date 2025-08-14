@@ -140,5 +140,7 @@ export function useAdminReadings(authService: AuthService, options: UseAdminRead
     updateFilters,
     goToPage,
     refresh: fetchReadings,
+    setReadings,
+    setTotalCount,
   };
 }
