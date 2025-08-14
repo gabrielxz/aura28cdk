@@ -12,8 +12,12 @@ describe('delete-reading Lambda', () => {
     process.env.READINGS_TABLE_NAME = 'test-readings-table';
   });
 
-  const createEvent = (isAdmin: boolean, readingId?: string): Partial<APIGatewayProxyEvent> => ({
-    pathParameters: readingId ? { readingId } : null,
+  const createEvent = (
+    isAdmin: boolean,
+    userId?: string,
+    readingId?: string,
+  ): Partial<APIGatewayProxyEvent> => ({
+    pathParameters: userId && readingId ? { userId, readingId } : null,
     requestContext: {
       authorizer: {
         claims: {
@@ -25,7 +29,7 @@ describe('delete-reading Lambda', () => {
 
   describe('Authorization', () => {
     it('should return 403 when user is not admin', async () => {
-      const event = createEvent(false, 'reading-123');
+      const event = createEvent(false, 'user-456', 'reading-123');
       const response = await handler(event as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(403);
@@ -34,7 +38,7 @@ describe('delete-reading Lambda', () => {
     });
 
     it('should allow access when user is admin', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).resolves({
         Item: { readingId: 'reading-123' },
@@ -49,7 +53,7 @@ describe('delete-reading Lambda', () => {
 
     it('should handle admin group as comma-separated string', async () => {
       const event: Partial<APIGatewayProxyEvent> = {
-        pathParameters: { readingId: 'reading-123' },
+        pathParameters: { userId: 'user-456', readingId: 'reading-123' },
         requestContext: {
           authorizer: {
             claims: {
@@ -72,7 +76,7 @@ describe('delete-reading Lambda', () => {
 
     it('should reject when admin is not in comma-separated string', async () => {
       const event: Partial<APIGatewayProxyEvent> = {
-        pathParameters: { readingId: 'reading-123' },
+        pathParameters: { userId: 'user-456', readingId: 'reading-123' },
         requestContext: {
           authorizer: {
             claims: {
@@ -90,18 +94,18 @@ describe('delete-reading Lambda', () => {
 
   describe('Input validation', () => {
     it('should return 400 when reading ID is missing', async () => {
-      const event = createEvent(true);
+      const event = createEvent(true, undefined, undefined);
       const response = await handler(event as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(400);
       const body = JSON.parse(response.body);
-      expect(body.error).toBe('Reading ID is required');
+      expect(body.error).toBe('User ID and Reading ID are required');
     });
   });
 
   describe('Deleting reading', () => {
     it('should delete reading successfully', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).resolves({
         Item: {
@@ -122,11 +126,14 @@ describe('delete-reading Lambda', () => {
       // Verify DeleteCommand was called
       const deleteCall = dynamoMock.commandCalls(DeleteCommand)[0];
       expect(deleteCall).toBeDefined();
-      expect(deleteCall.args[0].input.Key).toEqual({ readingId: 'reading-123' });
+      expect(deleteCall.args[0].input.Key).toEqual({
+        userId: 'user-456',
+        readingId: 'reading-123',
+      });
     });
 
     it('should return 404 when reading not found', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).resolves({ Item: undefined });
 
@@ -141,7 +148,7 @@ describe('delete-reading Lambda', () => {
     });
 
     it('should check existence before deletion', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).resolves({
         Item: { readingId: 'reading-123' },
@@ -157,12 +164,15 @@ describe('delete-reading Lambda', () => {
 
       expect(getCalls.length).toBe(1);
       expect(deleteCalls.length).toBe(1);
-      expect(getCalls[0].args[0].input.Key).toEqual({ readingId: 'reading-123' });
+      expect(getCalls[0].args[0].input.Key).toEqual({
+        userId: 'user-456',
+        readingId: 'reading-123',
+      });
     });
 
     it('should log successful deletion', async () => {
       // In infrastructure tests, console.info is allowed
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).resolves({
         Item: { readingId: 'reading-123' },
@@ -179,7 +189,7 @@ describe('delete-reading Lambda', () => {
 
   describe('Error handling', () => {
     it('should handle DynamoDB GetCommand errors', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).rejects(new Error('DynamoDB GetCommand error'));
 
@@ -191,7 +201,7 @@ describe('delete-reading Lambda', () => {
     });
 
     it('should handle DynamoDB DeleteCommand errors', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).resolves({
         Item: { readingId: 'reading-123' },
@@ -208,7 +218,7 @@ describe('delete-reading Lambda', () => {
 
     it('should return 500 and log errors', async () => {
       // In infrastructure tests, console.error is allowed
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       const error = new Error('Test error');
       dynamoMock.on(GetCommand).rejects(error);
@@ -223,7 +233,7 @@ describe('delete-reading Lambda', () => {
 
   describe('Response format', () => {
     it('should include CORS headers for success', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).resolves({
         Item: { readingId: 'reading-123' },
@@ -240,7 +250,7 @@ describe('delete-reading Lambda', () => {
     });
 
     it('should include CORS headers for errors', async () => {
-      const event = createEvent(false, 'reading-123');
+      const event = createEvent(false, 'user-456', 'reading-123');
 
       const response = await handler(event as APIGatewayProxyEvent);
 
@@ -251,7 +261,7 @@ describe('delete-reading Lambda', () => {
     });
 
     it('should return 204 with empty body on success', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).resolves({
         Item: { readingId: 'reading-123' },
@@ -269,7 +279,7 @@ describe('delete-reading Lambda', () => {
   describe('Logging', () => {
     it('should log incoming event', async () => {
       // In infrastructure tests, console.info is allowed
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).resolves({
         Item: { readingId: 'reading-123' },
@@ -287,7 +297,7 @@ describe('delete-reading Lambda', () => {
   describe('Edge cases', () => {
     it('should handle missing requestContext', async () => {
       const event: Partial<APIGatewayProxyEvent> = {
-        pathParameters: { readingId: 'reading-123' },
+        pathParameters: { userId: 'user-456', readingId: 'reading-123' },
         requestContext: undefined as unknown as APIGatewayEventRequestContext,
       };
 
@@ -300,7 +310,7 @@ describe('delete-reading Lambda', () => {
 
     it('should handle missing authorizer claims', async () => {
       const event: Partial<APIGatewayProxyEvent> = {
-        pathParameters: { readingId: 'reading-123' },
+        pathParameters: { userId: 'user-456', readingId: 'reading-123' },
         requestContext: {
           authorizer: undefined,
         } as unknown as APIGatewayProxyEvent['requestContext'],
@@ -313,7 +323,7 @@ describe('delete-reading Lambda', () => {
 
     it('should handle empty cognito:groups', async () => {
       const event: Partial<APIGatewayProxyEvent> = {
-        pathParameters: { readingId: 'reading-123' },
+        pathParameters: { userId: 'user-456', readingId: 'reading-123' },
         requestContext: {
           authorizer: {
             claims: {
@@ -330,7 +340,7 @@ describe('delete-reading Lambda', () => {
 
     it('should handle cognito:groups as array with admin', async () => {
       const event: Partial<APIGatewayProxyEvent> = {
-        pathParameters: { readingId: 'reading-123' },
+        pathParameters: { userId: 'user-456', readingId: 'reading-123' },
         requestContext: {
           authorizer: {
             claims: {
@@ -353,7 +363,7 @@ describe('delete-reading Lambda', () => {
 
     it('should handle cognito:groups as array without admin', async () => {
       const event: Partial<APIGatewayProxyEvent> = {
-        pathParameters: { readingId: 'reading-123' },
+        pathParameters: { userId: 'user-456', readingId: 'reading-123' },
         requestContext: {
           authorizer: {
             claims: {
@@ -370,7 +380,7 @@ describe('delete-reading Lambda', () => {
 
     it('should handle special characters in reading ID', async () => {
       const specialReadingId = 'reading-123!@#$%^&*()';
-      const event = createEvent(true, specialReadingId);
+      const event = createEvent(true, 'user-456', specialReadingId);
 
       dynamoMock.on(GetCommand).resolves({
         Item: { readingId: specialReadingId },
@@ -384,12 +394,15 @@ describe('delete-reading Lambda', () => {
 
       const deleteCall = dynamoMock.commandCalls(DeleteCommand)[0];
       expect(deleteCall).toBeDefined();
-      expect(deleteCall?.args[0]?.input?.Key?.readingId).toBe(specialReadingId);
+      expect(deleteCall?.args[0]?.input?.Key).toEqual({
+        userId: 'user-456',
+        readingId: specialReadingId,
+      });
     });
 
     it('should handle very long reading IDs', async () => {
       const longReadingId = 'reading-' + 'a'.repeat(1000);
-      const event = createEvent(true, longReadingId);
+      const event = createEvent(true, 'user-456', longReadingId);
 
       dynamoMock.on(GetCommand).resolves({
         Item: { readingId: longReadingId },
@@ -405,7 +418,7 @@ describe('delete-reading Lambda', () => {
 
   describe('Idempotency', () => {
     it('should return 404 if reading already deleted (idempotent)', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       // First call - reading doesn't exist
       dynamoMock.on(GetCommand).resolves({ Item: undefined });
