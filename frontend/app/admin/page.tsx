@@ -15,7 +15,10 @@ import { AdminApi, AdminReading } from '@/lib/api/admin-api';
 export default function AdminDashboard() {
   const { authService } = useAuth();
   const [pageSize, setPageSize] = useState(25);
-  const [selectedReadingId, setSelectedReadingId] = useState<string | null>(null);
+  const [selectedReading, setSelectedReading] = useState<{
+    userId: string;
+    readingId: string;
+  } | null>(null);
   const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [readingToDelete, setReadingToDelete] = useState<{ id: string; email?: string } | null>(
@@ -42,18 +45,18 @@ export default function AdminDashboard() {
 
   const adminApi = useMemo(() => new AdminApi(authService), [authService]);
 
-  const handleViewDetails = useCallback((readingId: string) => {
-    setSelectedReadingId(readingId);
+  const handleViewDetails = useCallback((userId: string, readingId: string) => {
+    setSelectedReading({ userId, readingId });
     setDetailsSheetOpen(true);
   }, []);
 
-  const handleDeleteClick = useCallback((readingId: string, userEmail?: string) => {
-    setReadingToDelete({ id: readingId, email: userEmail });
+  const handleDeleteClick = useCallback((userId: string, readingId: string, userEmail?: string) => {
+    setReadingToDelete({ userId, id: readingId, email: userEmail });
     setDeleteDialogOpen(true);
   }, []);
 
   const handleDeleteConfirm = useCallback(
-    async (readingId: string) => {
+    async (userId: string, readingId: string) => {
       // Store original state for rollback
       const originalReadings = readings;
       const originalTotalCount = totalCount;
@@ -63,7 +66,7 @@ export default function AdminDashboard() {
       setTotalCount(totalCount - 1);
 
       try {
-        await adminApi.deleteReading(readingId);
+        await adminApi.deleteReading(userId, readingId);
         // Refresh to get updated list and accurate count
         refresh();
       } catch (error) {
@@ -77,7 +80,7 @@ export default function AdminDashboard() {
   );
 
   const handleStatusUpdate = useCallback(
-    async (readingId: string, newStatus: AdminReading['status']) => {
+    async (userId: string, readingId: string, newStatus: AdminReading['status']) => {
       // Store original state for rollback
       const originalReadings = readings;
       const readingToUpdate = readings.find((r) => r.readingId === readingId);
@@ -97,7 +100,7 @@ export default function AdminDashboard() {
       );
 
       try {
-        await adminApi.updateReadingStatus(readingId, newStatus);
+        await adminApi.updateReadingStatus(userId, readingId, newStatus);
         // Optionally refresh to ensure consistency
         // refresh();
       } catch (error) {
@@ -203,7 +206,8 @@ export default function AdminDashboard() {
 
       {/* Reading Details Sheet */}
       <ReadingDetailsSheet
-        readingId={selectedReadingId}
+        userId={selectedReading?.userId || null}
+        readingId={selectedReading?.readingId || null}
         open={detailsSheetOpen}
         onOpenChange={setDetailsSheetOpen}
         adminApi={adminApi}
@@ -212,6 +216,7 @@ export default function AdminDashboard() {
       {/* Delete Confirmation Dialog */}
       {readingToDelete && (
         <DeleteReadingDialog
+          userId={readingToDelete.userId}
           readingId={readingToDelete.id}
           userEmail={readingToDelete.email}
           open={deleteDialogOpen}

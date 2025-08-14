@@ -20,9 +20,13 @@ import { AdminReading } from '@/lib/api/admin-api';
 
 interface ReadingActionsProps {
   reading: AdminReading;
-  onViewDetails: (readingId: string) => void;
-  onDelete: (readingId: string, userEmail?: string) => void;
-  onStatusUpdate: (readingId: string, newStatus: AdminReading['status']) => Promise<void>;
+  onViewDetails: (userId: string, readingId: string) => void;
+  onDelete: (userId: string, readingId: string, userEmail?: string) => void;
+  onStatusUpdate: (
+    userId: string,
+    readingId: string,
+    newStatus: AdminReading['status'],
+  ) => Promise<void>;
 }
 
 const STATUSES: AdminReading['status'][] = ['Processing', 'Ready', 'Failed', 'In Review'];
@@ -41,7 +45,7 @@ export function ReadingActions({
 
     setUpdating(true);
     try {
-      await onStatusUpdate(reading.readingId, newStatus);
+      await onStatusUpdate(reading.userId, reading.readingId, newStatus);
       toast({
         title: 'Status updated',
         description: `Reading status changed to ${newStatus}`,
@@ -93,7 +97,7 @@ export function ReadingActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem onClick={() => onViewDetails(reading.readingId)}>
+        <DropdownMenuItem onClick={() => onViewDetails(reading.userId, reading.readingId)}>
           <Eye className="mr-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
@@ -130,7 +134,7 @@ export function ReadingActions({
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          onClick={() => onDelete(reading.readingId, reading.userEmail)}
+          onClick={() => onDelete(reading.userId, reading.readingId, reading.userEmail)}
           className="text-destructive focus:text-destructive"
         >
           <Trash2 className="mr-2 h-4 w-4" />

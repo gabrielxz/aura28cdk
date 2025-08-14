@@ -65,6 +65,7 @@ describe('DeleteReadingDialog', () => {
   const mockOnConfirm = jest.fn();
 
   const defaultProps = {
+    userId: 'user-123',
     readingId: 'reading-123-abc-def-ghi',
     userEmail: 'test@example.com',
     open: true,
@@ -120,7 +121,7 @@ describe('DeleteReadingDialog', () => {
     const deleteButton = screen.getByTestId('delete-button');
     await user.click(deleteButton);
 
-    expect(mockOnConfirm).toHaveBeenCalledWith('reading-123-abc-def-ghi');
+    expect(mockOnConfirm).toHaveBeenCalledWith('user-123', 'reading-123-abc-def-ghi');
   });
 
   test('shows success toast when deletion succeeds', async () => {

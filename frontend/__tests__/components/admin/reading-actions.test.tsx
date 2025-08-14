@@ -139,7 +139,7 @@ describe('ReadingActions', () => {
     const viewDetailsButton = screen.getByText('View Details').closest('button');
     await user.click(viewDetailsButton!);
 
-    expect(mockOnViewDetails).toHaveBeenCalledWith('reading-123');
+    expect(mockOnViewDetails).toHaveBeenCalledWith('user-456', 'reading-123');
   });
 
   test('calls onDelete when Delete Reading is clicked', async () => {
@@ -149,7 +149,7 @@ describe('ReadingActions', () => {
     const deleteButton = screen.getByText('Delete Reading').closest('button');
     await user.click(deleteButton!);
 
-    expect(mockOnDelete).toHaveBeenCalledWith('reading-123', 'test@example.com');
+    expect(mockOnDelete).toHaveBeenCalledWith('user-456', 'reading-123', 'test@example.com');
   });
 
   test('displays current status badge', () => {
@@ -194,7 +194,7 @@ describe('ReadingActions', () => {
 
     await user.click(processingButton!);
 
-    expect(mockOnStatusUpdate).toHaveBeenCalledWith('reading-123', 'Processing');
+    expect(mockOnStatusUpdate).toHaveBeenCalledWith('user-456', 'reading-123', 'Processing');
   });
 
   test('shows success toast when status update succeeds', async () => {
@@ -371,7 +371,7 @@ describe('ReadingActions', () => {
     const deleteButton = screen.getByText('Delete Reading').closest('button');
     await user.click(deleteButton!);
 
-    expect(mockOnDelete).toHaveBeenCalledWith('reading-123', undefined);
+    expect(mockOnDelete).toHaveBeenCalledWith('user-456', 'reading-123', undefined);
   });
 
   test('aligns dropdown content to end', () => {

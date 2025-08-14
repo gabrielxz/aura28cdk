@@ -152,10 +152,10 @@ export class AdminApi {
     }
   }
 
-  async getReadingDetails(readingId: string): Promise<AdminReadingDetails> {
+  async getReadingDetails(userId: string, readingId: string): Promise<AdminReadingDetails> {
     try {
       const headers = await this.getAuthHeaders();
-      const url = `${this.baseUrl}api/admin/readings/${readingId}`;
+      const url = `${this.baseUrl}api/admin/readings/${userId}/${readingId}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -182,12 +182,13 @@ export class AdminApi {
   }
 
   async updateReadingStatus(
+    userId: string,
     readingId: string,
     status: AdminReading['status'],
   ): Promise<AdminReading> {
     try {
       const headers = await this.getAuthHeaders();
-      const url = `${this.baseUrl}api/admin/readings/${readingId}/status`;
+      const url = `${this.baseUrl}api/admin/readings/${userId}/${readingId}/status`;
 
       const response = await fetch(url, {
         method: 'PATCH',
@@ -214,10 +215,10 @@ export class AdminApi {
     }
   }
 
-  async deleteReading(readingId: string): Promise<void> {
+  async deleteReading(userId: string, readingId: string): Promise<void> {
     try {
       const headers = await this.getAuthHeaders();
-      const url = `${this.baseUrl}api/admin/readings/${readingId}`;
+      const url = `${this.baseUrl}api/admin/readings/${userId}/${readingId}`;
 
       const response = await fetch(url, {
         method: 'DELETE',

@@ -393,11 +393,11 @@ describe('AdminApi', () => {
         json: async () => mockResponse,
       });
 
-      const result = await adminApi.getReadingDetails('reading-123');
+      const result = await adminApi.getReadingDetails('user-123', 'reading-123');
 
       expect(mockAuthService.getIdToken).toHaveBeenCalled();
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.example.com/api/admin/readings/reading-123',
+        'https://api.example.com/api/admin/readings/user-123/reading-123',
         {
           method: 'GET',
           headers: {
@@ -412,7 +412,9 @@ describe('AdminApi', () => {
     test('throws error when not authenticated', async () => {
       mockAuthService.getIdToken.mockResolvedValue(null);
 
-      await expect(adminApi.getReadingDetails('reading-123')).rejects.toThrow('Not authenticated');
+      await expect(adminApi.getReadingDetails('user-123', 'reading-123')).rejects.toThrow(
+        'Not authenticated',
+      );
     });
 
     test('throws error with 403 response', async () => {
@@ -423,7 +425,7 @@ describe('AdminApi', () => {
         json: async () => ({ error: 'Forbidden' }),
       });
 
-      await expect(adminApi.getReadingDetails('reading-123')).rejects.toThrow(
+      await expect(adminApi.getReadingDetails('user-123', 'reading-123')).rejects.toThrow(
         'Access denied. Admin privileges required.',
       );
     });
@@ -436,7 +438,9 @@ describe('AdminApi', () => {
         json: async () => ({ error: 'Not found' }),
       });
 
-      await expect(adminApi.getReadingDetails('reading-123')).rejects.toThrow('Reading not found');
+      await expect(adminApi.getReadingDetails('user-123', 'reading-123')).rejects.toThrow(
+        'Reading not found',
+      );
     });
 
     test('logs and re-throws network errors', async () => {
@@ -446,7 +450,9 @@ describe('AdminApi', () => {
       mockAuthService.getIdToken.mockResolvedValue('test-token');
       (global.fetch as jest.Mock).mockRejectedValue(networkError);
 
-      await expect(adminApi.getReadingDetails('reading-123')).rejects.toThrow('Network error');
+      await expect(adminApi.getReadingDetails('user-123', 'reading-123')).rejects.toThrow(
+        'Network error',
+      );
       expect(consoleErrorSpy).toHaveBeenCalledWith('Error fetching reading details:', networkError);
 
       consoleErrorSpy.mockRestore();
@@ -471,11 +477,11 @@ describe('AdminApi', () => {
         json: async () => mockResponse,
       });
 
-      const result = await adminApi.updateReadingStatus('reading-123', 'Processing');
+      const result = await adminApi.updateReadingStatus('user-123', 'reading-123', 'Processing');
 
       expect(mockAuthService.getIdToken).toHaveBeenCalled();
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.example.com/api/admin/readings/reading-123/status',
+        'https://api.example.com/api/admin/readings/user-123/reading-123/status',
         {
           method: 'PATCH',
           headers: {
@@ -491,9 +497,9 @@ describe('AdminApi', () => {
     test('throws error when not authenticated', async () => {
       mockAuthService.getIdToken.mockResolvedValue(null);
 
-      await expect(adminApi.updateReadingStatus('reading-123', 'Ready')).rejects.toThrow(
-        'Not authenticated',
-      );
+      await expect(
+        adminApi.updateReadingStatus('user-123', 'reading-123', 'Ready'),
+      ).rejects.toThrow('Not authenticated');
     });
 
     test('throws error with 400 response for invalid status', async () => {
@@ -505,7 +511,11 @@ describe('AdminApi', () => {
       });
 
       await expect(
-        adminApi.updateReadingStatus('reading-123', 'InvalidStatus' as AdminReadingStatus),
+        adminApi.updateReadingStatus(
+          'user-123',
+          'reading-123',
+          'InvalidStatus' as AdminReadingStatus,
+        ),
       ).rejects.toThrow('Invalid status');
     });
 
@@ -517,9 +527,9 @@ describe('AdminApi', () => {
         json: async () => ({ error: 'Not found' }),
       });
 
-      await expect(adminApi.updateReadingStatus('reading-123', 'Ready')).rejects.toThrow(
-        'Reading not found',
-      );
+      await expect(
+        adminApi.updateReadingStatus('user-123', 'reading-123', 'Ready'),
+      ).rejects.toThrow('Reading not found');
     });
 
     test('logs and re-throws network errors', async () => {
@@ -529,9 +539,9 @@ describe('AdminApi', () => {
       mockAuthService.getIdToken.mockResolvedValue('test-token');
       (global.fetch as jest.Mock).mockRejectedValue(networkError);
 
-      await expect(adminApi.updateReadingStatus('reading-123', 'Failed')).rejects.toThrow(
-        'Connection timeout',
-      );
+      await expect(
+        adminApi.updateReadingStatus('user-123', 'reading-123', 'Failed'),
+      ).rejects.toThrow('Connection timeout');
       expect(consoleErrorSpy).toHaveBeenCalledWith('Error updating reading status:', networkError);
 
       consoleErrorSpy.mockRestore();
@@ -548,11 +558,11 @@ describe('AdminApi', () => {
         status: 204,
       });
 
-      await adminApi.deleteReading('reading-123');
+      await adminApi.deleteReading('user-123', 'reading-123');
 
       expect(mockAuthService.getIdToken).toHaveBeenCalled();
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.example.com/api/admin/readings/reading-123',
+        'https://api.example.com/api/admin/readings/user-123/reading-123',
         {
           method: 'DELETE',
           headers: {
@@ -566,7 +576,9 @@ describe('AdminApi', () => {
     test('throws error when not authenticated', async () => {
       mockAuthService.getIdToken.mockResolvedValue(null);
 
-      await expect(adminApi.deleteReading('reading-123')).rejects.toThrow('Not authenticated');
+      await expect(adminApi.deleteReading('user-123', 'reading-123')).rejects.toThrow(
+        'Not authenticated',
+      );
     });
 
     test('throws error with 403 response', async () => {
@@ -577,7 +589,7 @@ describe('AdminApi', () => {
         json: async () => ({ error: 'Forbidden' }),
       });
 
-      await expect(adminApi.deleteReading('reading-123')).rejects.toThrow(
+      await expect(adminApi.deleteReading('user-123', 'reading-123')).rejects.toThrow(
         'Access denied. Admin privileges required.',
       );
     });
@@ -590,7 +602,9 @@ describe('AdminApi', () => {
         json: async () => ({ error: 'Not found' }),
       });
 
-      await expect(adminApi.deleteReading('reading-123')).rejects.toThrow('Reading not found');
+      await expect(adminApi.deleteReading('user-123', 'reading-123')).rejects.toThrow(
+        'Reading not found',
+      );
     });
 
     test('throws generic error for other error responses', async () => {
@@ -601,7 +615,9 @@ describe('AdminApi', () => {
         json: async () => ({ error: 'Internal server error' }),
       });
 
-      await expect(adminApi.deleteReading('reading-123')).rejects.toThrow('Internal server error');
+      await expect(adminApi.deleteReading('user-123', 'reading-123')).rejects.toThrow(
+        'Internal server error',
+      );
     });
 
     test('throws generic error when no error message in response', async () => {
@@ -612,7 +628,7 @@ describe('AdminApi', () => {
         json: async () => ({}),
       });
 
-      await expect(adminApi.deleteReading('reading-123')).rejects.toThrow(
+      await expect(adminApi.deleteReading('user-123', 'reading-123')).rejects.toThrow(
         'Failed to delete reading',
       );
     });
@@ -624,7 +640,9 @@ describe('AdminApi', () => {
       mockAuthService.getIdToken.mockResolvedValue('test-token');
       (global.fetch as jest.Mock).mockRejectedValue(networkError);
 
-      await expect(adminApi.deleteReading('reading-123')).rejects.toThrow('Network failure');
+      await expect(adminApi.deleteReading('user-123', 'reading-123')).rejects.toThrow(
+        'Network failure',
+      );
       expect(consoleErrorSpy).toHaveBeenCalledWith('Error deleting reading:', networkError);
 
       consoleErrorSpy.mockRestore();

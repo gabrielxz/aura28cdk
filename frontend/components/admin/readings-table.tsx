@@ -22,9 +22,13 @@ interface ReadingsTableProps {
   sortField: SortField;
   sortOrder: SortOrder;
   onSort: (field: SortField) => void;
-  onViewDetails: (readingId: string) => void;
-  onDelete: (readingId: string, userEmail?: string) => void;
-  onStatusUpdate: (readingId: string, newStatus: AdminReading['status']) => Promise<void>;
+  onViewDetails: (userId: string, readingId: string) => void;
+  onDelete: (userId: string, readingId: string, userEmail?: string) => void;
+  onStatusUpdate: (
+    userId: string,
+    readingId: string,
+    newStatus: AdminReading['status'],
+  ) => Promise<void>;
 }
 
 export function ReadingsTable({
@@ -155,7 +159,7 @@ export function ReadingsTable({
           {readings.map((reading) => (
             <TableRow
               key={reading.readingId}
-              onClick={() => onViewDetails(reading.readingId)}
+              onClick={() => onViewDetails(reading.userId, reading.readingId)}
               className="cursor-pointer hover:bg-muted/50"
             >
               <TableCell>{format(new Date(reading.createdAt), 'MMM dd, yyyy HH:mm')}</TableCell>
