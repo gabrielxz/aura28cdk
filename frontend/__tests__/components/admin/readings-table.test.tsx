@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ReadingsTable } from '@/components/admin/readings-table';
 import { AdminReading } from '@/lib/api/admin-api';
@@ -114,18 +114,18 @@ describe('ReadingsTable', () => {
 
     // Default: sorting by createdAt desc (down arrow)
     const createdAtButton = screen.getByRole('button', { name: /Date Generated/i });
-    const createdAtIcon = within(createdAtButton).getByRole('img', { hidden: true });
-    expect(createdAtIcon).toHaveClass('lucide-arrow-down');
+    const createdAtIcon = createdAtButton.querySelector('.lucide-arrow-down');
+    expect(createdAtIcon).toBeInTheDocument();
 
     // Other columns should show up-down arrow
     const userButton = screen.getByRole('button', { name: /^User/i });
-    const userIcon = within(userButton).getByRole('img', { hidden: true });
-    expect(userIcon).toHaveClass('lucide-arrow-up-down');
+    const userIcon = userButton.querySelector('.lucide-arrow-up-down');
+    expect(userIcon).toBeInTheDocument();
 
     // Change to ascending
     rerender(<ReadingsTable {...defaultProps} sortOrder="asc" />);
-    const updatedIcon = within(createdAtButton).getByRole('img', { hidden: true });
-    expect(updatedIcon).toHaveClass('lucide-arrow-up');
+    const updatedIcon = createdAtButton.querySelector('.lucide-arrow-up');
+    expect(updatedIcon).toBeInTheDocument();
   });
 
   test('handles sort column clicks', async () => {
@@ -240,20 +240,20 @@ describe('ReadingsTable', () => {
 
     // Type column should show up arrow
     const typeButton = screen.getByRole('button', { name: /Reading Type/i });
-    const typeIcon = within(typeButton).getByRole('img', { hidden: true });
-    expect(typeIcon).toHaveClass('lucide-arrow-up');
+    const typeIcon = typeButton.querySelector('.lucide-arrow-up');
+    expect(typeIcon).toBeInTheDocument();
 
     // Other columns should show up-down arrow
     const dateButton = screen.getByRole('button', { name: /Date Generated/i });
-    const dateIcon = within(dateButton).getByRole('img', { hidden: true });
-    expect(dateIcon).toHaveClass('lucide-arrow-up-down');
+    const dateIcon = dateButton.querySelector('.lucide-arrow-up-down');
+    expect(dateIcon).toBeInTheDocument();
 
     // Change sort field
     rerender(<ReadingsTable {...defaultProps} sortField="status" sortOrder="desc" />);
 
     const statusButton = screen.getByRole('button', { name: /^Status/i });
-    const statusIcon = within(statusButton).getByRole('img', { hidden: true });
-    expect(statusIcon).toHaveClass('lucide-arrow-down');
+    const statusIcon = statusButton.querySelector('.lucide-arrow-down');
+    expect(statusIcon).toBeInTheDocument();
   });
 
   test('applies correct styling to sortable headers', () => {

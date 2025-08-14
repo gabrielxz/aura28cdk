@@ -8,11 +8,21 @@ import { ReadingsFilter } from '@/lib/api/admin-api';
 jest.mock('@/components/ui/popover', () => ({
   Popover: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   PopoverTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  PopoverContent: ({ children }: { children: React.ReactNode }) => <div data-testid="popover-content">{children}</div>,
+  PopoverContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="popover-content">{children}</div>
+  ),
 }));
 
 jest.mock('@/components/ui/select', () => ({
-  Select: ({ children, onValueChange, value }: { children: React.ReactNode; onValueChange?: (value: string) => void; value?: string }) => {
+  Select: ({
+    children,
+    onValueChange,
+    value,
+  }: {
+    children: React.ReactNode;
+    onValueChange?: (value: string) => void;
+    value?: string;
+  }) => {
     // Extract SelectItem components and render as a regular select
     const items: React.ReactElement[] = [];
     const extractItems = (child: React.ReactElement): void => {
@@ -44,7 +54,9 @@ jest.mock('@/components/ui/select', () => ({
   },
   SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => <option value={value}>{children}</option>,
+  SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => (
+    <option value={value}>{children}</option>
+  ),
   SelectValue: ({ placeholder }: { placeholder?: string }) => <>{placeholder}</>,
 }));
 
