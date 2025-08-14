@@ -87,6 +87,14 @@ export function Header() {
                 >
                   Account Settings
                 </DropdownMenuItem>
+                {authService.isAdmin() && (
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => router.push('/admin')}
+                  >
+                    Admin Dashboard
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="cursor-pointer text-red-600" onClick={handleLogout}>
                   Logout

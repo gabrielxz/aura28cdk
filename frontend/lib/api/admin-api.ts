@@ -1,0 +1,134 @@
+import { AuthService } from '@/lib/auth/auth-service';
+
+export interface AdminReading {
+  readingId: string;
+  userId: string;
+  userEmail?: string;
+  type: string;
+  status: 'Processing' | 'Ready' | 'Failed' | 'In Review';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminReadingsResponse {
+  readings: AdminReading[];
+  count: number;
+  lastEvaluatedKey?: string;
+}
+
+export interface AdminUser {
+  userId: string;
+  email: string;
+  name?: string;
+  createdAt: string;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUser[];
+  count: number;
+  nextToken?: string;
+}
+
+export interface ReadingsFilter {
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  type?: string;
+  userSearch?: string;
+  limit?: number;
+  lastEvaluatedKey?: string;
+}
+
+export class AdminApi {
+  private baseUrl: string;
+  private authService: AuthService;
+
+  constructor(authService: AuthService) {
+    this.authService = authService;
+    this.baseUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL || '';
+
+    if (!this.baseUrl) {
+      console.error('API Gateway URL not configured');
+    }
+  }
+
+  private async getAuthHeaders(): Promise<HeadersInit> {
+    const idToken = await this.authService.getIdToken();
+    if (!idToken) {
+      throw new Error('Not authenticated');
+    }
+
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    };
+  }
+
+  async getAllReadings(filters?: ReadingsFilter): Promise<AdminReadingsResponse> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const queryParams = new URLSearchParams();
+
+      if (filters) {
+        if (filters.startDate) queryParams.append('startDate', filters.startDate);
+        if (filters.endDate) queryParams.append('endDate', filters.endDate);
+        if (filters.status) queryParams.append('status', filters.status);
+        if (filters.type) queryParams.append('type', filters.type);
+        if (filters.userSearch) queryParams.append('userSearch', filters.userSearch);
+        if (filters.limit) queryParams.append('limit', filters.limit.toString());
+        if (filters.lastEvaluatedKey)
+          queryParams.append('lastEvaluatedKey', filters.lastEvaluatedKey);
+      }
+
+      const url = `${this.baseUrl}api/admin/readings${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Access denied. Admin privileges required.');
+        }
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch readings');
+      }
+
+      const data: AdminReadingsResponse = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching admin readings:', error);
+      throw error;
+    }
+  }
+
+  async getAllUsers(searchTerm?: string, nextToken?: string): Promise<AdminUsersResponse> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const queryParams = new URLSearchParams();
+
+      if (searchTerm) queryParams.append('search', searchTerm);
+      if (nextToken) queryParams.append('nextToken', nextToken);
+
+      const url = `${this.baseUrl}api/admin/users${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Access denied. Admin privileges required.');
+        }
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch users');
+      }
+
+      const data: AdminUsersResponse = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
+      throw error;
+    }
+  }
+}
