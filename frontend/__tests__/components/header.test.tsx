@@ -42,6 +42,7 @@ describe('Header', () => {
       authService: {
         getCurrentUser: jest.fn().mockReturnValue(null),
         getIdToken: jest.fn().mockResolvedValue(null),
+        isAdmin: jest.fn().mockReturnValue(false),
       },
     });
 
@@ -60,6 +61,7 @@ describe('Header', () => {
       authService: {
         getCurrentUser: jest.fn().mockReturnValue(null),
         getIdToken: jest.fn().mockResolvedValue(null),
+        isAdmin: jest.fn().mockReturnValue(false),
       },
     });
 
@@ -77,6 +79,7 @@ describe('Header', () => {
       authService: {
         getCurrentUser: jest.fn().mockReturnValue(null),
         getIdToken: jest.fn().mockResolvedValue(null),
+        isAdmin: jest.fn().mockReturnValue(false),
       },
     });
 
@@ -103,6 +106,7 @@ describe('Header', () => {
       authService: {
         getCurrentUser: jest.fn().mockReturnValue(mockUser),
         getIdToken: jest.fn().mockResolvedValue('mock-token'),
+        isAdmin: jest.fn().mockReturnValue(false),
       },
     });
 

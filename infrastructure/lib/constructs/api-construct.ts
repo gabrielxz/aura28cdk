@@ -30,6 +30,8 @@ export class ApiConstruct extends Construct {
   public readonly generateReadingFunction: lambda.Function;
   public readonly getReadingsFunction: lambda.Function;
   public readonly getReadingDetailFunction: lambda.Function;
+  public readonly adminGetAllReadingsFunction: lambda.Function;
+  public readonly adminGetAllUsersFunction: lambda.Function;
 
   constructor(scope: Construct, id: string, props: ApiConstructProps) {
     super(scope, id);
@@ -306,6 +308,60 @@ export class ApiConstruct extends Construct {
     // S3 bucket read permissions for configuration files
     configBucket.grantRead(this.generateReadingFunction);
 
+    // Create Admin Lambda functions
+    this.adminGetAllReadingsFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'AdminGetAllReadingsFunction',
+      {
+        functionName: `aura28-${props.environment}-admin-get-all-readings`,
+        entry: path.join(__dirname, '../../lambda/admin/get-all-readings.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_18_X,
+        environment: {
+          READINGS_TABLE_NAME: props.readingsTable.tableName,
+          USER_TABLE_NAME: props.userTable.tableName,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 512,
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
+    this.adminGetAllUsersFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'AdminGetAllUsersFunction',
+      {
+        functionName: `aura28-${props.environment}-admin-get-all-users`,
+        entry: path.join(__dirname, '../../lambda/admin/get-all-users.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_18_X,
+        environment: {
+          USER_POOL_ID: props.userPool.userPoolId,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
+    // Grant DynamoDB permissions for admin functions
+    props.readingsTable.grantReadData(this.adminGetAllReadingsFunction);
+    props.userTable.grantReadData(this.adminGetAllReadingsFunction);
+
+    // Grant Cognito permissions for admin user listing
+    this.adminGetAllUsersFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['cognito-idp:ListUsers'],
+        resources: [props.userPool.userPoolArn],
+      }),
+    );
+
     // Grant Location Service permissions
     this.updateUserProfileFunction.addToRolePolicy(
       new iam.PolicyStatement({
@@ -412,6 +468,31 @@ export class ApiConstruct extends Construct {
     readingIdResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(this.getReadingDetailFunction),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      },
+    );
+
+    // Create /api/admin resources
+    const adminResource = apiResource.addResource('admin');
+
+    // GET /api/admin/readings - Get all readings (admin only)
+    const adminReadingsResource = adminResource.addResource('readings');
+    adminReadingsResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(this.adminGetAllReadingsFunction),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      },
+    );
+
+    // GET /api/admin/users - Get all users (admin only)
+    const adminUsersResource = adminResource.addResource('users');
+    adminUsersResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(this.adminGetAllUsersFunction),
       {
         authorizer,
         authorizationType: apigateway.AuthorizationType.COGNITO,

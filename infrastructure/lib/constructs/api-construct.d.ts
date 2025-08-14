@@ -21,5 +21,7 @@ export declare class ApiConstruct extends Construct {
   readonly generateReadingFunction: lambda.Function;
   readonly getReadingsFunction: lambda.Function;
   readonly getReadingDetailFunction: lambda.Function;
+  readonly adminGetAllReadingsFunction: lambda.Function;
+  readonly adminGetAllUsersFunction: lambda.Function;
   constructor(scope: Construct, id: string, props: ApiConstructProps);
 }
