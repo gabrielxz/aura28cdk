@@ -438,6 +438,123 @@ describe('AuthService', () => {
     });
   });
 
+  describe('isAdmin', () => {
+    test('returns true when user has admin group', async () => {
+      const mockTokens = {
+        idToken: 'test-id-token',
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
+        expiresAt: Date.now() + 3600000,
+      };
+
+      localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(mockTokens));
+
+      // Mock jwt-decode to return user with admin group
+      const { jwtDecode } = await import('jwt-decode');
+      jwtDecode.mockReturnValueOnce({
+        sub: 'test-user-id',
+        email: 'test@example.com',
+        email_verified: true,
+        'cognito:groups': ['admin'],
+      });
+
+      expect(authService.isAdmin()).toBe(true);
+    });
+
+    test('returns false when user has other groups but not admin', async () => {
+      const mockTokens = {
+        idToken: 'test-id-token',
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
+        expiresAt: Date.now() + 3600000,
+      };
+
+      localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(mockTokens));
+
+      // Mock jwt-decode to return user with other groups
+      const { jwtDecode } = await import('jwt-decode');
+      jwtDecode.mockReturnValueOnce({
+        sub: 'test-user-id',
+        email: 'test@example.com',
+        email_verified: true,
+        'cognito:groups': ['user', 'premium'],
+      });
+
+      expect(authService.isAdmin()).toBe(false);
+    });
+
+    test('returns false when user has no groups', async () => {
+      const mockTokens = {
+        idToken: 'test-id-token',
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
+        expiresAt: Date.now() + 3600000,
+      };
+
+      localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(mockTokens));
+
+      // Mock jwt-decode to return user without groups
+      const { jwtDecode } = await import('jwt-decode');
+      jwtDecode.mockReturnValueOnce({
+        sub: 'test-user-id',
+        email: 'test@example.com',
+        email_verified: true,
+      });
+
+      expect(authService.isAdmin()).toBe(false);
+    });
+
+    test('returns false when groups claim is empty array', async () => {
+      const mockTokens = {
+        idToken: 'test-id-token',
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
+        expiresAt: Date.now() + 3600000,
+      };
+
+      localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(mockTokens));
+
+      // Mock jwt-decode to return user with empty groups array
+      const { jwtDecode } = await import('jwt-decode');
+      jwtDecode.mockReturnValueOnce({
+        sub: 'test-user-id',
+        email: 'test@example.com',
+        email_verified: true,
+        'cognito:groups': [],
+      });
+
+      expect(authService.isAdmin()).toBe(false);
+    });
+
+    test('returns false when no user is authenticated', async () => {
+      localStorageMock.getItem.mockReturnValueOnce(null);
+
+      expect(authService.isAdmin()).toBe(false);
+    });
+
+    test('returns true when user has admin among multiple groups', async () => {
+      const mockTokens = {
+        idToken: 'test-id-token',
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
+        expiresAt: Date.now() + 3600000,
+      };
+
+      localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(mockTokens));
+
+      // Mock jwt-decode to return user with multiple groups including admin
+      const { jwtDecode } = await import('jwt-decode');
+      jwtDecode.mockReturnValueOnce({
+        sub: 'test-user-id',
+        email: 'test@example.com',
+        email_verified: true,
+        'cognito:groups': ['user', 'admin', 'premium'],
+      });
+
+      expect(authService.isAdmin()).toBe(true);
+    });
+  });
+
   describe('getTokens', () => {
     test('returns tokens when they exist in localStorage', () => {
       const mockTokens = {
