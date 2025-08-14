@@ -15,14 +15,16 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 
 interface DeleteReadingDialogProps {
+  userId: string;
   readingId: string;
   userEmail?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (readingId: string) => Promise<void>;
+  onConfirm: (userId: string, readingId: string) => Promise<void>;
 }
 
 export function DeleteReadingDialog({
+  userId,
   readingId,
   userEmail,
   open,
@@ -35,7 +37,7 @@ export function DeleteReadingDialog({
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await onConfirm(readingId);
+      await onConfirm(userId, readingId);
       toast({
         title: 'Reading deleted',
         description: 'The reading has been permanently deleted.',

@@ -557,10 +557,11 @@ export class ApiConstruct extends Construct {
       },
     );
 
-    // /api/admin/readings/{readingId} resource
-    const adminReadingIdResource = adminReadingsResource.addResource('{readingId}');
+    // /api/admin/readings/{userId}/{readingId} resource
+    const adminUserIdResource = adminReadingsResource.addResource('{userId}');
+    const adminReadingIdResource = adminUserIdResource.addResource('{readingId}');
 
-    // GET /api/admin/readings/{readingId} - Get reading details (admin only)
+    // GET /api/admin/readings/{userId}/{readingId} - Get reading details (admin only)
     adminReadingIdResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(this.adminGetReadingDetailsFunction),
@@ -570,7 +571,7 @@ export class ApiConstruct extends Construct {
       },
     );
 
-    // DELETE /api/admin/readings/{readingId} - Delete reading (admin only)
+    // DELETE /api/admin/readings/{userId}/{readingId} - Delete reading (admin only)
     adminReadingIdResource.addMethod(
       'DELETE',
       new apigateway.LambdaIntegration(this.adminDeleteReadingFunction),
@@ -580,10 +581,10 @@ export class ApiConstruct extends Construct {
       },
     );
 
-    // /api/admin/readings/{readingId}/status resource
+    // /api/admin/readings/{userId}/{readingId}/status resource
     const adminReadingStatusResource = adminReadingIdResource.addResource('status');
 
-    // PATCH /api/admin/readings/{readingId}/status - Update reading status (admin only)
+    // PATCH /api/admin/readings/{userId}/{readingId}/status - Update reading status (admin only)
     adminReadingStatusResource.addMethod(
       'PATCH',
       new apigateway.LambdaIntegration(this.adminUpdateReadingStatusFunction),

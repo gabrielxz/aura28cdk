@@ -98,6 +98,7 @@ describe('ReadingDetailsSheet', () => {
   test('renders closed sheet when open is false', () => {
     render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={false}
         onOpenChange={mockOnOpenChange}
@@ -111,6 +112,7 @@ describe('ReadingDetailsSheet', () => {
   test('renders open sheet with title and description', () => {
     render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -128,6 +130,7 @@ describe('ReadingDetailsSheet', () => {
 
     render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -136,7 +139,7 @@ describe('ReadingDetailsSheet', () => {
     );
 
     await waitFor(() => {
-      expect(mockAdminApi.getReadingDetails).toHaveBeenCalledWith('reading-123');
+      expect(mockAdminApi.getReadingDetails).toHaveBeenCalledWith('user-123', 'reading-123');
     });
   });
 
@@ -147,6 +150,7 @@ describe('ReadingDetailsSheet', () => {
 
     render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -163,6 +167,7 @@ describe('ReadingDetailsSheet', () => {
 
     render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -181,6 +186,7 @@ describe('ReadingDetailsSheet', () => {
 
     render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -233,6 +239,7 @@ describe('ReadingDetailsSheet', () => {
 
     render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -256,6 +263,7 @@ describe('ReadingDetailsSheet', () => {
 
     render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -282,6 +290,7 @@ describe('ReadingDetailsSheet', () => {
 
       const { rerender } = render(
         <ReadingDetailsSheet
+          userId="user-123"
           readingId="reading-123"
           open={true}
           onOpenChange={mockOnOpenChange}
@@ -296,6 +305,7 @@ describe('ReadingDetailsSheet', () => {
 
       rerender(
         <ReadingDetailsSheet
+          userId="user-124"
           readingId="reading-124"
           open={true}
           onOpenChange={mockOnOpenChange}
@@ -308,6 +318,7 @@ describe('ReadingDetailsSheet', () => {
   test('does not fetch when readingId is null', () => {
     render(
       <ReadingDetailsSheet
+        userId={null}
         readingId={null}
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -323,6 +334,7 @@ describe('ReadingDetailsSheet', () => {
 
     const { rerender } = render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -331,7 +343,7 @@ describe('ReadingDetailsSheet', () => {
     );
 
     await waitFor(() => {
-      expect(mockAdminApi.getReadingDetails).toHaveBeenCalledWith('reading-123');
+      expect(mockAdminApi.getReadingDetails).toHaveBeenCalledWith('user-123', 'reading-123');
     });
 
     const newReading = { ...mockReadingDetails, readingId: 'reading-456' };
@@ -339,6 +351,7 @@ describe('ReadingDetailsSheet', () => {
 
     rerender(
       <ReadingDetailsSheet
+        userId="user-456"
         readingId="reading-456"
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -347,7 +360,7 @@ describe('ReadingDetailsSheet', () => {
     );
 
     await waitFor(() => {
-      expect(mockAdminApi.getReadingDetails).toHaveBeenCalledWith('reading-456');
+      expect(mockAdminApi.getReadingDetails).toHaveBeenCalledWith('user-456', 'reading-456');
     });
   });
 
@@ -363,6 +376,7 @@ describe('ReadingDetailsSheet', () => {
 
     render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -391,6 +405,7 @@ describe('ReadingDetailsSheet', () => {
 
     render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -410,6 +425,7 @@ describe('ReadingDetailsSheet', () => {
 
     render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -437,6 +453,7 @@ describe('ReadingDetailsSheet', () => {
 
     render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -456,6 +473,7 @@ describe('ReadingDetailsSheet', () => {
 
     render(
       <ReadingDetailsSheet
+        userId="user-123"
         readingId="reading-123"
         open={true}
         onOpenChange={mockOnOpenChange}

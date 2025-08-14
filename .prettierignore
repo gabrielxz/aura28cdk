@@ -35,6 +35,8 @@ coverage/
 *.tsbuildinfo
 frontend/*.tsbuildinfo
 frontend/next-env.d.ts
+# Auto-generated TypeScript declaration files
+*.d.ts
 
 # Environment files
 .env*

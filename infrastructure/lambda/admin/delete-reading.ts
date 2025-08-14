@@ -31,16 +31,17 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
-    // Get reading ID from path parameters
+    // Get user ID and reading ID from path parameters
+    const userId = event.pathParameters?.userId;
     const readingId = event.pathParameters?.readingId;
-    if (!readingId) {
+    if (!userId || !readingId) {
       return {
         statusCode: 400,
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
         },
-        body: JSON.stringify({ error: 'Reading ID is required' }),
+        body: JSON.stringify({ error: 'User ID and Reading ID are required' }),
       };
     }
 
@@ -49,6 +50,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       new GetCommand({
         TableName: READINGS_TABLE_NAME,
         Key: {
+          userId: userId,
           readingId: readingId,
         },
       }),
@@ -70,12 +72,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       new DeleteCommand({
         TableName: READINGS_TABLE_NAME,
         Key: {
+          userId: userId,
           readingId: readingId,
         },
       }),
     );
 
-    logger.info(`Successfully deleted reading ${readingId}`);
+    logger.info(`Successfully deleted reading ${readingId} for user ${userId}`);
 
     return {
       statusCode: 204,

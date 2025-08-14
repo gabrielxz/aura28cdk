@@ -13,8 +13,12 @@ describe('get-reading-details Lambda', () => {
     process.env.USER_TABLE_NAME = 'test-user-table';
   });
 
-  const createEvent = (isAdmin: boolean, readingId?: string): Partial<APIGatewayProxyEvent> => ({
-    pathParameters: readingId ? { readingId } : null,
+  const createEvent = (
+    isAdmin: boolean,
+    userId?: string,
+    readingId?: string,
+  ): Partial<APIGatewayProxyEvent> => ({
+    pathParameters: userId && readingId ? { userId, readingId } : null,
     requestContext: {
       authorizer: {
         claims: {
@@ -26,7 +30,7 @@ describe('get-reading-details Lambda', () => {
 
   describe('Authorization', () => {
     it('should return 403 when user is not admin', async () => {
-      const event = createEvent(false, 'reading-123');
+      const event = createEvent(false, 'user-456', 'reading-123');
       const response = await handler(event as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(403);
@@ -35,7 +39,7 @@ describe('get-reading-details Lambda', () => {
     });
 
     it('should allow access when user is admin', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).resolves({
         Item: {
@@ -55,7 +59,7 @@ describe('get-reading-details Lambda', () => {
 
     it('should handle admin group as comma-separated string', async () => {
       const event: Partial<APIGatewayProxyEvent> = {
-        pathParameters: { readingId: 'reading-123' },
+        pathParameters: { userId: 'user-456', readingId: 'reading-123' },
         requestContext: {
           authorizer: {
             claims: {
@@ -80,18 +84,18 @@ describe('get-reading-details Lambda', () => {
 
   describe('Input validation', () => {
     it('should return 400 when reading ID is missing', async () => {
-      const event = createEvent(true);
+      const event = createEvent(true, undefined, undefined);
       const response = await handler(event as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(400);
       const body = JSON.parse(response.body);
-      expect(body.error).toBe('Reading ID is required');
+      expect(body.error).toBe('User ID and Reading ID are required');
     });
   });
 
   describe('Fetching reading details', () => {
     it('should fetch and return reading details successfully', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       const mockReading = {
         readingId: 'reading-123',
@@ -134,7 +138,7 @@ describe('get-reading-details Lambda', () => {
     });
 
     it('should return 404 when reading not found', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).resolves({ Item: undefined });
 
@@ -146,7 +150,7 @@ describe('get-reading-details Lambda', () => {
     });
 
     it('should handle reading without userId', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       const mockReading = {
         readingId: 'reading-123',
@@ -166,7 +170,7 @@ describe('get-reading-details Lambda', () => {
     });
 
     it('should handle user not found in user table', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       const mockReading = {
         readingId: 'reading-123',
@@ -191,7 +195,7 @@ describe('get-reading-details Lambda', () => {
 
     it('should warn but continue when user fetch fails', async () => {
       // In infrastructure tests, console.warn is allowed
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       const mockReading = {
         readingId: 'reading-123',
@@ -217,7 +221,7 @@ describe('get-reading-details Lambda', () => {
     });
 
     it('should handle reading with error field', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       const mockReading = {
         readingId: 'reading-123',
@@ -240,7 +244,7 @@ describe('get-reading-details Lambda', () => {
     });
 
     it('should return null for missing optional fields', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       const mockReading = {
         readingId: 'reading-123',
@@ -265,7 +269,7 @@ describe('get-reading-details Lambda', () => {
 
   describe('Error handling', () => {
     it('should handle DynamoDB errors', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).rejects(new Error('DynamoDB error'));
 
@@ -278,7 +282,7 @@ describe('get-reading-details Lambda', () => {
 
     it('should return 500 and log errors', async () => {
       // In infrastructure tests, console.error is allowed
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       const error = new Error('Test error');
       dynamoMock.on(GetCommand).rejects(error);
@@ -293,7 +297,7 @@ describe('get-reading-details Lambda', () => {
 
   describe('Response format', () => {
     it('should include CORS headers', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).resolves({
         Item: {
@@ -311,7 +315,7 @@ describe('get-reading-details Lambda', () => {
     });
 
     it('should return proper response structure', async () => {
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       const mockReading = {
         readingId: 'reading-123',
@@ -346,7 +350,7 @@ describe('get-reading-details Lambda', () => {
   describe('Logging', () => {
     it('should log incoming event', async () => {
       // In infrastructure tests, console.info is allowed
-      const event = createEvent(true, 'reading-123');
+      const event = createEvent(true, 'user-456', 'reading-123');
 
       dynamoMock.on(GetCommand).resolves({
         Item: { readingId: 'reading-123' },
@@ -362,7 +366,7 @@ describe('get-reading-details Lambda', () => {
   describe('Edge cases', () => {
     it('should handle missing requestContext', async () => {
       const event: Partial<APIGatewayProxyEvent> = {
-        pathParameters: { readingId: 'reading-123' },
+        pathParameters: { userId: 'user-456', readingId: 'reading-123' },
         requestContext: undefined as unknown as APIGatewayEventRequestContext,
       };
 
@@ -375,7 +379,7 @@ describe('get-reading-details Lambda', () => {
 
     it('should handle missing authorizer claims', async () => {
       const event: Partial<APIGatewayProxyEvent> = {
-        pathParameters: { readingId: 'reading-123' },
+        pathParameters: { userId: 'user-456', readingId: 'reading-123' },
         requestContext: {
           authorizer: undefined,
         } as unknown as APIGatewayProxyEvent['requestContext'],
@@ -388,7 +392,7 @@ describe('get-reading-details Lambda', () => {
 
     it('should handle empty cognito:groups', async () => {
       const event: Partial<APIGatewayProxyEvent> = {
-        pathParameters: { readingId: 'reading-123' },
+        pathParameters: { userId: 'user-456', readingId: 'reading-123' },
         requestContext: {
           authorizer: {
             claims: {
@@ -405,7 +409,7 @@ describe('get-reading-details Lambda', () => {
 
     it('should handle cognito:groups as array without admin', async () => {
       const event: Partial<APIGatewayProxyEvent> = {
-        pathParameters: { readingId: 'reading-123' },
+        pathParameters: { userId: 'user-456', readingId: 'reading-123' },
         requestContext: {
           authorizer: {
             claims: {

@@ -48,6 +48,7 @@ export interface ReadingDetails {
 }
 
 interface ReadingDetailsSheetProps {
+  userId: string | null;
   readingId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -55,6 +56,7 @@ interface ReadingDetailsSheetProps {
 }
 
 export function ReadingDetailsSheet({
+  userId,
   readingId,
   open,
   onOpenChange,
@@ -65,13 +67,13 @@ export function ReadingDetailsSheet({
   const [details, setDetails] = useState<ReadingDetails | null>(null);
 
   const fetchReadingDetails = useCallback(async () => {
-    if (!readingId) return;
+    if (!userId || !readingId) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const data = await adminApi.getReadingDetails(readingId);
+      const data = await adminApi.getReadingDetails(userId, readingId);
       setDetails(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch reading details');
@@ -79,13 +81,13 @@ export function ReadingDetailsSheet({
     } finally {
       setLoading(false);
     }
-  }, [readingId, adminApi]);
+  }, [userId, readingId, adminApi]);
 
   useEffect(() => {
-    if (open && readingId) {
+    if (open && userId && readingId) {
       fetchReadingDetails();
     }
-  }, [open, readingId, fetchReadingDetails]);
+  }, [open, userId, readingId, fetchReadingDetails]);
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
