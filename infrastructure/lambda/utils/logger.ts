@@ -6,9 +6,14 @@
 const REDACTION_PATTERNS = [
   // Email addresses
   { pattern: /([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, replacement: '$1@[REDACTED]' },
-  // JWT tokens (Bearer tokens)
+  // JWT tokens (Bearer tokens with dots)
   {
     pattern: /Bearer\s+[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+/g,
+    replacement: 'Bearer [REDACTED]',
+  },
+  // Simple Bearer tokens (without dots)
+  {
+    pattern: /Bearer\s+[A-Za-z0-9-_]{20,}/g,
     replacement: 'Bearer [REDACTED]',
   },
   // AWS Access Keys

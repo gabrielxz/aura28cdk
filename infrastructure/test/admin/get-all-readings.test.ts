@@ -30,7 +30,7 @@ describe('get-all-readings Lambda', () => {
   describe('Authorization', () => {
     it('should return 403 when user is not admin', async () => {
       const event = createEvent(false);
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(403);
       const body = JSON.parse(response.body);
@@ -42,7 +42,7 @@ describe('get-all-readings Lambda', () => {
 
       dynamoMock.on(ScanCommand).resolves({ Items: [] });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
     });
@@ -60,7 +60,7 @@ describe('get-all-readings Lambda', () => {
 
       dynamoMock.on(ScanCommand).resolves({ Items: [] });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
     });
@@ -76,7 +76,7 @@ describe('get-all-readings Lambda', () => {
         } as unknown as APIGatewayProxyEvent['requestContext'],
       };
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(403);
     });
@@ -118,7 +118,7 @@ describe('get-all-readings Lambda', () => {
         .on(GetCommand, { Key: { userId: 'user-2', createdAt: 'PROFILE' } })
         .resolves({ Item: mockUsers[1] });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
@@ -143,7 +143,7 @@ describe('get-all-readings Lambda', () => {
         return Promise.resolve({ Items: [] });
       });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
       expect(response.statusCode).toBe(200);
     });
 
@@ -158,7 +158,7 @@ describe('get-all-readings Lambda', () => {
         return Promise.resolve({ Items: [] });
       });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
       expect(response.statusCode).toBe(200);
     });
 
@@ -173,7 +173,7 @@ describe('get-all-readings Lambda', () => {
         return Promise.resolve({ Items: [] });
       });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
       expect(response.statusCode).toBe(200);
     });
 
@@ -193,7 +193,7 @@ describe('get-all-readings Lambda', () => {
         return Promise.resolve({ Items: [], LastEvaluatedKey: { readingId: 'reading-75' } });
       });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
       expect(response.statusCode).toBe(200);
 
       const body = JSON.parse(response.body);
@@ -211,7 +211,7 @@ describe('get-all-readings Lambda', () => {
         return Promise.resolve({ Items: [] });
       });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
       expect(response.statusCode).toBe(200);
     });
   });
@@ -237,7 +237,7 @@ describe('get-all-readings Lambda', () => {
         .on(GetCommand, { Key: { userId: 'user-3', createdAt: 'PROFILE' } })
         .resolves({ Item: { userId: 'user-3', email: 'another@example.com' } });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
@@ -256,7 +256,7 @@ describe('get-all-readings Lambda', () => {
         .on(GetCommand)
         .resolves({ Item: { userId: 'user-1', email: 'user1@example.com' } });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       const body = JSON.parse(response.body);
       expect(body.readings).toHaveLength(1);
@@ -278,7 +278,7 @@ describe('get-all-readings Lambda', () => {
         .on(GetCommand, { Key: { userId: 'user-2', createdAt: 'PROFILE' } })
         .resolves({ Item: { userId: 'user-2', email: 'test@example.com' } });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       const body = JSON.parse(response.body);
       expect(body.readings).toHaveLength(1);
@@ -301,7 +301,7 @@ describe('get-all-readings Lambda', () => {
         .on(GetCommand, { Key: { userId: 'user-2', createdAt: 'PROFILE' } })
         .resolves({ Item: { userId: 'user-2', email: 'user2@example.com' } });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       const body = JSON.parse(response.body);
       expect(body.readings).toHaveLength(2);
@@ -316,7 +316,7 @@ describe('get-all-readings Lambda', () => {
 
       dynamoMock.on(ScanCommand).rejects(new Error('DynamoDB error'));
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(500);
       const body = JSON.parse(response.body);
@@ -330,9 +330,12 @@ describe('get-all-readings Lambda', () => {
       const error = new Error('Test error');
       dynamoMock.on(ScanCommand).rejects(error);
 
-      await handler(event as APIGatewayProxyEvent);
+      await handler(event as unknown as APIGatewayProxyEvent);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error:', error);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error in get-all-readings handler:',
+        expect.stringContaining('Test error'),
+      );
       consoleErrorSpy.mockRestore();
     });
 
@@ -345,7 +348,7 @@ describe('get-all-readings Lambda', () => {
       dynamoMock.on(ScanCommand).resolves({ Items: mockReadings });
       dynamoMock.on(GetCommand).rejects(new Error('User not found'));
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -363,7 +366,7 @@ describe('get-all-readings Lambda', () => {
 
       dynamoMock.on(ScanCommand).resolves({ Items: [] });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.headers).toEqual({
         'Content-Type': 'application/json',
@@ -384,7 +387,7 @@ describe('get-all-readings Lambda', () => {
         Item: { userId: 'user-1', email: 'user1@example.com' },
       });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
@@ -415,7 +418,7 @@ describe('get-all-readings Lambda', () => {
         return Promise.resolve({ Items: [] });
       });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
       expect(response.statusCode).toBe(200);
     });
   });
@@ -441,7 +444,7 @@ describe('get-all-readings Lambda', () => {
 
       dynamoMock.on(ScanCommand).resolves({ Items: [], Count: 0 });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
       expect(dynamoMock.commandCalls(ScanCommand)[0].args[0].input.Limit).toBe(100);
@@ -452,7 +455,7 @@ describe('get-all-readings Lambda', () => {
 
       dynamoMock.on(ScanCommand).resolves({ Items: [], Count: 0 });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
       expect(dynamoMock.commandCalls(ScanCommand)[0].args[0].input.Limit).toBe(25);
@@ -463,7 +466,7 @@ describe('get-all-readings Lambda', () => {
 
       dynamoMock.on(ScanCommand).resolves({ Items: [], Count: 0 });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
       expect(dynamoMock.commandCalls(ScanCommand)[0].args[0].input.Limit).toBe(25);
@@ -476,7 +479,7 @@ describe('get-all-readings Lambda', () => {
       dynamoMock.on(ScanCommand).resolves({ Items: [] });
       dynamoMock.on(GetCommand).resolves({ Item: undefined });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       // The search should be truncated to 100 chars
       // We can't directly test the truncation in the filter, but we can verify it doesn't crash
@@ -489,7 +492,7 @@ describe('get-all-readings Lambda', () => {
         endDate: '2024-06-01', // More than 90 days
       });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(400);
       const body = JSON.parse(response.body);
@@ -504,7 +507,7 @@ describe('get-all-readings Lambda', () => {
 
       dynamoMock.on(ScanCommand).resolves({ Items: [] });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
     });
@@ -517,7 +520,7 @@ describe('get-all-readings Lambda', () => {
 
       dynamoMock.on(ScanCommand).resolves({ Items: [] });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
     });
@@ -530,7 +533,7 @@ describe('get-all-readings Lambda', () => {
 
       dynamoMock.on(ScanCommand).resolves({ Items: [] });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
     });
@@ -551,7 +554,7 @@ describe('get-all-readings Lambda', () => {
         },
       };
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(403);
       const body = JSON.parse(response.body);
@@ -572,7 +575,7 @@ describe('get-all-readings Lambda', () => {
         },
       };
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(403);
       const body = JSON.parse(response.body);
@@ -593,7 +596,7 @@ describe('get-all-readings Lambda', () => {
         },
       };
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(403);
       const body = JSON.parse(response.body);
@@ -608,7 +611,7 @@ describe('get-all-readings Lambda', () => {
         },
       };
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(403);
       const body = JSON.parse(response.body);
@@ -644,7 +647,7 @@ describe('get-all-readings Lambda', () => {
 
       dynamoMock.on(ScanCommand).resolves({ Items: [] });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
@@ -667,7 +670,7 @@ describe('get-all-readings Lambda', () => {
 
       dynamoMock.on(ScanCommand).resolves({ Items: [] });
 
-      const response = await handler(event as APIGatewayProxyEvent);
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);

@@ -28,7 +28,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
   try {
     // Check if user is admin
-    const userGroups = event.requestContext.authorizer?.claims?.['cognito:groups'];
+    const userGroups = event.requestContext?.authorizer?.claims?.['cognito:groups'];
     const isAdmin =
       userGroups &&
       (typeof userGroups === 'string'
@@ -75,7 +75,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       if (daysDiff > 90) {
         return {
           statusCode: 400,
-          headers,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
           body: JSON.stringify({
             error: 'Date range cannot exceed 90 days',
           }),
