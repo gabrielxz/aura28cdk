@@ -9,7 +9,7 @@ import NatalChartTab from './natal-chart-tab';
 import ReadingsTab from './readings-tab';
 
 export default function DashboardPage() {
-  const { user, loading, authService } = useAuth();
+  const { user, isAdmin, loading, authService } = useAuth();
   const router = useRouter();
   const [userApi] = useState(() => new UserApi(authService));
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
@@ -68,7 +68,8 @@ export default function DashboardPage() {
     <div className="container mx-auto max-w-4xl p-8">
       <h1 className="mb-4 text-3xl font-bold">Dashboard</h1>
       <h2 className="mb-8 text-xl text-gray-600 dark:text-gray-400">
-        Welcome back, {profile?.profile.birthName || user.email}!
+        Welcome back, {isAdmin ? 'Admin ' : ''}
+        {profile?.profile.birthName || user.email}!
       </h2>
 
       <Tabs defaultValue="profile" className="w-full">

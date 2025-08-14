@@ -77,6 +77,14 @@ describe('CognitoAuthConstruct', () => {
       });
     });
 
+    test('creates admin group in user pool', () => {
+      template.hasResourceProperties('AWS::Cognito::UserPoolGroup', {
+        GroupName: 'admin',
+        Description: 'Administrator users with elevated privileges',
+        Precedence: 1,
+      });
+    });
+
     test('creates placeholder secrets for OAuth providers', () => {
       template.hasResourceProperties('AWS::SecretsManager::Secret', {
         Name: 'aura28/oauth/google/dev',
@@ -104,6 +112,7 @@ describe('CognitoAuthConstruct', () => {
       expect(outputKeys.some((key) => key.startsWith('TestAuthUserPoolClientId'))).toBe(true);
       expect(outputKeys.some((key) => key.startsWith('TestAuthCognitoDomainPrefix'))).toBe(true);
       expect(outputKeys.some((key) => key.startsWith('TestAuthCognitoHostedUIURL'))).toBe(true);
+      expect(outputKeys.some((key) => key.startsWith('TestAuthAdminGroupName'))).toBe(true);
       expect(outputKeys.some((key) => key.startsWith('TestAuthOAuthSecretsReminder'))).toBe(true);
     });
   });
@@ -122,6 +131,14 @@ describe('CognitoAuthConstruct', () => {
     test('creates a User Pool with production settings', () => {
       template.hasResourceProperties('AWS::Cognito::UserPool', {
         UserPoolName: 'aura28-prod-user-pool',
+      });
+    });
+
+    test('creates admin group in user pool', () => {
+      template.hasResourceProperties('AWS::Cognito::UserPoolGroup', {
+        GroupName: 'admin',
+        Description: 'Administrator users with elevated privileges',
+        Precedence: 1,
       });
     });
 

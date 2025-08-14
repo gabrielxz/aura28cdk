@@ -12,6 +12,7 @@ export interface User {
   email_verified: boolean;
   given_name?: string;
   family_name?: string;
+  'cognito:groups'?: string[];
 }
 
 export interface AuthTokens {
@@ -124,6 +125,17 @@ export class AuthService {
   isAuthenticated(): boolean {
     const tokens = this.getTokens();
     return tokens !== null && !this.isTokenExpired(tokens);
+  }
+
+  /**
+   * Check if the current user is an admin
+   */
+  isAdmin(): boolean {
+    const user = this.getCurrentUser();
+    if (!user || !user['cognito:groups']) {
+      return false;
+    }
+    return user['cognito:groups'].includes('admin');
   }
 
   /**
