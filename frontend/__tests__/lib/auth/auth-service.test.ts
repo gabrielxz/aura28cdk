@@ -439,7 +439,7 @@ describe('AuthService', () => {
   });
 
   describe('isAdmin', () => {
-    test('returns true when user has admin group', () => {
+    test('returns true when user has admin group', async () => {
       const mockTokens = {
         idToken: 'test-id-token',
         accessToken: 'test-access-token',
@@ -461,7 +461,7 @@ describe('AuthService', () => {
       expect(authService.isAdmin()).toBe(true);
     });
 
-    test('returns false when user has other groups but not admin', () => {
+    test('returns false when user has other groups but not admin', async () => {
       const mockTokens = {
         idToken: 'test-id-token',
         accessToken: 'test-access-token',
@@ -483,7 +483,7 @@ describe('AuthService', () => {
       expect(authService.isAdmin()).toBe(false);
     });
 
-    test('returns false when user has no groups', () => {
+    test('returns false when user has no groups', async () => {
       const mockTokens = {
         idToken: 'test-id-token',
         accessToken: 'test-access-token',
@@ -504,7 +504,7 @@ describe('AuthService', () => {
       expect(authService.isAdmin()).toBe(false);
     });
 
-    test('returns false when groups claim is empty array', () => {
+    test('returns false when groups claim is empty array', async () => {
       const mockTokens = {
         idToken: 'test-id-token',
         accessToken: 'test-access-token',
@@ -526,13 +526,13 @@ describe('AuthService', () => {
       expect(authService.isAdmin()).toBe(false);
     });
 
-    test('returns false when no user is authenticated', () => {
+    test('returns false when no user is authenticated', async () => {
       localStorageMock.getItem.mockReturnValueOnce(null);
 
       expect(authService.isAdmin()).toBe(false);
     });
 
-    test('returns true when user has admin among multiple groups', () => {
+    test('returns true when user has admin among multiple groups', async () => {
       const mockTokens = {
         idToken: 'test-id-token',
         accessToken: 'test-access-token',
