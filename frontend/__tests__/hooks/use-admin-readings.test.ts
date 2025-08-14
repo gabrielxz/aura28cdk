@@ -79,10 +79,13 @@ describe('useAdminReadings', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(mockGetAllReadings).toHaveBeenCalledWith({
-      limit: 25,
-      lastEvaluatedKey: undefined,
-    });
+    expect(mockGetAllReadings).toHaveBeenCalledWith(
+      {
+        limit: 25,
+        lastEvaluatedKey: undefined,
+      },
+      expect.any(Object), // AbortSignal
+    );
     expect(result.current.readings).toHaveLength(3);
     expect(result.current.totalCount).toBe(3);
   });
@@ -158,11 +161,14 @@ describe('useAdminReadings', () => {
     });
 
     await waitFor(() => {
-      expect(mockGetAllReadings).toHaveBeenLastCalledWith({
-        ...newFilters,
-        limit: 25,
-        lastEvaluatedKey: undefined,
-      });
+      expect(mockGetAllReadings).toHaveBeenLastCalledWith(
+        {
+          ...newFilters,
+          limit: 25,
+          lastEvaluatedKey: undefined,
+        },
+        expect.any(Object), // AbortSignal
+      );
     });
 
     expect(result.current.filters).toEqual(newFilters);
@@ -190,10 +196,13 @@ describe('useAdminReadings', () => {
     });
 
     await waitFor(() => {
-      expect(mockGetAllReadings).toHaveBeenLastCalledWith({
-        limit: 2,
-        lastEvaluatedKey: 'next-page-key',
-      });
+      expect(mockGetAllReadings).toHaveBeenLastCalledWith(
+        {
+          limit: 2,
+          lastEvaluatedKey: 'next-page-key',
+        },
+        expect.any(Object), // AbortSignal
+      );
     });
 
     expect(result.current.currentPage).toBe(2);
@@ -283,10 +292,13 @@ describe('useAdminReadings', () => {
 
     expect(result.current.sortField).toBe('type');
     expect(result.current.sortOrder).toBe('asc');
-    expect(mockGetAllReadings).toHaveBeenCalledWith({
-      limit: 50,
-      lastEvaluatedKey: undefined,
-    });
+    expect(mockGetAllReadings).toHaveBeenCalledWith(
+      {
+        limit: 50,
+        lastEvaluatedKey: undefined,
+      },
+      expect.any(Object), // AbortSignal
+    );
   });
 
   test('sorts by status correctly', async () => {

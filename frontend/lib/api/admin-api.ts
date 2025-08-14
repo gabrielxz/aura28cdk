@@ -64,7 +64,10 @@ export class AdminApi {
     };
   }
 
-  async getAllReadings(filters?: ReadingsFilter): Promise<AdminReadingsResponse> {
+  async getAllReadings(
+    filters?: ReadingsFilter,
+    signal?: AbortSignal,
+  ): Promise<AdminReadingsResponse> {
     try {
       const headers = await this.getAuthHeaders();
       const queryParams = new URLSearchParams();
@@ -84,6 +87,7 @@ export class AdminApi {
       const response = await fetch(url, {
         method: 'GET',
         headers,
+        signal, // Add AbortSignal support
       });
 
       if (!response.ok) {

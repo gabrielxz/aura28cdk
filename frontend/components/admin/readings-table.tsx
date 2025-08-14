@@ -32,13 +32,18 @@ export function ReadingsTable({
 }: ReadingsTableProps) {
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+      return <ArrowUpDown className="ml-2 h-4 w-4" aria-hidden="true" />;
     }
     return sortOrder === 'asc' ? (
-      <ArrowUp className="ml-2 h-4 w-4" />
+      <ArrowUp className="ml-2 h-4 w-4" aria-hidden="true" />
     ) : (
-      <ArrowDown className="ml-2 h-4 w-4" />
+      <ArrowDown className="ml-2 h-4 w-4" aria-hidden="true" />
     );
+  };
+
+  const getAriaSortValue = (field: SortField): 'ascending' | 'descending' | 'none' => {
+    if (sortField !== field) return 'none';
+    return sortOrder === 'asc' ? 'ascending' : 'descending';
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -85,47 +90,55 @@ export function ReadingsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>
+            <TableHead scope="col">
               <Button
                 variant="ghost"
                 onClick={() => onSort('createdAt')}
                 className="h-auto p-0 font-semibold hover:bg-transparent"
+                aria-sort={getAriaSortValue('createdAt')}
+                aria-label={`Sort by Date Generated, currently ${getAriaSortValue('createdAt')}`}
               >
                 Date Generated
                 {getSortIcon('createdAt')}
               </Button>
             </TableHead>
-            <TableHead>
+            <TableHead scope="col">
               <Button
                 variant="ghost"
                 onClick={() => onSort('userEmail')}
                 className="h-auto p-0 font-semibold hover:bg-transparent"
+                aria-sort={getAriaSortValue('userEmail')}
+                aria-label={`Sort by User, currently ${getAriaSortValue('userEmail')}`}
               >
                 User
                 {getSortIcon('userEmail')}
               </Button>
             </TableHead>
-            <TableHead>
+            <TableHead scope="col">
               <Button
                 variant="ghost"
                 onClick={() => onSort('type')}
                 className="h-auto p-0 font-semibold hover:bg-transparent"
+                aria-sort={getAriaSortValue('type')}
+                aria-label={`Sort by Reading Type, currently ${getAriaSortValue('type')}`}
               >
                 Reading Type
                 {getSortIcon('type')}
               </Button>
             </TableHead>
-            <TableHead>
+            <TableHead scope="col">
               <Button
                 variant="ghost"
                 onClick={() => onSort('status')}
                 className="h-auto p-0 font-semibold hover:bg-transparent"
+                aria-sort={getAriaSortValue('status')}
+                aria-label={`Sort by Status, currently ${getAriaSortValue('status')}`}
               >
                 Status
                 {getSortIcon('status')}
               </Button>
             </TableHead>
-            <TableHead>Reading ID</TableHead>
+            <TableHead scope="col">Reading ID</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

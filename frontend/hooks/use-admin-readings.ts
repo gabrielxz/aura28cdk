@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AdminApi, AdminReading, ReadingsFilter } from '@/lib/api/admin-api';
 import { AuthService } from '@/lib/auth/auth-service';
 
@@ -23,24 +23,41 @@ export function useAdminReadings(authService: AuthService, options: UseAdminRead
   const [sortField, setSortField] = useState<SortField>(initialSortField);
   const [sortOrder, setSortOrder] = useState<SortOrder>(initialSortOrder);
   const [filters, setFilters] = useState<ReadingsFilter>({});
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const adminApi = useMemo(() => new AdminApi(authService), [authService]);
 
   const fetchReadings = useCallback(async () => {
+    // Cancel any in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new AbortController for this request
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     try {
       setLoading(true);
       setError(null);
 
-      const response = await adminApi.getAllReadings({
-        ...filters,
-        limit: pageSize,
-        lastEvaluatedKey: currentPage > 1 ? lastEvaluatedKey : undefined,
-      });
+      const response = await adminApi.getAllReadings(
+        {
+          ...filters,
+          limit: pageSize,
+          lastEvaluatedKey: currentPage > 1 ? lastEvaluatedKey : undefined,
+        },
+        abortController.signal,
+      );
 
       setReadings(response.readings);
       setTotalCount(response.count);
       setLastEvaluatedKey(response.lastEvaluatedKey);
     } catch (err) {
+      // Don't set error state if request was aborted
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to fetch readings');
       setReadings([]);
     } finally {

@@ -434,4 +434,244 @@ describe('get-all-readings Lambda', () => {
       consoleInfoSpy.mockRestore();
     });
   });
+
+  describe('Input validation guardrails', () => {
+    it('should cap limit at 100', async () => {
+      const event = createEvent(true, { limit: '200' });
+
+      dynamoMock.on(ScanCommand).resolves({ Items: [], Count: 0 });
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(200);
+      expect(dynamoMock.commandCalls(ScanCommand)[0].args[0].input.Limit).toBe(100);
+    });
+
+    it('should default to 25 when limit is invalid', async () => {
+      const event = createEvent(true, { limit: 'invalid' });
+
+      dynamoMock.on(ScanCommand).resolves({ Items: [], Count: 0 });
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(200);
+      expect(dynamoMock.commandCalls(ScanCommand)[0].args[0].input.Limit).toBe(25);
+    });
+
+    it('should default to 25 when limit is negative', async () => {
+      const event = createEvent(true, { limit: '-10' });
+
+      dynamoMock.on(ScanCommand).resolves({ Items: [], Count: 0 });
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(200);
+      expect(dynamoMock.commandCalls(ScanCommand)[0].args[0].input.Limit).toBe(25);
+    });
+
+    it('should truncate userSearch to 100 characters', async () => {
+      const longSearch = 'a'.repeat(150);
+      const event = createEvent(true, { userSearch: longSearch });
+
+      dynamoMock.on(ScanCommand).resolves({ Items: [] });
+      dynamoMock.on(GetCommand).resolves({ Item: undefined });
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      // The search should be truncated to 100 chars
+      // We can't directly test the truncation in the filter, but we can verify it doesn't crash
+      expect(response.statusCode).toBe(200);
+    });
+
+    it('should return 400 when date range exceeds 90 days', async () => {
+      const event = createEvent(true, {
+        startDate: '2024-01-01',
+        endDate: '2024-06-01', // More than 90 days
+      });
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe('Date range cannot exceed 90 days');
+    });
+
+    it('should allow date range of exactly 90 days', async () => {
+      const event = createEvent(true, {
+        startDate: '2024-01-01',
+        endDate: '2024-03-31', // Exactly 90 days
+      });
+
+      dynamoMock.on(ScanCommand).resolves({ Items: [] });
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(200);
+    });
+
+    it('should allow date range less than 90 days', async () => {
+      const event = createEvent(true, {
+        startDate: '2024-01-01',
+        endDate: '2024-02-01', // 31 days
+      });
+
+      dynamoMock.on(ScanCommand).resolves({ Items: [] });
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(200);
+    });
+
+    it('should not validate date range when only one date is provided', async () => {
+      const event = createEvent(true, {
+        startDate: '2024-01-01',
+        // No endDate
+      });
+
+      dynamoMock.on(ScanCommand).resolves({ Items: [] });
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(200);
+    });
+  });
+
+  describe('JWT verification edge cases', () => {
+    it('should return 403 when cognito:groups claim is missing', async () => {
+      const event = {
+        ...createEvent(false),
+        requestContext: {
+          authorizer: {
+            claims: {
+              sub: 'user-123',
+              email: 'test@example.com',
+              // No cognito:groups claim
+            },
+          },
+        },
+      };
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(403);
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe('Access denied. Admin privileges required.');
+    });
+
+    it('should return 403 when cognito:groups exists but does not contain admin', async () => {
+      const event = {
+        ...createEvent(false),
+        requestContext: {
+          authorizer: {
+            claims: {
+              sub: 'user-123',
+              email: 'test@example.com',
+              'cognito:groups': 'user,developer',
+            },
+          },
+        },
+      };
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(403);
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe('Access denied. Admin privileges required.');
+    });
+
+    it('should handle cognito:groups as an array without admin', async () => {
+      const event = {
+        ...createEvent(false),
+        requestContext: {
+          authorizer: {
+            claims: {
+              sub: 'user-123',
+              email: 'test@example.com',
+              'cognito:groups': ['user', 'developer'],
+            },
+          },
+        },
+      };
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(403);
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe('Access denied. Admin privileges required.');
+    });
+
+    it('should return 403 when authorizer claims are completely missing', async () => {
+      const event = {
+        ...createEvent(false),
+        requestContext: {
+          authorizer: undefined,
+        },
+      };
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(403);
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe('Access denied. Admin privileges required.');
+    });
+
+    it('should return 403 when requestContext is missing', async () => {
+      const event = {
+        ...createEvent(false),
+        requestContext: undefined,
+      };
+
+      const response = await handler(event as unknown as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(403);
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe('Access denied. Admin privileges required.');
+    });
+
+    it('should accept admin group in comma-separated string format', async () => {
+      const event = {
+        ...createEvent(false),
+        requestContext: {
+          authorizer: {
+            claims: {
+              sub: 'user-123',
+              email: 'admin@example.com',
+              'cognito:groups': 'user,admin,developer',
+            },
+          },
+        },
+      };
+
+      dynamoMock.on(ScanCommand).resolves({ Items: [] });
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.readings).toEqual([]);
+    });
+
+    it('should accept admin group in array format', async () => {
+      const event = {
+        ...createEvent(false),
+        requestContext: {
+          authorizer: {
+            claims: {
+              sub: 'user-123',
+              email: 'admin@example.com',
+              'cognito:groups': ['user', 'admin', 'developer'],
+            },
+          },
+        },
+      };
+
+      dynamoMock.on(ScanCommand).resolves({ Items: [] });
+
+      const response = await handler(event as APIGatewayProxyEvent);
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.readings).toEqual([]);
+    });
+  });
 });

@@ -22,6 +22,7 @@ export function Header() {
   const router = useRouter();
   const [userApi] = useState(() => new UserApi(authService));
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -37,6 +38,15 @@ export function Header() {
 
     fetchProfile();
   }, [user, loading, userApi]);
+
+  // Check admin status when auth state changes
+  useEffect(() => {
+    if (!loading && user) {
+      setIsAdmin(authService.isAdmin());
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user, loading, authService]);
 
   const handleLogout = async () => {
     await logout();
@@ -87,7 +97,7 @@ export function Header() {
                 >
                   Account Settings
                 </DropdownMenuItem>
-                {authService.isAdmin() && (
+                {isAdmin && (
                   <DropdownMenuItem
                     className="cursor-pointer"
                     onClick={() => router.push('/admin')}

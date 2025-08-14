@@ -113,12 +113,12 @@ describe('ReadingsTable', () => {
     const { rerender } = render(<ReadingsTable {...defaultProps} />);
 
     // Default: sorting by createdAt desc (down arrow)
-    const createdAtButton = screen.getByRole('button', { name: /Date Generated/i });
+    const createdAtButton = screen.getByRole('button', { name: /Sort by Date Generated/i });
     const createdAtIcon = createdAtButton.querySelector('.lucide-arrow-down');
     expect(createdAtIcon).toBeInTheDocument();
 
     // Other columns should show up-down arrow
-    const userButton = screen.getByRole('button', { name: /^User/i });
+    const userButton = screen.getByRole('button', { name: /Sort by User/i });
     const userIcon = userButton.querySelector('.lucide-arrow-up-down');
     expect(userIcon).toBeInTheDocument();
 
@@ -134,19 +134,19 @@ describe('ReadingsTable', () => {
     render(<ReadingsTable {...defaultProps} onSort={onSort} />);
 
     // Click Date Generated
-    await user.click(screen.getByRole('button', { name: /Date Generated/i }));
+    await user.click(screen.getByRole('button', { name: /Sort by Date Generated/i }));
     expect(onSort).toHaveBeenCalledWith('createdAt');
 
     // Click User
-    await user.click(screen.getByRole('button', { name: /^User/i }));
+    await user.click(screen.getByRole('button', { name: /Sort by User/i }));
     expect(onSort).toHaveBeenCalledWith('userEmail');
 
     // Click Reading Type
-    await user.click(screen.getByRole('button', { name: /Reading Type/i }));
+    await user.click(screen.getByRole('button', { name: /Sort by Reading Type/i }));
     expect(onSort).toHaveBeenCalledWith('type');
 
     // Click Status
-    await user.click(screen.getByRole('button', { name: /^Status/i }));
+    await user.click(screen.getByRole('button', { name: /Sort by Status/i }));
     expect(onSort).toHaveBeenCalledWith('status');
   });
 
@@ -239,19 +239,19 @@ describe('ReadingsTable', () => {
     );
 
     // Type column should show up arrow
-    const typeButton = screen.getByRole('button', { name: /Reading Type/i });
+    const typeButton = screen.getByRole('button', { name: /Sort by Reading Type/i });
     const typeIcon = typeButton.querySelector('.lucide-arrow-up');
     expect(typeIcon).toBeInTheDocument();
 
     // Other columns should show up-down arrow
-    const dateButton = screen.getByRole('button', { name: /Date Generated/i });
+    const dateButton = screen.getByRole('button', { name: /Sort by Date Generated/i });
     const dateIcon = dateButton.querySelector('.lucide-arrow-up-down');
     expect(dateIcon).toBeInTheDocument();
 
     // Change sort field
     rerender(<ReadingsTable {...defaultProps} sortField="status" sortOrder="desc" />);
 
-    const statusButton = screen.getByRole('button', { name: /^Status/i });
+    const statusButton = screen.getByRole('button', { name: /Sort by Status/i });
     const statusIcon = statusButton.querySelector('.lucide-arrow-down');
     expect(statusIcon).toBeInTheDocument();
   });
