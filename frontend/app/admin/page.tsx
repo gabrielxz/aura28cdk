@@ -21,9 +21,11 @@ export default function AdminDashboard() {
   } | null>(null);
   const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [readingToDelete, setReadingToDelete] = useState<{ id: string; email?: string } | null>(
-    null,
-  );
+  const [readingToDelete, setReadingToDelete] = useState<{
+    userId: string;
+    id: string;
+    email?: string;
+  } | null>(null);
 
   const {
     readings,
