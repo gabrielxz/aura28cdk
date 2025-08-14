@@ -13,8 +13,8 @@ declare function redactObject(obj: any): any;
  * Safe logging functions with automatic redaction
  */
 export declare const logger: {
-  info: (message: string, data?: any) => void;
-  warn: (message: string, data?: any) => void;
-  error: (message: string, error?: any) => void;
+    info: (message: string, data?: any) => void;
+    warn: (message: string, data?: any) => void;
+    error: (message: string, error?: any) => void;
 };
 export { redact, redactObject };
