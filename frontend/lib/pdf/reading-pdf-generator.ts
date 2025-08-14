@@ -103,7 +103,7 @@ export async function generateReadingPDF(
         </div>
         
         <!-- Footer -->
-        <div style="margin-top: 30px; padding-top: 10px; border-top: 1px solid #e2e8f0;">
+        <div style="margin-top: 9px; padding-top: 10px; border-top: 1px solid #e2e8f0;">
           <p style="color: #718096; font-size: 10px; text-align: center;">
             © ${new Date().getFullYear()} Star33 LLC.
           </p>
