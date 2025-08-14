@@ -78,3 +78,7 @@ logs/
 
 # Claude Code
 .claude/
+
+# Context folder (working documentation)
+context/
+/context/
