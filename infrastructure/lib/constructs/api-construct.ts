@@ -32,6 +32,9 @@ export class ApiConstruct extends Construct {
   public readonly getReadingDetailFunction: lambda.Function;
   public readonly adminGetAllReadingsFunction: lambda.Function;
   public readonly adminGetAllUsersFunction: lambda.Function;
+  public readonly adminGetReadingDetailsFunction: lambda.Function;
+  public readonly adminUpdateReadingStatusFunction: lambda.Function;
+  public readonly adminDeleteReadingFunction: lambda.Function;
 
   constructor(scope: Construct, id: string, props: ApiConstructProps) {
     super(scope, id);
@@ -350,9 +353,75 @@ export class ApiConstruct extends Construct {
       },
     );
 
+    // Create additional admin Lambda functions
+    this.adminGetReadingDetailsFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'AdminGetReadingDetailsFunction',
+      {
+        functionName: `aura28-${props.environment}-admin-get-reading-details`,
+        entry: path.join(__dirname, '../../lambda/admin/get-reading-details.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_18_X,
+        environment: {
+          READINGS_TABLE_NAME: props.readingsTable.tableName,
+          USER_TABLE_NAME: props.userTable.tableName,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
+    this.adminUpdateReadingStatusFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'AdminUpdateReadingStatusFunction',
+      {
+        functionName: `aura28-${props.environment}-admin-update-reading-status`,
+        entry: path.join(__dirname, '../../lambda/admin/update-reading-status.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_18_X,
+        environment: {
+          READINGS_TABLE_NAME: props.readingsTable.tableName,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
+    this.adminDeleteReadingFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'AdminDeleteReadingFunction',
+      {
+        functionName: `aura28-${props.environment}-admin-delete-reading`,
+        entry: path.join(__dirname, '../../lambda/admin/delete-reading.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_18_X,
+        environment: {
+          READINGS_TABLE_NAME: props.readingsTable.tableName,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
     // Grant DynamoDB permissions for admin functions
     props.readingsTable.grantReadData(this.adminGetAllReadingsFunction);
     props.userTable.grantReadData(this.adminGetAllReadingsFunction);
+    props.readingsTable.grantReadData(this.adminGetReadingDetailsFunction);
+    props.userTable.grantReadData(this.adminGetReadingDetailsFunction);
+    props.readingsTable.grantReadWriteData(this.adminUpdateReadingStatusFunction);
+    props.readingsTable.grantReadWriteData(this.adminDeleteReadingFunction);
 
     // Grant Cognito permissions for admin user listing
     this.adminGetAllUsersFunction.addToRolePolicy(
@@ -387,7 +456,7 @@ export class ApiConstruct extends Construct {
       },
       defaultCorsPreflightOptions: {
         allowOrigins: props.allowedOrigins,
-        allowMethods: ['GET', 'PUT', 'POST', 'OPTIONS'],
+        allowMethods: ['GET', 'PUT', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
         allowHeaders: [
           'Content-Type',
           'X-Amz-Date',
@@ -482,6 +551,42 @@ export class ApiConstruct extends Construct {
     adminReadingsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(this.adminGetAllReadingsFunction),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      },
+    );
+
+    // /api/admin/readings/{readingId} resource
+    const adminReadingIdResource = adminReadingsResource.addResource('{readingId}');
+
+    // GET /api/admin/readings/{readingId} - Get reading details (admin only)
+    adminReadingIdResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(this.adminGetReadingDetailsFunction),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      },
+    );
+
+    // DELETE /api/admin/readings/{readingId} - Delete reading (admin only)
+    adminReadingIdResource.addMethod(
+      'DELETE',
+      new apigateway.LambdaIntegration(this.adminDeleteReadingFunction),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      },
+    );
+
+    // /api/admin/readings/{readingId}/status resource
+    const adminReadingStatusResource = adminReadingIdResource.addResource('status');
+
+    // PATCH /api/admin/readings/{readingId}/status - Update reading status (admin only)
+    adminReadingStatusResource.addMethod(
+      'PATCH',
+      new apigateway.LambdaIntegration(this.adminUpdateReadingStatusFunction),
       {
         authorizer,
         authorizationType: apigateway.AuthorizationType.COGNITO,

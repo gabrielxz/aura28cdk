@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AdminReading } from '@/lib/api/admin-api';
 import { SortField, SortOrder } from '@/hooks/use-admin-readings';
+import { ReadingActions } from './reading-actions';
 
 interface ReadingsTableProps {
   readings: AdminReading[];
@@ -21,6 +22,9 @@ interface ReadingsTableProps {
   sortField: SortField;
   sortOrder: SortOrder;
   onSort: (field: SortField) => void;
+  onViewDetails: (readingId: string) => void;
+  onDelete: (readingId: string, userEmail?: string) => void;
+  onStatusUpdate: (readingId: string, newStatus: AdminReading['status']) => Promise<void>;
 }
 
 export function ReadingsTable({
@@ -29,6 +33,9 @@ export function ReadingsTable({
   sortField,
   sortOrder,
   onSort,
+  onViewDetails,
+  onDelete,
+  onStatusUpdate,
 }: ReadingsTableProps) {
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
@@ -139,11 +146,18 @@ export function ReadingsTable({
               </Button>
             </TableHead>
             <TableHead scope="col">Reading ID</TableHead>
+            <TableHead scope="col" className="text-right">
+              Actions
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {readings.map((reading) => (
-            <TableRow key={reading.readingId}>
+            <TableRow
+              key={reading.readingId}
+              onClick={() => onViewDetails(reading.readingId)}
+              className="cursor-pointer hover:bg-muted/50"
+            >
               <TableCell>{format(new Date(reading.createdAt), 'MMM dd, yyyy HH:mm')}</TableCell>
               <TableCell>
                 <div>
@@ -157,6 +171,14 @@ export function ReadingsTable({
               </TableCell>
               <TableCell className="font-mono text-xs">
                 {reading.readingId.slice(0, 8)}...
+              </TableCell>
+              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                <ReadingActions
+                  reading={reading}
+                  onViewDetails={onViewDetails}
+                  onDelete={onDelete}
+                  onStatusUpdate={onStatusUpdate}
+                />
               </TableCell>
             </TableRow>
           ))}
