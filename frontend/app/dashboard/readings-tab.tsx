@@ -6,7 +6,9 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UserApi } from '@/lib/api/user-api';
 import { formatDistanceToNow } from 'date-fns';
-import { Loader2, BookOpen, Plus } from 'lucide-react';
+import { Loader2, BookOpen, Plus, Download } from 'lucide-react';
+import { generateReadingPDF, isPDFGenerationSupported } from '@/lib/pdf/reading-pdf-generator';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Reading {
   readingId: string;
@@ -33,6 +35,9 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasNatalChart, setHasNatalChart] = useState<boolean | null>(null);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState(0);
+  const { toast } = useToast();
 
   // Check if user has natal chart
   useEffect(() => {
@@ -94,6 +99,74 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
     }
   };
 
+  // Download reading as PDF
+  const handleDownloadPDF = async () => {
+    if (!selectedReading || !selectedReading.content) {
+      toast({
+        title: 'Download Failed',
+        description: 'No reading content available to download.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check browser support
+    if (!isPDFGenerationSupported()) {
+      toast({
+        title: 'Not Supported',
+        description: 'PDF download is not supported in your browser.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setDownloadingPDF(true);
+      setPdfProgress(0);
+
+      // Fetch user profile for birth name
+      const userProfile = await userApi.getUserProfile(userId);
+
+      if (!userProfile || !userProfile.profile?.birthName) {
+        toast({
+          title: 'Profile Incomplete',
+          description: 'Please complete your profile before downloading readings.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Generate PDF
+      const result = await generateReadingPDF({
+        birthName: userProfile.profile.birthName,
+        readingType: selectedReading.type,
+        content: selectedReading.content,
+        createdAt: selectedReading.createdAt,
+        onProgress: setPdfProgress,
+      });
+
+      if (result.success) {
+        toast({
+          title: 'Download Complete',
+          description: `Your reading has been saved as ${result.filename}`,
+        });
+      } else {
+        throw new Error(result.error || 'Failed to generate PDF');
+      }
+    } catch (error) {
+      console.error('Failed to download PDF:', error);
+      toast({
+        title: 'Download Failed',
+        description:
+          error instanceof Error ? error.message : 'Failed to generate PDF. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingPDF(false);
+      setPdfProgress(0);
+    }
+  };
+
   // Get status badge color
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -122,9 +195,32 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
   if (selectedReading) {
     return (
       <div className="mt-6">
-        <Button onClick={() => setSelectedReading(null)} variant="outline" className="mb-4">
-          ← Back to Readings
-        </Button>
+        <div className="mb-4 flex items-center justify-between">
+          <Button onClick={() => setSelectedReading(null)} variant="outline">
+            ← Back to Readings
+          </Button>
+          {selectedReading.status === 'Ready' && selectedReading.content && (
+            <Button
+              onClick={handleDownloadPDF}
+              disabled={downloadingPDF}
+              variant="default"
+              className="flex items-center gap-2"
+              aria-label="Download reading as PDF"
+            >
+              {downloadingPDF ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Downloading {pdfProgress > 0 && `${pdfProgress}%`}
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Download PDF
+                </>
+              )}
+            </Button>
+          )}
+        </div>
 
         <Card className="p-6">
           <div className="mb-6 flex items-start justify-between">
