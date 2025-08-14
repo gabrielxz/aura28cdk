@@ -50,7 +50,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Check for auth on mount
     const initAuth = async () => {
       try {
-        await refreshUser();
+        // Check if we have server-side authentication that needs to be synced
+        const hasServerAuth = authService.syncTokensFromCookies();
+
+        if (hasServerAuth) {
+          // Server-side auth detected, try to refresh tokens to get them in localStorage
+          // This handles the case where tokens are in HTTP-only cookies
+          const tokens = await authService.refreshToken();
+          if (tokens) {
+            const refreshedUser = authService.getCurrentUser();
+            setUser(refreshedUser);
+          }
+        } else {
+          // Normal flow - check for existing tokens in localStorage
+          await refreshUser();
+        }
       } finally {
         setLoading(false);
       }
