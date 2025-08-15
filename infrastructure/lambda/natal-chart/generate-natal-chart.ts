@@ -9,16 +9,49 @@ const docClient = DynamoDBDocumentClient.from(dynamoClient);
 // Import swisseph from the Lambda Layer
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let swisseph: any;
-try {
-  swisseph = require('/opt/nodejs/node_modules/swisseph');
-} catch (_error) {
-  console.warn('Swiss Ephemeris not available from layer, falling back to local if available');
+let ephemerisPath: string | undefined;
+
+// Cold start logging for ephemeris path verification
+const initSwissEph = () => {
   try {
-    swisseph = require('swisseph');
-  } catch (_e) {
-    console.error('Swiss Ephemeris not available');
+    swisseph = require('/opt/nodejs/node_modules/swisseph');
+    ephemerisPath =
+      process.env.SE_EPHE_PATH ||
+      process.env.EPHEMERIS_PATH ||
+      '/opt/nodejs/node_modules/swisseph/ephe';
+
+    // Log ephemeris path on cold start
+    console.info('Swiss Ephemeris initialization:', {
+      path: ephemerisPath,
+      envSE_EPHE_PATH: process.env.SE_EPHE_PATH,
+      envEPHEMERIS_PATH: process.env.EPHEMERIS_PATH,
+    });
+
+    // Verify ephemeris directory exists
+    const fs = require('fs');
+    if (fs.existsSync(ephemerisPath)) {
+      const files = fs.readdirSync(ephemerisPath);
+      const seFiles = files.filter(
+        (f: string) => f.endsWith('.se1') || f === 'seleapsec.txt' || f === 'seorbel.txt',
+      );
+      console.info('Ephemeris files found:', seFiles.length, 'files:', seFiles.slice(0, 5));
+    } else {
+      console.error('Ephemeris directory does not exist:', ephemerisPath);
+    }
+  } catch (_error) {
+    console.warn('Swiss Ephemeris not available from layer, falling back to local if available');
+    try {
+      swisseph = require('swisseph');
+      ephemerisPath = './node_modules/swisseph/ephe';
+      console.info('Using local Swiss Ephemeris');
+    } catch (_e) {
+      console.error('Swiss Ephemeris not available');
+    }
   }
-}
+};
+
+// Initialize on cold start
+initSwissEph();
 
 interface NatalChartEvent {
   userId: string;
@@ -112,9 +145,14 @@ const calculateHousesWithSwisseph = async (
   }
 
   try {
-    // Set ephemeris path if provided
-    const ephePath = process.env.EPHEMERIS_PATH || '/opt/nodejs/node_modules/swisseph/ephe';
+    // Set ephemeris path explicitly
+    const ephePath =
+      ephemerisPath ||
+      process.env.SE_EPHE_PATH ||
+      process.env.EPHEMERIS_PATH ||
+      '/opt/nodejs/node_modules/swisseph/ephe';
     swisseph.swe_set_ephe_path(ephePath);
+    console.info('Setting ephemeris path for house calculations:', ephePath);
 
     // Calculate Julian Day
     const year = birthDateTime.getUTCFullYear();
