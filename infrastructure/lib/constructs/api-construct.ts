@@ -133,7 +133,7 @@ export class ApiConstruct extends Construct {
               '  echo "Error: Pre-built layer directory not found at /asset-input/layer/nodejs"',
               '  exit 1',
               'fi',
-            ].join(' && '),
+            ].join(' '),
           ],
           local: {
             // Bundle locally by copying the pre-built layer directory
