@@ -32,6 +32,9 @@ export class ApiConstruct extends Construct {
   public readonly getReadingDetailFunction: lambda.Function;
   public readonly adminGetAllReadingsFunction: lambda.Function;
   public readonly adminGetAllUsersFunction: lambda.Function;
+  public readonly adminGetReadingDetailsFunction: lambda.Function;
+  public readonly adminUpdateReadingStatusFunction: lambda.Function;
+  public readonly adminDeleteReadingFunction: lambda.Function;
 
   constructor(scope: Construct, id: string, props: ApiConstructProps) {
     super(scope, id);
@@ -113,6 +116,7 @@ export class ApiConstruct extends Construct {
     });
 
     // Create Swiss Ephemeris Lambda Layer
+    // Build the layer without Docker
     const swissEphemerisLayer = new lambda.LayerVersion(this, 'SwissEphemerisLayer', {
       code: lambda.Code.fromAsset(path.join(__dirname, '../../layers/swetest'), {
         bundling: {
@@ -144,7 +148,9 @@ export class ApiConstruct extends Construct {
 
                 // Check if pre-built layer exists
                 if (!fs.existsSync(srcNodejsDir)) {
+                  // eslint-disable-next-line no-console
                   console.error('Pre-built layer directory not found at:', srcNodejsDir);
+                  // eslint-disable-next-line no-console
                   console.error('Please run: cd infrastructure/layers/swetest && npm install');
                   return false;
                 }
@@ -154,11 +160,13 @@ export class ApiConstruct extends Construct {
                 const epheDir = path.join(swissephDir, 'ephe');
 
                 if (!fs.existsSync(swissephDir)) {
+                  // eslint-disable-next-line no-console
                   console.error('swisseph module not found in pre-built layer');
                   return false;
                 }
 
                 if (!fs.existsSync(epheDir)) {
+                  // eslint-disable-next-line no-console
                   console.error('ephemeris data directory not found in pre-built layer');
                   return false;
                 }
@@ -173,12 +181,14 @@ export class ApiConstruct extends Construct {
                 ];
                 for (const file of essentialFiles) {
                   if (!fs.existsSync(path.join(epheDir, file))) {
+                    // eslint-disable-next-line no-console
                     console.error(`Essential ephemeris file missing: ${file}`);
                     return false;
                   }
                 }
 
                 // Copy the entire pre-built layer to output
+                // eslint-disable-next-line no-console
                 console.log('Copying pre-built Swiss Ephemeris layer...');
                 child_process.execSync(`cp -r "${srcNodejsDir}" "${outputDir}/"`, {
                   stdio: 'inherit',
@@ -188,10 +198,12 @@ export class ApiConstruct extends Construct {
                 const layerSize = child_process
                   .execSync(`du -sh "${outputDir}/nodejs"`, { encoding: 'utf8' })
                   .trim();
+                // eslint-disable-next-line no-console
                 console.log(`Successfully bundled Swiss Ephemeris layer: ${layerSize}`);
 
                 return true;
               } catch (error) {
+                // eslint-disable-next-line no-console
                 console.error('Failed to bundle Swiss Ephemeris layer:', error);
                 return false;
               }
@@ -420,9 +432,75 @@ export class ApiConstruct extends Construct {
       },
     );
 
+    // Create additional admin Lambda functions
+    this.adminGetReadingDetailsFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'AdminGetReadingDetailsFunction',
+      {
+        functionName: `aura28-${props.environment}-admin-get-reading-details`,
+        entry: path.join(__dirname, '../../lambda/admin/get-reading-details.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_18_X,
+        environment: {
+          READINGS_TABLE_NAME: props.readingsTable.tableName,
+          USER_TABLE_NAME: props.userTable.tableName,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
+    this.adminUpdateReadingStatusFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'AdminUpdateReadingStatusFunction',
+      {
+        functionName: `aura28-${props.environment}-admin-update-reading-status`,
+        entry: path.join(__dirname, '../../lambda/admin/update-reading-status.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_18_X,
+        environment: {
+          READINGS_TABLE_NAME: props.readingsTable.tableName,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
+    this.adminDeleteReadingFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'AdminDeleteReadingFunction',
+      {
+        functionName: `aura28-${props.environment}-admin-delete-reading`,
+        entry: path.join(__dirname, '../../lambda/admin/delete-reading.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_18_X,
+        environment: {
+          READINGS_TABLE_NAME: props.readingsTable.tableName,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
     // Grant DynamoDB permissions for admin functions
     props.readingsTable.grantReadData(this.adminGetAllReadingsFunction);
     props.userTable.grantReadData(this.adminGetAllReadingsFunction);
+    props.readingsTable.grantReadData(this.adminGetReadingDetailsFunction);
+    props.userTable.grantReadData(this.adminGetReadingDetailsFunction);
+    props.readingsTable.grantReadWriteData(this.adminUpdateReadingStatusFunction);
+    props.readingsTable.grantReadWriteData(this.adminDeleteReadingFunction);
 
     // Grant Cognito permissions for admin user listing
     this.adminGetAllUsersFunction.addToRolePolicy(
@@ -457,7 +535,7 @@ export class ApiConstruct extends Construct {
       },
       defaultCorsPreflightOptions: {
         allowOrigins: props.allowedOrigins,
-        allowMethods: ['GET', 'PUT', 'POST', 'OPTIONS'],
+        allowMethods: ['GET', 'PUT', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
         allowHeaders: [
           'Content-Type',
           'X-Amz-Date',
@@ -552,6 +630,43 @@ export class ApiConstruct extends Construct {
     adminReadingsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(this.adminGetAllReadingsFunction),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      },
+    );
+
+    // /api/admin/readings/{userId}/{readingId} resource
+    const adminUserIdResource = adminReadingsResource.addResource('{userId}');
+    const adminReadingIdResource = adminUserIdResource.addResource('{readingId}');
+
+    // GET /api/admin/readings/{userId}/{readingId} - Get reading details (admin only)
+    adminReadingIdResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(this.adminGetReadingDetailsFunction),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      },
+    );
+
+    // DELETE /api/admin/readings/{userId}/{readingId} - Delete reading (admin only)
+    adminReadingIdResource.addMethod(
+      'DELETE',
+      new apigateway.LambdaIntegration(this.adminDeleteReadingFunction),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      },
+    );
+
+    // /api/admin/readings/{userId}/{readingId}/status resource
+    const adminReadingStatusResource = adminReadingIdResource.addResource('status');
+
+    // PATCH /api/admin/readings/{userId}/{readingId}/status - Update reading status (admin only)
+    adminReadingStatusResource.addMethod(
+      'PATCH',
+      new apigateway.LambdaIntegration(this.adminUpdateReadingStatusFunction),
       {
         authorizer,
         authorizationType: apigateway.AuthorizationType.COGNITO,
