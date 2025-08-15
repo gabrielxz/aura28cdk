@@ -1,0 +1,105 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.handler = void 0;
+const handler = async () => {
+    console.info('Starting Einstein canary test for Swiss Ephemeris layer');
+    const testResult = {
+        success: false,
+        error: null,
+        houseCount: 0,
+        executionTime: 0,
+    };
+    const startTime = Date.now();
+    try {
+        // Import Swiss Ephemeris - this validates the layer is working
+        const swisseph = require('swisseph');
+        // Set ephemeris path
+        process.env.SE_EPHE_PATH = '/opt/nodejs/node_modules/swisseph/ephe';
+        swisseph.swe_set_ephe_path(process.env.SE_EPHE_PATH);
+        // Albert Einstein birth data
+        const birthDate = new Date('1879-03-14T10:30:00Z'); // UTC time
+        const julianDay = swisseph.swe_julday(birthDate.getUTCFullYear(), birthDate.getUTCMonth() + 1, birthDate.getUTCDate(), birthDate.getUTCHours() + birthDate.getUTCMinutes() / 60, swisseph.SE_GREG_CAL);
+        // Ulm, Germany coordinates
+        const latitude = 48.4;
+        const longitude = 9.99;
+        // Calculate houses using Placidus system
+        const houses = swisseph.swe_houses(julianDay, latitude, longitude, 'P');
+        if (!houses || !houses.house || houses.house.length < 12) {
+            throw new Error('House calculation failed - invalid result structure');
+        }
+        // Validate we got 12 houses
+        const houseCount = houses.house.filter((h) => h !== undefined).length;
+        if (houseCount < 12) {
+            throw new Error(`Only ${houseCount} houses calculated, expected 12`);
+        }
+        // Calculate Sun position for additional validation
+        const sunResult = swisseph.swe_calc_ut(julianDay, swisseph.SE_SUN, swisseph.SEFLG_SPEED);
+        if (!sunResult || typeof sunResult.longitude !== 'number') {
+            throw new Error('Sun calculation failed');
+        }
+        // Validate Sun is approximately in Pisces (330-360 or 0-30 degrees)
+        const sunLongitude = sunResult.longitude;
+        const expectedSign = 'Pisces';
+        const signStart = 330;
+        const signEnd = 360;
+        if (sunLongitude < signStart || sunLongitude > signEnd) {
+            console.warn(`Sun position validation: ${sunLongitude}° (may not be in ${expectedSign} as expected)`);
+        }
+        testResult.success = true;
+        testResult.houseCount = houseCount;
+        console.info('Einstein canary test PASSED', {
+            houseCount,
+            firstHouse: houses.house[0],
+            sunLongitude,
+        });
+    }
+    catch (error) {
+        testResult.error = error instanceof Error ? error.message : String(error);
+        console.error('Einstein canary test FAILED:', testResult.error);
+    }
+    testResult.executionTime = Date.now() - startTime;
+    // Send metric to CloudWatch (using dynamic import to avoid bundling issues)
+    try {
+        // @ts-ignore - Dynamic import for runtime
+        const AWS = require('aws-sdk');
+        const cloudwatch = new AWS.CloudWatch();
+        await cloudwatch
+            .putMetricData({
+            Namespace: 'Aura28/Canary',
+            MetricData: [
+                {
+                    MetricName: 'SwissEphemerisLayerHealth',
+                    Value: testResult.success ? 1 : 0,
+                    Unit: 'Count',
+                    Timestamp: new Date(),
+                    Dimensions: [
+                        {
+                            Name: 'Environment',
+                            Value: process.env.ENVIRONMENT || 'unknown',
+                        },
+                        {
+                            Name: 'Test',
+                            Value: 'Einstein',
+                        },
+                    ],
+                },
+                {
+                    MetricName: 'SwissEphemerisExecutionTime',
+                    Value: testResult.executionTime,
+                    Unit: 'Milliseconds',
+                    Timestamp: new Date(),
+                },
+            ],
+        })
+            .promise();
+    }
+    catch (metricError) {
+        console.error('Failed to send CloudWatch metric:', metricError);
+    }
+    // Throw error if test failed to trigger alarm
+    if (!testResult.success) {
+        throw new Error(`Canary test failed: ${testResult.error}`);
+    }
+};
+exports.handler = handler;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiZWluc3RlaW4tY2FuYXJ5LmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiZWluc3RlaW4tY2FuYXJ5LnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7OztBQUFPLE1BQU0sT0FBTyxHQUFHLEtBQUssSUFBbUIsRUFBRTtJQUMvQyxPQUFPLENBQUMsSUFBSSxDQUFDLHlEQUF5RCxDQUFDLENBQUM7SUFFeEUsTUFBTSxVQUFVLEdBQUc7UUFDakIsT0FBTyxFQUFFLEtBQUs7UUFDZCxLQUFLLEVBQUUsSUFBcUI7UUFDNUIsVUFBVSxFQUFFLENBQUM7UUFDYixhQUFhLEVBQUUsQ0FBQztLQUNqQixDQUFDO0lBRUYsTUFBTSxTQUFTLEdBQUcsSUFBSSxDQUFDLEdBQUcsRUFBRSxDQUFDO0lBRTdCLElBQUksQ0FBQztRQUNILCtEQUErRDtRQUMvRCxNQUFNLFFBQVEsR0FBRyxPQUFPLENBQUMsVUFBVSxDQUFDLENBQUM7UUFFckMscUJBQXFCO1FBQ3JCLE9BQU8sQ0FBQyxHQUFHLENBQUMsWUFBWSxHQUFHLHdDQUF3QyxDQUFDO1FBQ3BFLFFBQVEsQ0FBQyxpQkFBaUIsQ0FBQyxPQUFPLENBQUMsR0FBRyxDQUFDLFlBQVksQ0FBQyxDQUFDO1FBRXJELDZCQUE2QjtRQUM3QixNQUFNLFNBQVMsR0FBRyxJQUFJLElBQUksQ0FBQyxzQkFBc0IsQ0FBQyxDQUFDLENBQUMsV0FBVztRQUMvRCxNQUFNLFNBQVMsR0FBRyxRQUFRLENBQUMsVUFBVSxDQUNuQyxTQUFTLENBQUMsY0FBYyxFQUFFLEVBQzFCLFNBQVMsQ0FBQyxXQUFXLEVBQUUsR0FBRyxDQUFDLEVBQzNCLFNBQVMsQ0FBQyxVQUFVLEVBQUUsRUFDdEIsU0FBUyxDQUFDLFdBQVcsRUFBRSxHQUFHLFNBQVMsQ0FBQyxhQUFhLEVBQUUsR0FBRyxFQUFFLEVBQ3hELFFBQVEsQ0FBQyxXQUFXLENBQ3JCLENBQUM7UUFFRiwyQkFBMkI7UUFDM0IsTUFBTSxRQUFRLEdBQUcsSUFBSSxDQUFDO1FBQ3RCLE1BQU0s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YixTQUFTLEVBQUUsSUFBSSxJQUFJLEVBQUU7b0JBQ3JCLFVBQVUsRUFBRTt3QkFDVjs0QkFDRSxJQUFJLEVBQUUsYUFBYTs0QkFDbkIsS0FBSyxFQUFFLE9BQU8sQ0FBQyxHQUFHLENBQUMsV0FBVyxJQUFJLFNBQVM7eUJBQzVDO3dCQUNEOzRCQUNFLElBQUksRUFBRSxNQUFNOzRCQUNaLEtBQUssRUFBRSxVQUFVO3lCQUNsQjtxQkFDRjtpQkFDRjtnQkFDRDtvQkFDRSxVQUFVLEVBQUUsNkJBQTZCO29CQUN6QyxLQUFLLEVBQUUsVUFBVSxDQUFDLGFBQWE7b0JBQy9CLElBQUksRUFBRSxjQUFjO29CQUNwQixTQUFTLEVBQUUsSUFBSSxJQUFJLEVBQUU7aUJBQ3RCO2FBQ0Y7U0FDRixDQUFDO2FBQ0QsT0FBTyxFQUFFLENBQUM7SUFDZixDQUFDO0lBQUMsT0FBTyxXQUFXLEVBQUUsQ0FBQztRQUNyQixPQUFPLENBQUMsS0FBSyxDQUFDLG1DQUFtQyxFQUFFLFdBQVcsQ0FBQyxDQUFDO0lBQ2xFLENBQUM7SUFFRCw4Q0FBOEM7SUFDOUMsSUFBSSxDQUFDLFVBQVUsQ0FBQyxPQUFPLEVBQUUsQ0FBQztRQUN4QixNQUFNLElBQUksS0FBSyxDQUFDLHVCQUF1QixVQUFVLENBQUMsS0FBSyxFQUFFLENBQUMsQ0FBQztJQUM3RCxDQUFDO0FBQ0gsQ0FBQyxDQUFDO0FBL0hXLFFBQUEsT0FBTyxXQStIbEIiLCJzb3VyY2VzQ29udGVudCI6WyJleHBvcnQgY29uc3QgaGFuZGxlciA9IGFzeW5jICgpOiBQcm9taXNlPHZvaWQ+ID0+IHtcbiAgY29uc29sZS5pbmZvKCdTdGFydGluZyBFaW5zdGVpbiBjYW5hcnkgdGVzdCBmb3IgU3dpc3MgRXBoZW1lcmlzIGxheWVyJyk7XG5cbiAgY29uc3QgdGVzdFJlc3VsdCA9IHtcbiAgICBzdWNjZXNzOiBmYWxzZSxcbiAgICBlcnJvcjogbnVsbCBhcyBzdHJpbmcgfCBudWxsLFxuICAgIGhvdXNlQ291bnQ6IDAsXG4gICAgZXhlY3V0aW9uVGltZTogMCxcbiAgfTtcblxuICBjb25zdCBzdGFydFRpbWUgPSBEYXRlLm5vdygpO1xuXG4gIHRyeSB7XG4gICAgLy8gSW1wb3J0IFN3aXNzIEVwaGVtZXJpcyAtIHRoaXMgdmFsaWRhdGVzIHRoZSBsYXllciBpcyB3b3JraW5nXG4gICAgY29uc3Qgc3dpc3NlcGggPSByZXF1aXJlKCdzd2lzc2VwaCcpO1xuXG4gICAgLy8gU2V0IGVwaGVtZXJpcyBwYXRoXG4gICAgcHJvY2Vzcy5lbnYuU0VfRVBIRV9QQVRIID0gJy9vcHQvbm9kZWpzL25vZGVfbW9kdWxlcy9zd2lzc2VwaC9lcGhlJztcbiAgICBzd2lzc2VwaC5zd2Vfc2V0X2VwaGVfcGF0aChwcm9jZXNzLmVudi5TRV9FUEhFX1BBVEgpO1xuXG4gICAgLy8gQWxiZXJ0IEVpbnN0ZWluIGJpcnRoIGRhdGFcbiAgICBjb25zdCBiaXJ0aERhdGUgPSBuZXcgRGF0ZSgnMTg3OS0wMy0xNFQxMDozMDowMFonKTsgLy8gVVRDIHRpbWVcbiAgICBjb25zdCBqdWxpYW5EYXkgPSBzd2lzc2VwaC5zd2VfanVsZGF5KFxuICAgICAgYmlydGhEYXRlLmdldFVUQ0Z1bGxZZWFyKCksXG4gICAgICBiaXJ0aERhdGUuZ2V0VVRDTW9udGgoKSArIDEsXG4gICAgICBiaXJ0aERhdGUuZ2V0VVRDRGF0ZSgpLFxuICAgICAgYmlydGhEYXRlLmdldFVUQ0hvdXJzKCkgKyBiaXJ0aERhdGUuZ2V0VVRDTWludXRlcygpIC8gNjAsXG4gICAgICBzd2lzc2VwaC5TRV9HUkVHX0NBTCxcbiAgICApO1xuXG4gICAgLy8gVWxtLCBHZXJtYW55IGNvb3JkaW5hdGVzXG4gICAgY29uc3QgbGF0aXR1ZGUgPSA0OC40O1xuICAgIGNvbnN0IGxvbmdpdHVkZSA9IDkuOTk7XG5cbiAgICAvLyBDYWxjdWxhdGUgaG91c2VzIHVzaW5nIFBsYWNpZHVzIHN5c3RlbVxuICAgIGNvbnN0IGhvdXNlcyA9IHN3aXNzZXBoLnN3ZV9ob3VzZXMoXG4gICAgICBqdWxpYW5EYXksXG4gICAgICBsYXRpdHVkZSxcbiAgICAgIGxvbmdpdHVkZSxcbiAgICAgICdQJywgLy8gUGxhY2lkdXNcbiAgICApO1xuXG4gICAgaWYgKCFob3VzZXMgfHwgIWhvdXNlcy5ob3VzZSB8fCBob3VzZXMuaG91c2UubGVuZ3RoIDwgMTIpIHtcbiAgICAgIHRocm93IG5ldyBFcnJvcignSG91c2UgY2FsY3VsYXRpb24gZmFpbGVkIC0gaW52YWxpZCByZXN1bHQgc3RydWN0dXJlJyk7XG4gICAgfVxuXG4gICAgLy8gVmFsaWRhdGUgd2UgZ290IDEyIGhvdXNlc1xuICAgIGNvbnN0IGhvdXNlQ291bnQgPSBob3VzZXMuaG91c2UuZmlsdGVyKChoOiBudW1iZXIpID0+IGggIT09IHVuZGVmaW5lZCkubGVuZ3RoO1xuICAgIGlmIChob3VzZUNvdW50IDwgMTIpIHtcbiAgICAgIHRocm93IG5ldyBFcnJvcihgT25seSAke2hvdXNlQ291bnR9IGhvdXNlcyBjYWxjdWxhdGVkLCBleHBlY3RlZCAxMmApO1xuICAgIH1cblxuICAgIC8vIENhbGN1bGF0ZSBTdW4gcG9zaXRpb24gZm9yIGFkZGl0aW9uYWwgdmFsaWRhdGlvblxuICAgIGNvbnN0IHN1blJlc3VsdCA9IHN3aXNzZXBoLnN3ZV9jYWxjX3V0KGp1bGlhbkRheSwgc3dpc3NlcGguU0VfU1VOLCBzd2lzc2VwaC5TRUZMR19TUEVFRCk7XG4gICAgaWYgKCFzdW5SZXN1bHQgfHwgdHlwZW9mIHN1blJlc3VsdC5sb25naXR1ZGUgIT09ICdudW1iZXInKSB7XG4gICAgICB0aHJvdyBuZXcgRXJyb3IoJ1N1biBjYWxjdWxhdGlvbiBmYWlsZWQnKTtcbiAgICB9XG5cbiAgICAvLyBWYWxpZGF0ZSBTdW4gaXMgYXBwcm94aW1hdGVseSBpbiBQaXNjZXMgKDMzMC0zNjAgb3IgMC0zMCBkZWdyZWVzKVxuICAgIGNvbnN0IHN1bkxvbmdpdHVkZSA9IHN1blJlc3VsdC5sb25naXR1ZGU7XG4gICAgY29uc3QgZXhwZWN0ZWRTaWduID0gJ1Bpc2Nlcyc7XG4gICAgY29uc3Qgc2lnblN0YXJ0ID0gMzMwO1xuICAgIGNvbnN0IHNpZ25FbmQgPSAzNjA7XG5cbiAgICBpZiAoc3VuTG9uZ2l0dWRlIDwgc2lnblN0YXJ0IHx8IHN1bkxvbmdpdHVkZSA+IHNpZ25FbmQpIHtcbiAgICAgIGNvbnNvbGUud2FybihcbiAgICAgICAgYFN1biBwb3NpdGlvbiB2YWxpZGF0aW9uOiAke3N1bkxvbmdpdHVkZX3CsCAobWF5IG5vdCBiZSBpbiAke2V4cGVjdGVkU2lnbn0gYXMgZXhwZWN0ZWQpYCxcbiAgICAgICk7XG4gICAgfVxuXG4gICAgdGVzdFJlc3VsdC5zdWNjZXNzID0gdHJ1ZTtcbiAgICB0ZXN0UmVzdWx0LmhvdXNlQ291bnQgPSBob3VzZUNvdW50O1xuICAgIGNvbnNvbGUuaW5mbygnRWluc3RlaW4gY2FuYXJ5IHRlc3QgUEFTU0VEJywge1xuICAgICAgaG91c2VDb3VudCxcbiAgICAgIGZpcnN0SG91c2U6IGhvdXNlcy5ob3VzZVswXSxcbiAgICAgIHN1bkxvbmdpdHVkZSxcbiAgICB9KTtcbiAgfSBjYXRjaCAoZXJyb3IpIHtcbiAgICB0ZXN0UmVzdWx0LmVycm9yID0gZXJyb3IgaW5zdGFuY2VvZiBFcnJvciA/IGVycm9yLm1lc3NhZ2UgOiBTdHJpbmcoZXJyb3IpO1xuICAgIGNvbnNvbGUuZXJyb3IoJ0VpbnN0ZWluIGNhbmFyeSB0ZXN0IEZBSUxFRDonLCB0ZXN0UmVzdWx0LmVycm9yKTtcbiAgfVxuXG4gIHRlc3RSZXN1bHQuZXhlY3V0aW9uVGltZSA9IERhdGUubm93KCkgLSBzdGFydFRpbWU7XG5cbiAgLy8gU2VuZCBtZXRyaWMgdG8gQ2xvdWRXYXRjaCAodXNpbmcgZHluYW1pYyBpbXBvcnQgdG8gYXZvaWQgYnVuZGxpbmcgaXNzdWVzKVxuICB0cnkge1xuICAgIC8vIEB0cy1pZ25vcmUgLSBEeW5hbWljIGltcG9ydCBmb3IgcnVudGltZVxuICAgIGNvbnN0IEFXUyA9IHJlcXVpcmUoJ2F3cy1zZGsnKTtcbiAgICBjb25zdCBjbG91ZHdhdGNoID0gbmV3IEFXUy5DbG91ZFdhdGNoKCk7XG5cbiAgICBhd2FpdCBjbG91ZHdhdGNoXG4gICAgICAucHV0TWV0cmljRGF0YSh7XG4gICAgICAgIE5hbWVzcGFjZTogJ0F1cmEyOC9DYW5hcnknLFxuICAgICAgICBNZXRyaWNEYXRhOiBbXG4gICAgICAgICAge1xuICAgICAgICAgICAgTWV0cmljTmFtZTogJ1N3aXNzRXBoZW1lcmlzTGF5ZXJIZWFsdGgnLFxuICAgICAgICAgICAgVmFsdWU6IHRlc3RSZXN1bHQuc3VjY2VzcyA/IDEgOiAwLFxuICAgICAgICAgICAgVW5pdDogJ0NvdW50JyxcbiAgICAgICAgICAgIFRpbWVzdGFtcDogbmV3IERhdGUoKSxcbiAgICAgICAgICAgIERpbWVuc2lvbnM6IFtcbiAgICAgICAgICAgICAge1xuICAgICAgICAgICAgICAgIE5hbWU6ICdFbnZpcm9ubWVudCcsXG4gICAgICAgICAgICAgICAgVmFsdWU6IHByb2Nlc3MuZW52LkVOVklST05NRU5UIHx8ICd1bmtub3duJyxcbiAgICAgICAgICAgICAgfSxcbiAgICAgICAgICAgICAge1xuICAgICAgICAgICAgICAgIE5hbWU6ICdUZXN0JyxcbiAgICAgICAgICAgICAgICBWYWx1ZTogJ0VpbnN0ZWluJyxcbiAgICAgICAgICAgICAgfSxcbiAgICAgICAgICAgIF0sXG4gICAgICAgICAgfSxcbiAgICAgICAgICB7XG4gICAgICAgICAgICBNZXRyaWNOYW1lOiAnU3dpc3NFcGhlbWVyaXNFeGVjdXRpb25UaW1lJyxcbiAgICAgICAgICAgIFZhbHVlOiB0ZXN0UmVzdWx0LmV4ZWN1dGlvblRpbWUsXG4gICAgICAgICAgICBVbml0OiAnTWlsbGlzZWNvbmRzJyxcbiAgICAgICAgICAgIFRpbWVzdGFtcDogbmV3IERhdGUoKSxcbiAgICAgICAgICB9LFxuICAgICAgICBdLFxuICAgICAgfSlcbiAgICAgIC5wcm9taXNlKCk7XG4gIH0gY2F0Y2ggKG1ldHJpY0Vycm9yKSB7XG4gICAgY29uc29sZS5lcnJvcignRmFpbGVkIHRvIHNlbmQgQ2xvdWRXYXRjaCBtZXRyaWM6JywgbWV0cmljRXJyb3IpO1xuICB9XG5cbiAgLy8gVGhyb3cgZXJyb3IgaWYgdGVzdCBmYWlsZWQgdG8gdHJpZ2dlciBhbGFybVxuICBpZiAoIXRlc3RSZXN1bHQuc3VjY2Vzcykge1xuICAgIHRocm93IG5ldyBFcnJvcihgQ2FuYXJ5IHRlc3QgZmFpbGVkOiAke3Rlc3RSZXN1bHQuZXJyb3J9YCk7XG4gIH1cbn07XG4iXX0=

@@ -14,8 +14,8 @@ const layerPath = path.join(__dirname, '../layers/swetest/layer/nodejs/node_modu
 const ddbMock = mockClient(DynamoDBDocumentClient);
 
 // This test uses the Swiss Ephemeris module from the layer directory
-// The layer is built locally and includes all necessary ephemeris files
-// TODO: These tests require the layer to be built with Docker. They pass in CI/CD.
+// The layer is built via CodeBuild and includes all necessary ephemeris files
+// NOTE: Skip locally since the layer needs to be built via CodeBuild first
 describe.skip('Natal Chart Integration Test', () => {
   beforeEach(() => {
     ddbMock.reset();
@@ -117,6 +117,14 @@ describe.skip('Natal Chart Integration Test', () => {
       if (!savedItem) return; // Type guard for TypeScript
 
       // Verify no "House calculations unavailable" error
+      expect(savedItem.houses).toBeDefined();
+      if (!savedItem.houses) {
+        console.error(
+          'Houses object is missing from saved item:',
+          JSON.stringify(savedItem, null, 2),
+        );
+        return;
+      }
       expect(savedItem.houses.status).toBe('success');
       expect(savedItem.houses.error).toBeUndefined();
 
@@ -189,6 +197,11 @@ describe.skip('Natal Chart Integration Test', () => {
       if (!savedItem) throw new Error('No item saved');
 
       // Main assertion: houses should be successfully calculated
+      expect(savedItem.houses).toBeDefined();
+      if (!savedItem.houses) {
+        console.error('Houses missing in second test:', JSON.stringify(savedItem, null, 2));
+        return;
+      }
       expect(savedItem.houses.status).toBe('success');
       expect(savedItem.houses.error).not.toBe('House calculations unavailable');
       expect(savedItem.houses.data).toHaveLength(12);

@@ -11,6 +11,7 @@ import * as location from 'aws-cdk-lib/aws-location';
 import { Construct } from 'constructs';
 import { CognitoAuthConstruct } from './constructs/cognito-auth-construct';
 import { ApiConstruct } from './constructs/api-construct';
+import { SwetestLayerConstruct } from './constructs/swetest-layer-construct';
 
 export interface WebsiteStackProps extends cdk.StackProps {
   domainName: string;
@@ -103,6 +104,11 @@ export class WebsiteStack extends cdk.Stack {
       pointInTimeRecoverySpecification: {
         pointInTimeRecoveryEnabled: true,
       },
+    });
+
+    // Create Swiss Ephemeris layer construct
+    new SwetestLayerConstruct(this, 'SwetestLayer', {
+      environment: props.environment,
     });
 
     // Create API Gateway and Lambda functions
