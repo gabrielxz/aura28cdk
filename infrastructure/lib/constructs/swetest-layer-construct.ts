@@ -87,7 +87,9 @@ export class SwetestLayerConstruct extends Construct {
         SSM_PARAMETER_NAME: this.ssmParameterName,
         ENVIRONMENT: props.environment,
       },
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/swetest-orchestrator')),
+      code: lambda.Code.fromAsset(
+        path.join(__dirname, '../../lambda/swetest-orchestrator/orchestrator.zip'),
+      ),
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
 

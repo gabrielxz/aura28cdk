@@ -3,11 +3,9 @@ import { CodeBuildClient, StartBuildCommand, BatchGetBuildsCommand } from '@aws-
 import { LambdaClient, PublishLayerVersionCommand } from '@aws-sdk/client-lambda';
 import { SSMClient, PutParameterCommand } from '@aws-sdk/client-ssm';
 import { promises as fs } from 'fs';
+import { createWriteStream } from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+import archiver from 'archiver';
 
 const s3 = new S3Client({ region: process.env.AWS_REGION });
 const codebuild = new CodeBuildClient({ region: process.env.AWS_REGION });
@@ -91,18 +89,33 @@ artifacts:
       })
     };
     
-    // Create zip file using native Node.js child_process
-    const tmpDir = `/tmp/swetest-src-${Date.now()}`;
-    await fs.mkdir(tmpDir, { recursive: true });
+    // Create zip file using archiver
+    const zipPath = '/tmp/swetest-src.zip';
+    const output = createWriteStream(zipPath);
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    });
     
-    // Write files to temp directory
+    // Wait for the archive to finish
+    const archiveFinished = new Promise((resolve, reject) => {
+      output.on('close', resolve);
+      archive.on('error', reject);
+      archive.on('warning', (err) => {
+        if (err.code !== 'ENOENT') {
+          console.warn('Archive warning:', err);
+        }
+      });
+    });
+    
+    archive.pipe(output);
+    
+    // Add files to the archive
     for (const [filename, content] of Object.entries(sourceContent)) {
-      await fs.writeFile(path.join(tmpDir, filename), content);
+      archive.append(content, { name: filename });
     }
     
-    // Create zip using the zip command (available in Lambda runtime)
-    const zipPath = '/tmp/swetest-src.zip';
-    await execAsync(`cd ${tmpDir} && zip -r ${zipPath} .`);
+    archive.finalize();
+    await archiveFinished;
     
     // Upload source to S3
     console.info('Uploading source to S3...');
@@ -112,9 +125,6 @@ artifacts:
       Key: 'source/swetest-src.zip',
       Body: zipContent
     }));
-    
-    // Clean up temp directory
-    await execAsync(`rm -rf ${tmpDir}`);
     
     // Start CodeBuild
     console.info('Starting CodeBuild...');
