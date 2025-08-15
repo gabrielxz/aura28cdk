@@ -11,6 +11,7 @@ export interface ApiConstructProps {
     userPool: cognito.UserPool;
     placeIndexName: string;
     allowedOrigins: string[];
+    swissEphemerisLayerArn?: string;
 }
 export declare class ApiConstruct extends Construct {
     readonly api: apigateway.RestApi;

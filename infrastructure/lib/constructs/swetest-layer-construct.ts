@@ -2,7 +2,6 @@ import * as cdk from 'aws-cdk-lib';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cr from 'aws-cdk-lib/custom-resources';
 import * as logs from 'aws-cdk-lib/aws-logs';
@@ -320,7 +319,7 @@ async function streamToBuffer(stream) {
         lambda.LayerVersion.fromLayerVersionArn(
           this,
           'CanarySwissEphemerisLayer',
-          ssm.StringParameter.valueForStringParameter(this, this.ssmParameterName),
+          this.layerVersionArn, // Use the Custom Resource output directly
         ),
       ],
       logRetention: logs.RetentionDays.ONE_WEEK,
