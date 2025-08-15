@@ -19,6 +19,7 @@ export interface ApiConstructProps {
   userPool: cognito.UserPool;
   placeIndexName: string;
   allowedOrigins: string[];
+  swissEphemerisLayerArn?: string; // Optional to support gradual migration
 }
 
 export class ApiConstruct extends Construct {
@@ -115,12 +116,15 @@ export class ApiConstruct extends Construct {
       tier: ssm.ParameterTier.STANDARD,
     });
 
-    // Use pre-built Swiss Ephemeris Lambda Layer from SSM
+    // Use pre-built Swiss Ephemeris Lambda Layer
     // The layer is built via CodeBuild on Amazon Linux 2023 for binary compatibility
-    const swissEphemerisLayerArn = ssm.StringParameter.valueForStringParameter(
-      this,
-      `/aura28/${props.environment}/layers/swetest-arn`,
-    );
+    // Use prop if provided (new deployments), otherwise fall back to SSM (existing deployments)
+    const swissEphemerisLayerArn =
+      props.swissEphemerisLayerArn ||
+      ssm.StringParameter.valueForStringParameter(
+        this,
+        `/aura28/${props.environment}/layers/swetest-arn`,
+      );
 
     const swissEphemerisLayer = lambda.LayerVersion.fromLayerVersionArn(
       this,

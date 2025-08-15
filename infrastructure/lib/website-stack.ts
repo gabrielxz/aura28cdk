@@ -107,7 +107,7 @@ export class WebsiteStack extends cdk.Stack {
     });
 
     // Create Swiss Ephemeris layer construct
-    new SwetestLayerConstruct(this, 'SwetestLayer', {
+    const swetestLayer = new SwetestLayerConstruct(this, 'SwetestLayer', {
       environment: props.environment,
     });
 
@@ -124,6 +124,7 @@ export class WebsiteStack extends cdk.Stack {
         `https://${siteDomain}`,
         ...(props.environment === 'prod' ? [`https://www.${props.domainName}`] : []),
       ],
+      swissEphemerisLayerArn: swetestLayer.layerVersionArn, // Pass the layer ARN from the construct
     });
 
     // Create S3 bucket for hosting
