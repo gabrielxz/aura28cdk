@@ -116,23 +116,9 @@ export class ApiConstruct extends Construct {
     });
 
     // Create Swiss Ephemeris Lambda Layer
+    // Using pre-built layer to avoid Docker requirement
     const swissEphemerisLayer = new lambda.LayerVersion(this, 'SwissEphemerisLayer', {
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../layers/swetest'), {
-        bundling: {
-          image: lambda.Runtime.NODEJS_18_X.bundlingImage,
-          user: 'root',
-          command: [
-            'bash',
-            '-c',
-            [
-              'mkdir -p /asset-output/nodejs',
-              'cp package.json package-lock.json /asset-output/nodejs/',
-              'cd /asset-output/nodejs',
-              'npm install',
-            ].join(' && '),
-          ],
-        },
-      }),
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../layers/swetest/layer')),
       compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
       description: 'Swiss Ephemeris library for house calculations',
       layerVersionName: `aura28-${props.environment}-swisseph`,
