@@ -116,9 +116,55 @@ export class ApiConstruct extends Construct {
     });
 
     // Create Swiss Ephemeris Lambda Layer
-    // Using pre-built layer to avoid Docker requirement
+    // Build the layer without Docker
     const swissEphemerisLayer = new lambda.LayerVersion(this, 'SwissEphemerisLayer', {
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../layers/swetest/layer')),
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../layers/swetest'), {
+        bundling: {
+          image: lambda.Runtime.NODEJS_18_X.bundlingImage,
+          user: 'root',
+          command: [
+            'bash',
+            '-c',
+            [
+              'mkdir -p /asset-output/nodejs',
+              'cp package.json package-lock.json /asset-output/nodejs/',
+              'cd /asset-output/nodejs',
+              'npm ci --omit=dev',
+            ].join(' && '),
+          ],
+          local: {
+            // Try to build locally without Docker
+            tryBundle(outputDir: string): boolean {
+              const child_process = require('child_process');
+              const fs = require('fs');
+              try {
+                // Create nodejs directory in output
+                const nodejsDir = path.join(outputDir, 'nodejs');
+                child_process.execSync(`mkdir -p "${nodejsDir}"`);
+
+                // Copy package files
+                const srcDir = path.join(__dirname, '../../layers/swetest');
+                fs.copyFileSync(
+                  path.join(srcDir, 'package.json'),
+                  path.join(nodejsDir, 'package.json'),
+                );
+                fs.copyFileSync(
+                  path.join(srcDir, 'package-lock.json'),
+                  path.join(nodejsDir, 'package-lock.json'),
+                );
+
+                // Install dependencies
+                child_process.execSync('npm ci --omit=dev', { cwd: nodejsDir, stdio: 'inherit' });
+
+                return true; // Successfully bundled locally
+              } catch (error) {
+                console.warn('Local bundling failed, falling back to Docker:', error);
+                return false; // Fall back to Docker
+              }
+            },
+          },
+        },
+      }),
       compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
       description: 'Swiss Ephemeris library for house calculations',
       layerVersionName: `aura28-${props.environment}-swisseph`,
