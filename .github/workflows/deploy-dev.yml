@@ -112,8 +112,14 @@ jobs:
       - name: Build Swiss Ephemeris Layer
         run: |
           cd infrastructure/layers/swetest
+          # Create the layer directory structure
+          mkdir -p layer/nodejs
+          # Copy package.json to layer directory
+          cp package.json layer/nodejs/
+          # Install dependencies in the layer directory
+          cd layer/nodejs
           npm install
-          cd ../../..
+          cd ../../../../..
 
       - name: Run infrastructure tests
         run: npm run test:infrastructure
