@@ -109,6 +109,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build Swiss Ephemeris Layer
+        run: |
+          cd infrastructure/layers/swetest
+          npm install
+          cd ../../..
+
       - name: Run infrastructure tests
         run: npm run test:infrastructure
 
