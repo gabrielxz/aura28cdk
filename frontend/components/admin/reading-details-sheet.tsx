@@ -32,12 +32,14 @@ export interface ReadingDetails {
   status: 'Processing' | 'Ready' | 'Failed' | 'In Review';
   createdAt: string;
   updatedAt: string;
-  content?: {
-    chartData?: Record<string, unknown>;
-    interpretation?: string;
-    insights?: string[];
-    recommendations?: string[];
-  };
+  content?:
+    | string
+    | {
+        chartData?: Record<string, unknown>;
+        interpretation?: string;
+        insights?: string[];
+        recommendations?: string[];
+      };
   error?: string;
   metadata?: {
     model?: string;
@@ -220,47 +222,63 @@ export function ReadingDetailsSheet({
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Reading Content</h3>
 
-                  {details.content.interpretation && (
+                  {/* Handle both string and object content formats */}
+                  {typeof details.content === 'string' ? (
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium text-muted-foreground">Interpretation</h4>
-                      <div className="rounded-lg bg-muted p-4">
-                        <p className="text-sm whitespace-pre-wrap">
-                          {details.content.interpretation}
-                        </p>
+                      <div className="rounded-lg bg-muted p-4 max-h-96 overflow-y-auto">
+                        <p className="text-sm whitespace-pre-wrap">{details.content}</p>
                       </div>
                     </div>
-                  )}
+                  ) : (
+                    <>
+                      {details.content.interpretation && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium text-muted-foreground">
+                            Interpretation
+                          </h4>
+                          <div className="rounded-lg bg-muted p-4 max-h-96 overflow-y-auto">
+                            <p className="text-sm whitespace-pre-wrap">
+                              {details.content.interpretation}
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
-                  {details.content.insights && details.content.insights.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-muted-foreground">Key Insights</h4>
-                      <ul className="space-y-2">
-                        {details.content.insights.map((insight, index) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <span className="text-sm text-muted-foreground">•</span>
-                            <span className="text-sm">{insight}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                      {details.content.insights && details.content.insights.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium text-muted-foreground">
+                            Key Insights
+                          </h4>
+                          <ul className="space-y-2">
+                            {details.content.insights.map((insight, index) => (
+                              <li key={index} className="flex items-start gap-2">
+                                <span className="text-sm text-muted-foreground">•</span>
+                                <span className="text-sm">{insight}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
-                  {details.content.recommendations &&
-                    details.content.recommendations.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium text-muted-foreground">
-                          Recommendations
-                        </h4>
-                        <ul className="space-y-2">
-                          {details.content.recommendations.map((rec, index) => (
-                            <li key={index} className="flex items-start gap-2">
-                              <span className="text-sm text-muted-foreground">•</span>
-                              <span className="text-sm">{rec}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                      {details.content.recommendations &&
+                        details.content.recommendations.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium text-muted-foreground">
+                              Recommendations
+                            </h4>
+                            <ul className="space-y-2">
+                              {details.content.recommendations.map((rec, index) => (
+                                <li key={index} className="flex items-start gap-2">
+                                  <span className="text-sm text-muted-foreground">•</span>
+                                  <span className="text-sm">{rec}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                    </>
+                  )}
                 </div>
               )}
 

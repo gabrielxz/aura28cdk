@@ -50,6 +50,11 @@ export function useAdminReadings(authService: AuthService, options: UseAdminRead
         abortController.signal,
       );
 
+      // Check if request was aborted before updating state
+      if (abortController.signal.aborted) {
+        return;
+      }
+
       setReadings(response.readings);
       setTotalCount(response.count);
       setLastEvaluatedKey(response.lastEvaluatedKey);
@@ -58,16 +63,27 @@ export function useAdminReadings(authService: AuthService, options: UseAdminRead
       if (err instanceof Error && err.name === 'AbortError') {
         return;
       }
+      console.error('Error fetching admin readings:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch readings');
       setReadings([]);
     } finally {
-      setLoading(false);
+      // Only set loading to false if this request wasn't aborted
+      if (abortControllerRef.current === abortController) {
+        setLoading(false);
+      }
     }
   }, [adminApi, filters, pageSize, currentPage, lastEvaluatedKey]);
 
   // Fetch data when dependencies change
   useEffect(() => {
     fetchReadings();
+
+    // Cleanup function to abort request when component unmounts or dependencies change
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [fetchReadings]);
 
   // Sort readings client-side
