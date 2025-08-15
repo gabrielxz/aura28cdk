@@ -109,12 +109,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Swiss Ephemeris Layer
-        run: |
-          cd infrastructure/layers/swetest
-          # Use the build script which properly includes ephemeris files
-          ./build-layer.sh
-          cd ../../..
+      # Swiss Ephemeris layer is now pre-built and referenced from SSM
+      # No build step needed here
 
       - name: Run infrastructure tests
         run: npm run test:infrastructure
@@ -183,12 +179,8 @@ jobs:
         working-directory: ./infrastructure
         run: npm run build
 
-      - name: Build Swiss Ephemeris Layer for Deployment
-        run: |
-          cd infrastructure/layers/swetest
-          # Use the build script which properly includes ephemeris files
-          ./build-layer.sh
-          cd ../../..
+      # Swiss Ephemeris layer is now pre-built and deployed separately
+      # The layer ARN is stored in SSM Parameter Store
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

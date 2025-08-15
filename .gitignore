@@ -67,6 +67,11 @@ infrastructure/.cdk.staging/
 infrastructure/node_modules/
 !infrastructure/jest.config.js
 
+# Swiss Ephemeris Layer build artifacts
+infrastructure/layers/swetest/layer/
+infrastructure/layers/swetest/node_modules/
+infrastructure/layers/swetest/*.zip
+
 # Temporary
 *.tmp
 *.temp

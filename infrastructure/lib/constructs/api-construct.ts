@@ -115,21 +115,25 @@ export class ApiConstruct extends Construct {
       tier: ssm.ParameterTier.STANDARD,
     });
 
-    // Create Swiss Ephemeris Lambda Layer
-    // Use the pre-built layer directly (built by build-layer.sh in CI/CD)
-    const swissEphemerisLayer = new lambda.LayerVersion(this, 'SwissEphemerisLayer', {
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../layers/swetest/layer')),
-      compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
-      description: 'Swiss Ephemeris library v2 with house calculations and ephemeris data',
-      layerVersionName: `aura28-${props.environment}-swisseph-v2`,
-    });
+    // Use pre-built Swiss Ephemeris Lambda Layer from SSM
+    // The layer is built via CodeBuild on Amazon Linux 2023 for binary compatibility
+    const swissEphemerisLayerArn = ssm.StringParameter.valueForStringParameter(
+      this,
+      `/aura28/${props.environment}/layers/swetest-arn`,
+    );
+
+    const swissEphemerisLayer = lambda.LayerVersion.fromLayerVersionArn(
+      this,
+      'SwissEphemerisLayer',
+      swissEphemerisLayerArn,
+    );
 
     // Create Lambda functions
     this.getUserProfileFunction = new lambdaNodeJs.NodejsFunction(this, 'GetUserProfileFunction', {
       functionName: `aura28-${props.environment}-get-user-profile`,
       entry: path.join(__dirname, '../../lambda/user-profile/get-user-profile.ts'),
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       environment: {
         TABLE_NAME: props.userTable.tableName,
       },
@@ -149,12 +153,13 @@ export class ApiConstruct extends Construct {
         functionName: `aura28-${props.environment}-generate-natal-chart`,
         entry: path.join(__dirname, '../../lambda/natal-chart/generate-natal-chart.ts'),
         handler: 'handler',
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         layers: [swissEphemerisLayer],
         environment: {
           NATAL_CHART_TABLE_NAME: props.natalChartTable.tableName,
           EPHEMERIS_PATH: '/opt/nodejs/node_modules/swisseph/ephe',
           SE_EPHE_PATH: '/opt/nodejs/node_modules/swisseph/ephe',
+          NODE_ENV: 'production', // Ensure production mode
         },
         timeout: cdk.Duration.seconds(10), // 10 seconds for house calculations
         memorySize: 512, // Increased memory for ephemeris calculations
@@ -172,7 +177,7 @@ export class ApiConstruct extends Construct {
         functionName: `aura28-${props.environment}-update-user-profile`,
         entry: path.join(__dirname, '../../lambda/user-profile/update-user-profile.ts'),
         handler: 'handler',
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         environment: {
           TABLE_NAME: props.userTable.tableName,
           PLACE_INDEX_NAME: props.placeIndexName,
@@ -196,7 +201,7 @@ export class ApiConstruct extends Construct {
       functionName: `aura28-${props.environment}-get-natal-chart`,
       entry: path.join(__dirname, '../../lambda/natal-chart/get-natal-chart.ts'),
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       environment: {
         NATAL_CHART_TABLE_NAME: props.natalChartTable.tableName,
       },
@@ -221,7 +226,7 @@ export class ApiConstruct extends Construct {
         functionName: `aura28-${props.environment}-generate-reading`,
         entry: path.join(__dirname, '../../lambda/readings/generate-reading.ts'),
         handler: 'handler',
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         environment: {
           READINGS_TABLE_NAME: props.readingsTable.tableName,
           NATAL_CHART_TABLE_NAME: props.natalChartTable.tableName,
@@ -247,7 +252,7 @@ export class ApiConstruct extends Construct {
       functionName: `aura28-${props.environment}-get-readings`,
       entry: path.join(__dirname, '../../lambda/readings/get-readings.ts'),
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       environment: {
         READINGS_TABLE_NAME: props.readingsTable.tableName,
       },
@@ -266,7 +271,7 @@ export class ApiConstruct extends Construct {
         functionName: `aura28-${props.environment}-get-reading-detail`,
         entry: path.join(__dirname, '../../lambda/readings/get-reading-detail.ts'),
         handler: 'handler',
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         environment: {
           READINGS_TABLE_NAME: props.readingsTable.tableName,
         },
@@ -306,7 +311,7 @@ export class ApiConstruct extends Construct {
         functionName: `aura28-${props.environment}-admin-get-all-readings`,
         entry: path.join(__dirname, '../../lambda/admin/get-all-readings.ts'),
         handler: 'handler',
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         environment: {
           READINGS_TABLE_NAME: props.readingsTable.tableName,
           USER_TABLE_NAME: props.userTable.tableName,
@@ -327,7 +332,7 @@ export class ApiConstruct extends Construct {
         functionName: `aura28-${props.environment}-admin-get-all-users`,
         entry: path.join(__dirname, '../../lambda/admin/get-all-users.ts'),
         handler: 'handler',
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         environment: {
           USER_POOL_ID: props.userPool.userPoolId,
         },
@@ -348,7 +353,7 @@ export class ApiConstruct extends Construct {
         functionName: `aura28-${props.environment}-admin-get-reading-details`,
         entry: path.join(__dirname, '../../lambda/admin/get-reading-details.ts'),
         handler: 'handler',
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         environment: {
           READINGS_TABLE_NAME: props.readingsTable.tableName,
           USER_TABLE_NAME: props.userTable.tableName,
@@ -369,7 +374,7 @@ export class ApiConstruct extends Construct {
         functionName: `aura28-${props.environment}-admin-update-reading-status`,
         entry: path.join(__dirname, '../../lambda/admin/update-reading-status.ts'),
         handler: 'handler',
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         environment: {
           READINGS_TABLE_NAME: props.readingsTable.tableName,
         },
@@ -389,7 +394,7 @@ export class ApiConstruct extends Construct {
         functionName: `aura28-${props.environment}-admin-delete-reading`,
         entry: path.join(__dirname, '../../lambda/admin/delete-reading.ts'),
         handler: 'handler',
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         environment: {
           READINGS_TABLE_NAME: props.readingsTable.tableName,
         },
