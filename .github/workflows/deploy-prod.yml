@@ -112,14 +112,9 @@ jobs:
       - name: Build Swiss Ephemeris Layer
         run: |
           cd infrastructure/layers/swetest
-          # Create the layer directory structure
-          mkdir -p layer/nodejs
-          # Copy package.json to layer directory
-          cp package.json layer/nodejs/
-          # Install dependencies in the layer directory
-          cd layer/nodejs
-          npm install
-          cd ../../../../..
+          # Use the build script which properly includes ephemeris files
+          ./build-layer.sh
+          cd ../../..
 
       - name: Run infrastructure tests
         run: npm run test:infrastructure
@@ -191,14 +186,9 @@ jobs:
       - name: Build Swiss Ephemeris Layer for Deployment
         run: |
           cd infrastructure/layers/swetest
-          # Create the layer directory structure
-          mkdir -p layer/nodejs
-          # Copy package.json to layer directory
-          cp package.json layer/nodejs/
-          # Install dependencies in the layer directory
-          cd layer/nodejs
-          npm install
-          cd ../../../../..
+          # Use the build script which properly includes ephemeris files
+          ./build-layer.sh
+          cd ../../..
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
