@@ -126,48 +126,94 @@ export class ApiConstruct extends Construct {
             'bash',
             '-c',
             [
-              'mkdir -p /asset-output/nodejs',
-              'cp package.json package-lock.json /asset-output/nodejs/',
-              'cd /asset-output/nodejs',
-              'npm ci --omit=dev',
+              // Copy pre-built layer directory if it exists
+              'if [ -d /asset-input/layer/nodejs ]; then',
+              '  cp -r /asset-input/layer/nodejs /asset-output/',
+              'else',
+              '  echo "Error: Pre-built layer directory not found at /asset-input/layer/nodejs"',
+              '  exit 1',
+              'fi',
             ].join(' && '),
           ],
           local: {
-            // Try to build locally without Docker
+            // Bundle locally by copying the pre-built layer directory
             tryBundle(outputDir: string): boolean {
               const child_process = require('child_process');
               const fs = require('fs');
+              const path = require('path');
+
               try {
-                // Create nodejs directory in output
-                const nodejsDir = path.join(outputDir, 'nodejs');
-                child_process.execSync(`mkdir -p "${nodejsDir}"`);
+                const srcLayerDir = path.join(__dirname, '../../layers/swetest/layer');
+                const srcNodejsDir = path.join(srcLayerDir, 'nodejs');
 
-                // Copy package files
-                const srcDir = path.join(__dirname, '../../layers/swetest');
-                fs.copyFileSync(
-                  path.join(srcDir, 'package.json'),
-                  path.join(nodejsDir, 'package.json'),
-                );
-                fs.copyFileSync(
-                  path.join(srcDir, 'package-lock.json'),
-                  path.join(nodejsDir, 'package-lock.json'),
-                );
+                // Check if pre-built layer exists
+                if (!fs.existsSync(srcNodejsDir)) {
+                  // eslint-disable-next-line no-console
+                  console.error('Pre-built layer directory not found at:', srcNodejsDir);
+                  // eslint-disable-next-line no-console
+                  console.error('Please run: cd infrastructure/layers/swetest && npm install');
+                  return false;
+                }
 
-                // Install dependencies
-                child_process.execSync('npm ci --omit=dev', { cwd: nodejsDir, stdio: 'inherit' });
+                // Validate that swisseph and ephemeris files exist
+                const swissephDir = path.join(srcNodejsDir, 'node_modules/swisseph');
+                const epheDir = path.join(swissephDir, 'ephe');
 
-                return true; // Successfully bundled locally
-              } catch (_error) {
-                // Local bundling failed, fall back to Docker
-                return false; // Fall back to Docker
+                if (!fs.existsSync(swissephDir)) {
+                  // eslint-disable-next-line no-console
+                  console.error('swisseph module not found in pre-built layer');
+                  return false;
+                }
+
+                if (!fs.existsSync(epheDir)) {
+                  // eslint-disable-next-line no-console
+                  console.error('ephemeris data directory not found in pre-built layer');
+                  return false;
+                }
+
+                // Check for essential ephemeris files
+                const essentialFiles = [
+                  'semo_18.se1',
+                  'sepl_18.se1',
+                  'seas_18.se1',
+                  'seleapsec.txt',
+                  'seorbel.txt',
+                ];
+                for (const file of essentialFiles) {
+                  if (!fs.existsSync(path.join(epheDir, file))) {
+                    // eslint-disable-next-line no-console
+                    console.error(`Essential ephemeris file missing: ${file}`);
+                    return false;
+                  }
+                }
+
+                // Copy the entire pre-built layer to output
+                // eslint-disable-next-line no-console
+                console.log('Copying pre-built Swiss Ephemeris layer...');
+                child_process.execSync(`cp -r "${srcNodejsDir}" "${outputDir}/"`, {
+                  stdio: 'inherit',
+                });
+
+                // Log success and layer size
+                const layerSize = child_process
+                  .execSync(`du -sh "${outputDir}/nodejs"`, { encoding: 'utf8' })
+                  .trim();
+                // eslint-disable-next-line no-console
+                console.log(`Successfully bundled Swiss Ephemeris layer: ${layerSize}`);
+
+                return true;
+              } catch (error) {
+                // eslint-disable-next-line no-console
+                console.error('Failed to bundle Swiss Ephemeris layer:', error);
+                return false;
               }
             },
           },
         },
       }),
       compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
-      description: 'Swiss Ephemeris library for house calculations',
-      layerVersionName: `aura28-${props.environment}-swisseph`,
+      description: 'Swiss Ephemeris library v2 with house calculations and ephemeris data',
+      layerVersionName: `aura28-${props.environment}-swisseph-v2`,
     });
 
     // Create Lambda functions
@@ -200,6 +246,7 @@ export class ApiConstruct extends Construct {
         environment: {
           NATAL_CHART_TABLE_NAME: props.natalChartTable.tableName,
           EPHEMERIS_PATH: '/opt/nodejs/node_modules/swisseph/ephe',
+          SE_EPHE_PATH: '/opt/nodejs/node_modules/swisseph/ephe',
         },
         timeout: cdk.Duration.seconds(10), // 10 seconds for house calculations
         memorySize: 512, // Increased memory for ephemeris calculations
