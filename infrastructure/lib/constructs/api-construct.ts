@@ -115,14 +115,18 @@ export class ApiConstruct extends Construct {
       tier: ssm.ParameterTier.STANDARD,
     });
 
-    // Create Swiss Ephemeris Lambda Layer
-    // Use the pre-built layer directly (built by build-layer.sh in CI/CD)
-    const swissEphemerisLayer = new lambda.LayerVersion(this, 'SwissEphemerisLayer', {
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../layers/swetest/layer')),
-      compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
-      description: 'Swiss Ephemeris library v2 with house calculations and ephemeris data',
-      layerVersionName: `aura28-${props.environment}-swisseph-v2`,
-    });
+    // Use pre-built Swiss Ephemeris Lambda Layer from SSM
+    // The layer is built on EC2 with Amazon Linux 2023 for binary compatibility
+    const swissEphemerisLayerArn = ssm.StringParameter.valueForStringParameter(
+      this,
+      `/aura28/${props.environment}/layers/swetest-arn`,
+    );
+
+    const swissEphemerisLayer = lambda.LayerVersion.fromLayerVersionArn(
+      this,
+      'SwissEphemerisLayer',
+      swissEphemerisLayerArn,
+    );
 
     // Create Lambda functions
     this.getUserProfileFunction = new lambdaNodeJs.NodejsFunction(this, 'GetUserProfileFunction', {
@@ -155,6 +159,7 @@ export class ApiConstruct extends Construct {
           NATAL_CHART_TABLE_NAME: props.natalChartTable.tableName,
           EPHEMERIS_PATH: '/opt/nodejs/node_modules/swisseph/ephe',
           SE_EPHE_PATH: '/opt/nodejs/node_modules/swisseph/ephe',
+          NODE_ENV: 'production', // Ensure production mode
         },
         timeout: cdk.Duration.seconds(10), // 10 seconds for house calculations
         memorySize: 512, // Increased memory for ephemeris calculations
