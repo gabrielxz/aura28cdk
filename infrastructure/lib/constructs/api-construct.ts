@@ -128,10 +128,10 @@ export class ApiConstruct extends Construct {
             [
               // Copy pre-built layer directory if it exists
               'if [ -d /asset-input/layer/nodejs ]; then',
-              '  cp -r /asset-input/layer/nodejs /asset-output/',
+              '  cp -r /asset-input/layer/nodejs /asset-output/;',
               'else',
-              '  echo "Error: Pre-built layer directory not found at /asset-input/layer/nodejs"',
-              '  exit 1',
+              '  echo "Error: Pre-built layer directory not found at /asset-input/layer/nodejs";',
+              '  exit 1;',
               'fi',
             ].join(' '),
           ],
