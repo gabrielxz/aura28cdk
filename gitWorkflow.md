@@ -27,13 +27,13 @@ npm ci
 
 - This ensures Husky hooks are installed
 
-### Step 3: Run Linting
+### Step 3: Run Initial Linting Check
 
 ```bash
 npm run lint
 ```
 
-- If FAILS: Continue to next step (will be fixed)
+- If FAILS: Note the errors and continue (will attempt auto-fix)
 - If PASSES: Continue
 
 ### Step 4: Run Tests
@@ -61,8 +61,17 @@ npm run build
 npm run fix
 ```
 
-- This runs Prettier and ESLint fixes
-- Always succeeds
+- This runs Prettier formatting and ESLint auto-fixes
+- May not fix all issues (e.g., no-console warnings need manual intervention)
+
+### Step 6a: Re-Validate Linting
+
+```bash
+npm run lint
+```
+
+- If FAILS: ABORT with error "Linting still fails after auto-fix. Manual intervention required."
+- If PASSES: Continue
 
 ### Step 7: Verify Formatting
 

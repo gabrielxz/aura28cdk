@@ -119,6 +119,7 @@ describe.skip('Natal Chart Integration Test', () => {
       // Verify no "House calculations unavailable" error
       expect(savedItem.houses).toBeDefined();
       if (!savedItem.houses) {
+        // eslint-disable-next-line no-console
         console.error(
           'Houses object is missing from saved item:',
           JSON.stringify(savedItem, null, 2),
@@ -199,6 +200,7 @@ describe.skip('Natal Chart Integration Test', () => {
       // Main assertion: houses should be successfully calculated
       expect(savedItem.houses).toBeDefined();
       if (!savedItem.houses) {
+        // eslint-disable-next-line no-console
         console.error('Houses missing in second test:', JSON.stringify(savedItem, null, 2));
         return;
       }
