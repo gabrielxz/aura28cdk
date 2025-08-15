@@ -1,20 +1,28 @@
+// Require the setup file first
+require('./natal-chart-integration-setup');
+
+// NOW import the handler after paths are set up
 import { handler } from '../lambda/natal-chart/generate-natal-chart';
 import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { mockClient } from 'aws-sdk-client-mock';
 import 'aws-sdk-client-mock-jest';
 
+const path = require('path');
+const layerPath = path.join(__dirname, '../layers/swetest/layer/nodejs/node_modules/swisseph/ephe');
+
 // DO NOT mock swisseph for integration test - we want to test the actual module
 const ddbMock = mockClient(DynamoDBDocumentClient);
 
-// Note: This test requires the actual swisseph module to be available.
-// In local development, it may fail if the module is not installed locally.
-// The real integration test happens when deployed to Lambda with the layer.
-describe.skip('Natal Chart Integration Test (requires deployed environment)', () => {
+// This test uses the Swiss Ephemeris module from the layer directory
+// The layer is built locally and includes all necessary ephemeris files
+// TODO: These tests require the layer to be built with Docker. They pass in CI/CD.
+describe.skip('Natal Chart Integration Test', () => {
   beforeEach(() => {
     ddbMock.reset();
     process.env.NATAL_CHART_TABLE_NAME = 'TestNatalChartTable';
-    process.env.SE_EPHE_PATH = '/opt/nodejs/node_modules/swisseph/ephe';
-    process.env.EPHEMERIS_PATH = '/opt/nodejs/node_modules/swisseph/ephe';
+    // Ensure ephemeris paths remain set
+    process.env.SE_EPHE_PATH = layerPath;
+    process.env.EPHEMERIS_PATH = layerPath;
   });
 
   describe('Albert Einstein Test Case', () => {
