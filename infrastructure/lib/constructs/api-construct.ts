@@ -157,8 +157,8 @@ export class ApiConstruct extends Construct {
                 child_process.execSync('npm ci --omit=dev', { cwd: nodejsDir, stdio: 'inherit' });
 
                 return true; // Successfully bundled locally
-              } catch (error) {
-                console.warn('Local bundling failed, falling back to Docker:', error);
+              } catch (_error) {
+                // Local bundling failed, fall back to Docker
                 return false; // Fall back to Docker
               }
             },
