@@ -80,8 +80,7 @@ phases:
       - echo "Layer size:" && ls -lh layer.zip
 artifacts:
   files:
-    - layer.zip
-  name: layer.zip`,
+    - layer.zip`,
       'package.json': JSON.stringify({
         name: 'swetest-layer',
         version: '1.0.0',
