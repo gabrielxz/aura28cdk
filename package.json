@@ -24,7 +24,10 @@
     "ci:simulate": "./scripts/ci-local.sh",
     "ci:status": "./scripts/check-ci-status.sh",
     "precommit": "./scripts/pre-commit-check.sh",
-    "prepare": "husky"
+    "prepare": "husky",
+    "validate": "./scripts/validate-deployment.sh",
+    "deploy:dev": "npm run validate && cd infrastructure && npx cdk deploy -c env=dev",
+    "deploy:prod": "npm run validate && cd infrastructure && npx cdk deploy -c env=prod"
   },
   "devDependencies": {
     "esbuild": "^0.25.8",

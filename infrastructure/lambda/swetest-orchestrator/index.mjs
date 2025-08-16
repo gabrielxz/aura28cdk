@@ -146,18 +146,60 @@ artifacts:
       
       buildStatus = builds.builds[0].buildStatus;
       console.info('Build status:', buildStatus);
+      
+      // Log build phase details for debugging
+      if (builds.builds[0].phases) {
+        console.info('Build phases:', JSON.stringify(builds.builds[0].phases, null, 2));
+      }
     }
     
     if (buildStatus !== 'SUCCEEDED') {
-      throw new Error(`Build failed with status: ${buildStatus}`);
+      // Get build details for debugging
+      const buildDetails = builds.builds[0];
+      console.error('Build failed:', {
+        status: buildStatus,
+        phases: buildDetails.phases,
+        logs: buildDetails.logs
+      });
+      throw new Error(`Build failed with status: ${buildStatus}. Check CloudWatch logs at: ${buildDetails.logs?.deepLink}`);
     }
     
-    // Download the built layer
-    console.info('Downloading built layer...');
-    const layerObject = await s3.send(new GetObjectCommand({
+    // Wait a moment for S3 to be consistent
+    console.info('Waiting for S3 consistency...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // List bucket contents for debugging
+    console.info('Listing S3 bucket contents...');
+    const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+    const listResult = await s3.send(new ListObjectsV2Command({
       Bucket: bucketName,
-      Key: 'layer.zip'
+      Prefix: 'build/'
     }));
+    console.info('S3 objects found:', listResult.Contents?.map(obj => obj.Key) || []);
+    
+    // Download the built layer with retry logic
+    console.info('Downloading built layer from build/layer.zip...');
+    let layerObject;
+    let retries = 3;
+    
+    while (retries > 0) {
+      try {
+        layerObject = await s3.send(new GetObjectCommand({
+          Bucket: bucketName,
+          Key: 'build/layer.zip'
+        }));
+        break;
+      } catch (error) {
+        retries--;
+        if (retries === 0) {
+          console.error('Failed to download layer after 3 attempts');
+          console.error('Available objects in bucket:', listResult.Contents?.map(obj => obj.Key) || []);
+          throw error;
+        }
+        console.warn(`Download failed, retrying... (${retries} attempts left)`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
     
     // Convert stream to buffer
     const chunks = [];
