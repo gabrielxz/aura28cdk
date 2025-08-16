@@ -194,11 +194,24 @@ jobs:
           echo "Running CDK synthesis..."
           npx cdk synth -c env=dev
 
+      - name: Lambda Pre-flight Check
+        run: |
+          echo "Validating Lambda packages..."
+          ./scripts/preflight-lambda-check.sh || true
+
       - name: CDK Diff
         working-directory: ./infrastructure
         run: |
           echo "Checking what will change..."
           npx cdk diff -c env=dev || true
+
+      - name: Validate CDK Deployment
+        working-directory: ./infrastructure
+        run: |
+          echo "Running deployment validation..."
+          npx cdk synth -c env=dev --strict || {
+            echo "Warning: Strict synthesis failed. Check for deprecated APIs."
+          }
 
       - name: Deploy to AWS
         working-directory: ./infrastructure

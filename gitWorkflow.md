@@ -55,6 +55,19 @@ npm run build
 - If PASSES: Continue
 - NOTE: This must run BEFORE formatting to generate .d.ts files
 
+### Step 5a: Lambda Pre-flight Check (if Lambda functions modified)
+
+If any files in `infrastructure/lambda/` were modified:
+
+```bash
+cd infrastructure && npx cdk synth -c env=dev --quiet
+../scripts/preflight-lambda-check.sh
+```
+
+- If FAILS: ABORT with error "Lambda validation failed. Check package integrity and dependencies."
+- If PASSES: Continue
+- NOTE: This ensures Lambda packages are properly built and dependencies are correct
+
 ### Step 6: Auto-Fix Code Issues
 
 ```bash
