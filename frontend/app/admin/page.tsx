@@ -49,12 +49,12 @@ export default function AdminDashboard() {
 
   const handleViewDetails = useCallback((userId: string, readingId: string) => {
     setSelectedReading({ userId, readingId });
-    setDetailsSheetOpen(true);
+    setTimeout(() => setDetailsSheetOpen(true), 0);
   }, []);
 
   const handleDeleteClick = useCallback((userId: string, readingId: string, userEmail?: string) => {
     setReadingToDelete({ userId, id: readingId, email: userEmail });
-    setDeleteDialogOpen(true);
+    setTimeout(() => setDeleteDialogOpen(true), 0);
   }, []);
 
   const handleDeleteConfirm = useCallback(
