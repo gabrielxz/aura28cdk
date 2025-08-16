@@ -23,12 +23,31 @@ export function useAdminReadings(authService: AuthService, options: UseAdminRead
   const [sortField, setSortField] = useState<SortField>(initialSortField);
   const [sortOrder, setSortOrder] = useState<SortOrder>(initialSortOrder);
   const [filters, setFilters] = useState<ReadingsFilter>({});
+
+  // Refs for request management
   const abortControllerRef = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0);
 
   const adminApi = useMemo(() => new AdminApi(authService), [authService]);
 
+  // Create stable query key for memoization
+  const queryKey = useMemo(
+    () =>
+      JSON.stringify({
+        filters,
+        pageSize,
+        currentPage,
+        lastEvaluatedKey: currentPage > 1 ? lastEvaluatedKey : undefined,
+      }),
+    [filters, pageSize, currentPage, lastEvaluatedKey],
+  );
+
+  // Stable fetch function that doesn't recreate
   const fetchReadings = useCallback(async () => {
-    // Cancel any in-flight request
+    // Increment request ID for this fetch
+    const reqId = ++requestIdRef.current;
+
+    // Abort any in-flight request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -50,8 +69,8 @@ export function useAdminReadings(authService: AuthService, options: UseAdminRead
         abortController.signal,
       );
 
-      // Check if request was aborted before updating state
-      if (abortController.signal.aborted) {
+      // Only update state if this is still the current request
+      if (reqId !== requestIdRef.current) {
         return;
       }
 
@@ -59,32 +78,39 @@ export function useAdminReadings(authService: AuthService, options: UseAdminRead
       setTotalCount(response.count);
       setLastEvaluatedKey(response.lastEvaluatedKey);
     } catch (err) {
-      // Don't set error state if request was aborted
+      // Handle abort as non-error
       if (err instanceof Error && err.name === 'AbortError') {
         return;
       }
-      console.error('Error fetching admin readings:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch readings');
-      setReadings([]);
+
+      // Only set error if this is still the current request
+      if (reqId === requestIdRef.current) {
+        console.error('Error fetching admin readings:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch readings');
+        setReadings([]);
+      }
     } finally {
-      // Only set loading to false if this request wasn't aborted
-      if (abortControllerRef.current === abortController) {
+      // Always set loading to false if this is the current request
+      if (reqId === requestIdRef.current) {
         setLoading(false);
       }
     }
   }, [adminApi, filters, pageSize, currentPage, lastEvaluatedKey]);
 
-  // Fetch data when dependencies change
+  // Fetch data when query key changes
   useEffect(() => {
     fetchReadings();
 
-    // Cleanup function to abort request when component unmounts or dependencies change
+    // Cleanup: only abort on unmount, not on every dep change
     return () => {
+      // Component unmounting - abort any in-flight request
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
     };
-  }, [fetchReadings]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryKey]); // Depend on stable queryKey instead of fetchReadings
 
   // Sort readings client-side
   const sortedReadings = useMemo(() => {
