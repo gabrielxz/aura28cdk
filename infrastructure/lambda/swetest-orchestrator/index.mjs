@@ -156,7 +156,7 @@ artifacts:
     console.info('Downloading built layer...');
     const layerObject = await s3.send(new GetObjectCommand({
       Bucket: bucketName,
-      Key: 'build/layer.zip'
+      Key: 'layer.zip'
     }));
     
     // Convert stream to buffer
