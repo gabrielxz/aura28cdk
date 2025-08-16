@@ -61,14 +61,35 @@ echo ""
 echo "7️⃣ Checking Lambda deployment packages..."
 # Check if orchestrator.zip exists and is valid
 if [ -f "lambda/swetest-orchestrator/orchestrator.zip" ]; then
+    # Test zip integrity
     unzip -t lambda/swetest-orchestrator/orchestrator.zip > /dev/null 2>&1
     print_status $? "Orchestrator Lambda package is valid"
+    
+    # Check for required files in the zip
+    unzip -l lambda/swetest-orchestrator/orchestrator.zip | grep -q "index.mjs"
+    print_status $? "Orchestrator contains index.mjs"
+    
+    unzip -l lambda/swetest-orchestrator/orchestrator.zip | grep -q "node_modules"
+    print_status $? "Orchestrator contains node_modules"
 else
     print_status 1 "Orchestrator Lambda package not found"
 fi
 
 echo ""
-echo "8️⃣ Running CDK diff to preview changes..."
+echo "8️⃣ Checking for deprecated CDK APIs..."
+npx cdk synth -c env=dev 2>&1 | grep -i "deprecated" | head -5
+if [ $? -eq 0 ]; then
+    echo -e "${YELLOW}⚠️  Warning: Deprecated APIs detected (see above)${NC}"
+fi
+
+echo ""
+echo "9️⃣ Validating CDK deployment (dry-run)..."
+# Note: --no-execute doesn't exist, but we can use synth to catch most issues
+npx cdk synth -c env=dev --strict > /dev/null 2>&1
+print_status $? "CDK strict synthesis passed"
+
+echo ""
+echo "🔟 Running CDK diff to preview changes..."
 echo -e "${YELLOW}CDK Diff Output:${NC}"
 npx cdk diff -c env=dev 2>&1 | head -50
 echo ""
