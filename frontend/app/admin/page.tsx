@@ -211,21 +211,31 @@ export default function AdminDashboard() {
         userId={selectedReading?.userId || null}
         readingId={selectedReading?.readingId || null}
         open={detailsSheetOpen}
-        onOpenChange={setDetailsSheetOpen}
+        onOpenChange={(open) => {
+          setDetailsSheetOpen(open);
+          if (!open) {
+            // Clear the selection when sheet closes
+            setSelectedReading(null);
+          }
+        }}
         adminApi={adminApi}
       />
 
       {/* Delete Confirmation Dialog */}
-      {readingToDelete && (
-        <DeleteReadingDialog
-          userId={readingToDelete.userId}
-          readingId={readingToDelete.id}
-          userEmail={readingToDelete.email}
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          onConfirm={handleDeleteConfirm}
-        />
-      )}
+      <DeleteReadingDialog
+        userId={readingToDelete?.userId || ''}
+        readingId={readingToDelete?.id || ''}
+        userEmail={readingToDelete?.email}
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) {
+            // Clear the selection when dialog closes
+            setReadingToDelete(null);
+          }
+        }}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }
