@@ -45,7 +45,7 @@ phases:
   build:
     commands:
       - npm init -y
-      - npm install swisseph@2.10.3
+      - npm install swisseph@0.5.17
       - echo "Installed packages:"
       - ls -la node_modules/
       - echo "Swiss Ephemeris files:"
