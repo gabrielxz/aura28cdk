@@ -176,8 +176,14 @@ artifacts:
     }));
     console.info('S3 objects found:', listResult.Contents?.map(obj => obj.Key) || []);
     
+    // Find the layer.zip file dynamically (CodeBuild adds build ID to path)
+    const layerZipKey = listResult.Contents?.find(obj => obj.Key.endsWith('layer.zip'))?.Key;
+    if (!layerZipKey) {
+      throw new Error(`No layer.zip file found in S3. Available objects: ${listResult.Contents?.map(obj => obj.Key).join(', ') || 'none'}`);
+    }
+    
     // Download the built layer with retry logic
-    console.info('Downloading built layer from build/layer.zip...');
+    console.info(`Downloading built layer from ${layerZipKey}...`);
     let layerObject;
     let retries = 3;
     
@@ -185,13 +191,14 @@ artifacts:
       try {
         layerObject = await s3.send(new GetObjectCommand({
           Bucket: bucketName,
-          Key: 'build/layer.zip'
+          Key: layerZipKey
         }));
         break;
       } catch (error) {
         retries--;
         if (retries === 0) {
           console.error('Failed to download layer after 3 attempts');
+          console.error('Attempted to download from:', layerZipKey);
           console.error('Available objects in bucket:', listResult.Contents?.map(obj => obj.Key) || []);
           throw error;
         }
