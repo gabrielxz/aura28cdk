@@ -10,6 +10,7 @@
   "scripts": {
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md,yml,yaml}\"",
+    "fix": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md,yml,yaml}\" && ESLINT_USE_FLAT_CONFIG=false eslint \"frontend/**/*.{ts,tsx}\" --max-warnings=0 --fix && ESLINT_USE_FLAT_CONFIG=false eslint \"infrastructure/**/*.ts\" --max-warnings=10 --fix",
     "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces",
     "build": "npm run build --workspaces",
@@ -23,7 +24,10 @@
     "ci:simulate": "./scripts/ci-local.sh",
     "ci:status": "./scripts/check-ci-status.sh",
     "precommit": "./scripts/pre-commit-check.sh",
-    "prepare": "husky"
+    "prepare": "husky",
+    "validate": "./scripts/validate-deployment.sh",
+    "deploy:dev": "npm run validate && cd infrastructure && npx cdk deploy -c env=dev",
+    "deploy:prod": "npm run validate && cd infrastructure && npx cdk deploy -c env=prod"
   },
   "devDependencies": {
     "esbuild": "^0.25.8",

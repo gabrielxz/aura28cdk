@@ -23,6 +23,10 @@ beforeAll(() => {
     if (typeof args[0] === 'string' && args[0].includes('Error fetching user profile')) {
       return;
     }
+    // Suppress expected auth callback errors in tests
+    if (typeof args[0] === 'string' && args[0].includes('Auth callback error:')) {
+      return;
+    }
     originalError.call(console, ...args);
   };
 });

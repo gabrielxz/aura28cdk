@@ -9,16 +9,104 @@ const docClient = DynamoDBDocumentClient.from(dynamoClient);
 // Import swisseph from the Lambda Layer
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let swisseph: any;
-try {
-  swisseph = require('/opt/nodejs/node_modules/swisseph');
-} catch (_error) {
-  console.warn('Swiss Ephemeris not available from layer, falling back to local if available');
-  try {
-    swisseph = require('swisseph');
-  } catch (_e) {
-    console.error('Swiss Ephemeris not available');
+let ephemerisPath: string | undefined;
+
+// Cold start logging for ephemeris path verification
+const initSwissEph = () => {
+  // Try different paths to find Swiss Ephemeris
+  const path = require('path');
+  const fs = require('fs');
+
+  // Use environment variables if set (for test environments)
+  if (process.env.SE_EPHE_PATH && process.env.EPHEMERIS_PATH) {
+    const testModulePath = path.dirname(process.env.SE_EPHE_PATH);
+    if (fs.existsSync(testModulePath)) {
+      try {
+        swisseph = require(testModulePath);
+        ephemerisPath = process.env.SE_EPHE_PATH;
+
+        console.info('Swiss Ephemeris initialization (from env):', {
+          path: ephemerisPath,
+          modulePath: testModulePath,
+          envSE_EPHE_PATH: process.env.SE_EPHE_PATH,
+          envEPHEMERIS_PATH: process.env.EPHEMERIS_PATH,
+        });
+
+        // Verify ephemeris directory exists
+        if (fs.existsSync(ephemerisPath)) {
+          const files = fs.readdirSync(ephemerisPath);
+          const seFiles = files.filter(
+            (f: string) => f.endsWith('.se1') || f === 'seleapsec.txt' || f === 'seorbel.txt',
+          );
+          console.info('Ephemeris files found:', seFiles.length, 'files:', seFiles.slice(0, 5));
+        } else {
+          console.error('Ephemeris directory does not exist:', ephemerisPath);
+        }
+
+        return; // Successfully loaded from environment
+      } catch (e) {
+        console.warn('Failed to load from environment paths:', e);
+      }
+    }
   }
-}
+
+  const possiblePaths = [
+    '/opt/nodejs/node_modules/swisseph', // Lambda layer path
+    path.join(__dirname, '../../layers/swetest/layer/nodejs/node_modules/swisseph'), // Test environment path
+    'swisseph', // Normal require path
+  ];
+
+  for (const modulePath of possiblePaths) {
+    try {
+      swisseph = require(modulePath);
+
+      // Set ephemeris path based on environment
+      if (process.env.SE_EPHE_PATH) {
+        ephemerisPath = process.env.SE_EPHE_PATH;
+      } else if (process.env.EPHEMERIS_PATH) {
+        ephemerisPath = process.env.EPHEMERIS_PATH;
+      } else if (modulePath.startsWith('/opt')) {
+        ephemerisPath = '/opt/nodejs/node_modules/swisseph/ephe';
+      } else if (modulePath.includes('layers/swetest')) {
+        ephemerisPath = path.join(modulePath, 'ephe');
+      } else {
+        ephemerisPath = path.join(path.dirname(require.resolve(modulePath)), 'ephe');
+      }
+
+      // Log ephemeris path on cold start
+      console.info('Swiss Ephemeris initialization:', {
+        path: ephemerisPath,
+        modulePath: modulePath,
+        envSE_EPHE_PATH: process.env.SE_EPHE_PATH,
+        envEPHEMERIS_PATH: process.env.EPHEMERIS_PATH,
+      });
+
+      // Verify ephemeris directory exists
+      if (fs.existsSync(ephemerisPath)) {
+        const files = fs.readdirSync(ephemerisPath);
+        const seFiles = files.filter(
+          (f: string) => f.endsWith('.se1') || f === 'seleapsec.txt' || f === 'seorbel.txt',
+        );
+        console.info('Ephemeris files found:', seFiles.length, 'files:', seFiles.slice(0, 5));
+      } else {
+        console.error('Ephemeris directory does not exist:', ephemerisPath);
+      }
+
+      // Successfully loaded
+      break;
+    } catch (_error) {
+      // Try next path
+      continue;
+    }
+  }
+
+  if (!swisseph) {
+    console.error('Swiss Ephemeris not available from any path');
+  }
+};
+
+// Initialize on cold start
+initSwissEph();
 
 interface NatalChartEvent {
   userId: string;
@@ -112,9 +200,14 @@ const calculateHousesWithSwisseph = async (
   }
 
   try {
-    // Set ephemeris path if provided
-    const ephePath = process.env.EPHEMERIS_PATH || '/opt/nodejs/node_modules/swisseph/ephe';
+    // Set ephemeris path explicitly
+    const ephePath =
+      ephemerisPath ||
+      process.env.SE_EPHE_PATH ||
+      process.env.EPHEMERIS_PATH ||
+      '/opt/nodejs/node_modules/swisseph/ephe';
     swisseph.swe_set_ephe_path(ephePath);
+    console.info('Setting ephemeris path for house calculations:', ephePath);
 
     // Calculate Julian Day
     const year = birthDateTime.getUTCFullYear();

@@ -1,0 +1,9 @@
+{
+  "name": "swetest-layer",
+  "version": "1.0.0",
+  "description": "Swiss Ephemeris Lambda Layer for Node.js 20.x",
+  "private": true,
+  "dependencies": {
+    "swisseph": "^0.5.13"
+  }
+}

@@ -11,6 +11,7 @@ import * as location from 'aws-cdk-lib/aws-location';
 import { Construct } from 'constructs';
 import { CognitoAuthConstruct } from './constructs/cognito-auth-construct';
 import { ApiConstruct } from './constructs/api-construct';
+import { SwetestLayerConstruct } from './constructs/swetest-layer-construct';
 
 export interface WebsiteStackProps extends cdk.StackProps {
   domainName: string;
@@ -86,11 +87,36 @@ export class WebsiteStack extends cdk.Stack {
       },
     });
 
+    // Create DynamoDB table for readings
+    const readingsTable = new dynamodb.Table(this, 'ReadingsTable', {
+      tableName: `Aura28-${props.environment}-Readings`,
+      partitionKey: {
+        name: 'userId',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'readingId',
+        type: dynamodb.AttributeType.STRING,
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy:
+        props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: true,
+      },
+    });
+
+    // Create Swiss Ephemeris layer construct
+    const swetestLayer = new SwetestLayerConstruct(this, 'SwetestLayer', {
+      environment: props.environment,
+    });
+
     // Create API Gateway and Lambda functions
     this.api = new ApiConstruct(this, 'Api', {
       environment: props.environment,
       userTable: this.userTable,
-      natalChartTable: natalChartTable, // Pass the new table
+      natalChartTable: natalChartTable,
+      readingsTable: readingsTable,
       userPool: this.auth.userPool,
       placeIndexName: placeIndex.indexName,
       allowedOrigins: [
@@ -98,6 +124,7 @@ export class WebsiteStack extends cdk.Stack {
         `https://${siteDomain}`,
         ...(props.environment === 'prod' ? [`https://www.${props.domainName}`] : []),
       ],
+      swissEphemerisLayerArn: swetestLayer.layerVersionArn, // Pass the layer ARN from the construct
     });
 
     // Create S3 bucket for hosting

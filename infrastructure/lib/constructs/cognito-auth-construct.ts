@@ -59,6 +59,13 @@ export class CognitoAuthConstruct extends Construct {
         props.environment === 'dev' ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN,
     });
 
+    // Create Admin Group
+    this.userPool.addGroup('AdminGroup', {
+      groupName: 'admin',
+      description: 'Administrator users with elevated privileges',
+      precedence: 1, // Highest priority
+    });
+
     // Create User Pool Domain
     this.userPoolDomain = new cognito.UserPoolDomain(this, 'UserPoolDomain', {
       userPool: this.userPool,
@@ -160,6 +167,11 @@ export class CognitoAuthConstruct extends Construct {
     new cdk.CfnOutput(this, 'CognitoHostedUIURL', {
       value: `https://${props.domainPrefix}.auth.${cdk.Stack.of(this).region}.amazoncognito.com`,
       description: 'Cognito Hosted UI Base URL',
+    });
+
+    new cdk.CfnOutput(this, 'AdminGroupName', {
+      value: 'admin',
+      description: 'Cognito Admin Group Name',
     });
 
     new cdk.CfnOutput(this, 'OAuthSecretsReminder', {

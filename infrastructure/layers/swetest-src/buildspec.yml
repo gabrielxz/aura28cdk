@@ -1,0 +1,67 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo "Installing build dependencies..."
+      - yum update -y
+      - yum install -y gcc-c++ make python3
+      - echo "Node.js version:" && node --version
+      - echo "NPM version:" && npm --version
+      - echo "Architecture:" && uname -m
+
+  build:
+    commands:
+      - echo "Building Swiss Ephemeris layer..."
+      - npm ci
+
+      # Create layer structure
+      - mkdir -p nodejs
+
+      # Copy node_modules
+      - cp -r node_modules nodejs/
+
+      # Ensure ephemeris directory exists
+      - mkdir -p nodejs/node_modules/swisseph/ephe
+
+      # Copy only required ephemeris files (2.1MB total) for size control
+      - |
+        if [ -f "node_modules/swisseph/ephe/sepl_18.se1" ]; then
+          echo "Copying ephemeris files..."
+          cp node_modules/swisseph/ephe/sepl_18.se1 nodejs/node_modules/swisseph/ephe/
+          cp node_modules/swisseph/ephe/seas_18.se1 nodejs/node_modules/swisseph/ephe/
+          cp node_modules/swisseph/ephe/semo_18.se1 nodejs/node_modules/swisseph/ephe/
+          ls -lh nodejs/node_modules/swisseph/ephe/
+        else
+          echo "WARNING: Ephemeris files not found, will be downloaded at runtime"
+        fi
+
+      # Create the layer zip
+      - zip -rq layer.zip nodejs/
+
+      # Validate layer size (must be under 50MB compressed)
+      - |
+        LAYER_SIZE=$(stat -c%s layer.zip)
+        LAYER_SIZE_MB=$((LAYER_SIZE / 1048576))
+        echo "Layer size: ${LAYER_SIZE_MB}MB (compressed)"
+        if [ $LAYER_SIZE -gt 52428800 ]; then
+          echo "ERROR: Layer size exceeds 50MB limit"
+          exit 1
+        fi
+
+      # Show uncompressed size for reference
+      - |
+        UNCOMPRESSED_SIZE=$(unzip -l layer.zip | tail -1 | awk '{print $1}')
+        UNCOMPRESSED_MB=$((UNCOMPRESSED_SIZE / 1048576))
+        echo "Uncompressed size: ${UNCOMPRESSED_MB}MB (must be under 250MB)"
+        if [ $UNCOMPRESSED_SIZE -gt 262144000 ]; then
+          echo "ERROR: Uncompressed layer size exceeds 250MB limit"
+          exit 1
+        fi
+
+artifacts:
+  files:
+    - layer.zip
+  name: swetest-layer-$CODEBUILD_BUILD_NUMBER

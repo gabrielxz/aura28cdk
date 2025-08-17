@@ -5,6 +5,7 @@ import { AuthService, User } from './auth-service';
 
 interface AuthContextType {
   user: User | null;
+  isAdmin: boolean;
   loading: boolean;
   error: string | null;
   login: () => void;
@@ -21,6 +22,7 @@ export interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authService] = useState(() => new AuthService());
@@ -30,6 +32,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setError(null);
       const currentUser = authService.getCurrentUser();
       setUser(currentUser);
+      setIsAdmin(authService.isAdmin());
 
       // If token is about to expire, try to refresh
       if (currentUser && authService.isAuthenticated()) {
@@ -38,11 +41,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (tokens) {
           const refreshedUser = authService.getCurrentUser();
           setUser(refreshedUser);
+          setIsAdmin(authService.isAdmin());
         }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication error');
       setUser(null);
+      setIsAdmin(false);
     }
   }, [authService]);
 
@@ -50,7 +55,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Check for auth on mount
     const initAuth = async () => {
       try {
-        await refreshUser();
+        // Check if we have server-side authentication that needs to be synced
+        const hasServerAuth = authService.syncTokensFromCookies();
+
+        if (hasServerAuth) {
+          // Server-side auth detected, try to refresh tokens to get them in localStorage
+          // This handles the case where tokens are in HTTP-only cookies
+          const tokens = await authService.refreshToken();
+          if (tokens) {
+            const refreshedUser = authService.getCurrentUser();
+            setUser(refreshedUser);
+            setIsAdmin(authService.isAdmin());
+          }
+        } else {
+          // Normal flow - check for existing tokens in localStorage
+          await refreshUser();
+        }
       } finally {
         setLoading(false);
       }
@@ -81,6 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const value: AuthContextType = {
     user,
+    isAdmin,
     loading,
     error,
     login,
