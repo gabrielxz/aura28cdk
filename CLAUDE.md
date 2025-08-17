@@ -39,6 +39,8 @@ aura28cdk/
 │   ├── components/        # React components
 │   └── __tests__/        # Frontend tests
 ├── infrastructure/        # AWS CDK
+│   ├── assets/           # Static assets for deployment
+│   │   └── prompts/      # Prompt templates (source of truth)
 │   ├── lambda/           # Lambda functions
 │   └── lib/              # Stack definitions
 └── .github/workflows/    # CI/CD pipelines
@@ -106,6 +108,42 @@ NEXT_PUBLIC_API_GATEWAY_URL=https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.c
 - **Stack**: `Aura28-{env}-Stack`
 - **Tags**: `Project: Aura28CDK`
 - **S3 Policy**: DESTROY (dev), RETAIN (prod)
+
+## Prompt Management System
+
+**Architecture**: Prompts are stored as files in the repository and automatically deployed to S3 during CDK deployment.
+
+### Directory Structure
+
+```
+infrastructure/assets/prompts/
+├── dev/
+│   └── soul_blueprint/
+│       ├── system.txt         # System prompt for dev
+│       └── user_template.md    # User prompt template for dev
+└── prod/
+    └── soul_blueprint/
+        ├── system.txt         # System prompt for prod
+        └── user_template.md    # User prompt template for prod
+```
+
+### How It Works
+
+1. **Source of Truth**: Prompt files in `infrastructure/assets/prompts/{env}/` are version-controlled
+2. **Deployment**: CDK's `BucketDeployment` automatically syncs prompts to S3 bucket `aura28-{env}-config`
+3. **Configuration**: SSM parameters store S3 keys:
+   - `/aura28/{env}/reading/system_prompt_s3key` → `prompts/{env}/soul_blueprint/system.txt`
+   - `/aura28/{env}/reading/user_prompt_s3key` → `prompts/{env}/soul_blueprint/user_template.md`
+4. **Runtime**: Lambda fetches S3 keys from SSM, then reads prompt content from S3
+
+### Updating Prompts
+
+1. Edit files in `infrastructure/assets/prompts/{env}/`
+2. Deploy with `npx cdk deploy -c env={env}`
+3. Prompts are automatically uploaded to S3
+4. Lambda fetches latest version on next invocation (with caching)
+
+**Note**: Prompts use `{{placeholders}}` format (e.g., `{{birthName}}`, `{{natalChartData}}`)
 
 ## Key Notes
 
