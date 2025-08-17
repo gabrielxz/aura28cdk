@@ -312,6 +312,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
+    // Log natal chart status for debugging
+    console.info('Natal chart fetched:', {
+      userId,
+      hasNatalChart: !!natalChart,
+      natalChartKeys: natalChart ? Object.keys(natalChart) : [],
+      natalChartSize: natalChart ? JSON.stringify(natalChart).length : 0,
+    });
+
     // Generate reading ID and timestamp
     const readingId = uuidv4();
     const timestamp = new Date().toISOString();
@@ -347,6 +355,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         .replace('{{birthState}}', userProfile.profile?.birthState || 'Unknown')
         .replace('{{birthCountry}}', userProfile.profile?.birthCountry || 'Unknown')
         .replace('{{natalChartData}}', JSON.stringify(natalChart, null, 2));
+
+      // Log prompt info for debugging
+      console.info('Prompt built:', {
+        templateLength: openAIConfig.userPromptTemplate.length,
+        promptLength: userPrompt.length,
+        includesNatalChart: userPrompt.includes('planets'),
+        natalChartInPrompt: userPrompt.includes(JSON.stringify(natalChart, null, 2)),
+      });
 
       // Call OpenAI API
       const content = await callOpenAI(userPrompt, openAIConfig);
