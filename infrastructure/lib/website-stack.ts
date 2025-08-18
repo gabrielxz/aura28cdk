@@ -257,7 +257,7 @@ export class WebsiteStack extends cdk.Stack {
       destinationBucket: this.bucket,
       distribution: this.distribution,
       distributionPaths: ['/*'],
-      prune: false,
+      prune: true,
     });
 
     // Output Cognito configuration for frontend
