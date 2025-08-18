@@ -24,49 +24,37 @@ describe('Home Page', () => {
     });
   });
 
-  it('renders Hello Carri heading', () => {
+  it('renders Aura28 heading', () => {
     render(<Home />);
 
     const heading = screen.getByRole('heading', {
-      name: /hello carri/i,
+      name: /aura28/i,
     });
 
     expect(heading).toBeInTheDocument();
   });
 
-  it('renders welcome message', () => {
+  it('renders coming soon message', () => {
     render(<Home />);
 
-    const welcomeText = screen.getByText(/welcome to aura28/i);
+    const comingSoonText = screen.getByText(/your personalized astrology readings are on the way/i);
 
-    expect(welcomeText).toBeInTheDocument();
+    expect(comingSoonText).toBeInTheDocument();
   });
 
-  it('renders Get Started button', () => {
+  it('renders launch soon message', () => {
     render(<Home />);
 
-    const getStartedButton = screen.getByRole('button', {
-      name: /get started/i,
-    });
+    const launchText = screen.getByText(/we.*re preparing to launch soon/i);
 
-    expect(getStartedButton).toBeInTheDocument();
+    expect(launchText).toBeInTheDocument();
   });
 
-  it('renders Learn More button', () => {
+  it('renders contact email', () => {
     render(<Home />);
 
-    const learnMoreButton = screen.getByRole('button', {
-      name: /learn more/i,
-    });
+    const contactText = screen.getByText(/contact: support@aura28.com/i);
 
-    expect(learnMoreButton).toBeInTheDocument();
-  });
-
-  it('renders features message', () => {
-    render(<Home />);
-
-    const featuresText = screen.getByText(/Features: User authentication with AWS Cognito/i);
-
-    expect(featuresText).toBeInTheDocument();
+    expect(contactText).toBeInTheDocument();
   });
 });
