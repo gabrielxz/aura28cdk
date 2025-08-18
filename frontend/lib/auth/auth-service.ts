@@ -265,10 +265,34 @@ export class AuthService {
       throw new Error('No authentication tokens found');
     }
 
-    const userAttributes = Object.entries(attributes).map(([name, value]) => ({
-      Name: name,
-      Value: value,
-    }));
+    // Validate attributes parameter
+    if (!attributes || typeof attributes !== 'object') {
+      throw new Error('Invalid attributes: must be an object');
+    }
+
+    // Validate each attribute key and value
+    const validAttributePattern = /^[a-zA-Z0-9:_-]+$/;
+    const userAttributes = Object.entries(attributes).map(([name, value]) => {
+      // Validate attribute name
+      if (!name || typeof name !== 'string' || !validAttributePattern.test(name)) {
+        throw new Error(`Invalid attribute name: ${name}`);
+      }
+
+      // Validate attribute value
+      if (typeof value !== 'string') {
+        throw new Error(`Invalid attribute value for ${name}: must be a string`);
+      }
+
+      // Limit attribute value length to prevent abuse
+      if (value.length > 2048) {
+        throw new Error(`Attribute value for ${name} exceeds maximum length of 2048 characters`);
+      }
+
+      return {
+        Name: name,
+        Value: value,
+      };
+    });
 
     const input: UpdateUserAttributesCommandInput = {
       AccessToken: tokens.accessToken,

@@ -52,7 +52,21 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const endDate = queryParams.endDate;
     const status = queryParams.status;
     const type = queryParams.type;
-    const userSearch = queryParams.userSearch ? queryParams.userSearch.slice(0, 100) : undefined; // Limit search to 100 chars
+
+    // Validate and sanitize userSearch parameter
+    let userSearch: string | undefined;
+    if (queryParams.userSearch) {
+      // Remove any potentially malicious characters and limit length
+      userSearch = queryParams.userSearch
+        .replace(/[<>'"`;(){}]/g, '') // Remove potential XSS/injection characters
+        .trim()
+        .slice(0, 100); // Limit to 100 characters
+
+      // Additional validation: ensure it's a valid search string
+      if (userSearch.length === 0) {
+        userSearch = undefined;
+      }
+    }
 
     // Parse and validate limit (pageSize)
     let limit = queryParams.limit ? parseInt(queryParams.limit, 10) : 25;
