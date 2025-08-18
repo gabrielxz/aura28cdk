@@ -331,7 +331,7 @@ export const privacyPolicy: LegalDocument = {
         'If you have any questions about this Privacy Policy or our data practices, please contact us:',
         '• Through our Issue Resolution page',
         '• By email: privacy@aura28.com',
-        '• By mail: Aura28, [Address to be provided]',
+        '• By mail: Aura28.com, 7308 E Independence Blvd, Ste C #V338, Charlotte, NC 28277',
         'For data protection inquiries or to exercise your rights, please use our Issue Resolution page for the fastest response.',
       ],
     },
