@@ -85,11 +85,11 @@ export const handler = async (): Promise<void> => {
   // Send metric to CloudWatch (using dynamic import to avoid bundling issues)
   try {
     // @ts-ignore - Dynamic import for runtime
-    const AWS = require('aws-sdk');
-    const cloudwatch = new AWS.CloudWatch();
+    const { CloudWatchClient, PutMetricDataCommand } = require('@aws-sdk/client-cloudwatch');
+    const cloudwatch = new CloudWatchClient({});
 
-    await cloudwatch
-      .putMetricData({
+    await cloudwatch.send(
+      new PutMetricDataCommand({
         Namespace: 'Aura28/Canary',
         MetricData: [
           {
@@ -115,8 +115,8 @@ export const handler = async (): Promise<void> => {
             Timestamp: new Date(),
           },
         ],
-      })
-      .promise();
+      }),
+    );
   } catch (metricError) {
     console.error('Failed to send CloudWatch metric:', metricError);
   }
