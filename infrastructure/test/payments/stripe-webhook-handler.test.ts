@@ -162,6 +162,7 @@ describe('Stripe Webhook Handler Lambda', () => {
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
 
@@ -224,6 +225,7 @@ describe('Stripe Webhook Handler Lambda', () => {
             statusCode: 200,
             body: JSON.stringify({ readingId: 'reading-123' }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
       dynamoMock.on(PutCommand).resolves({});
@@ -263,11 +265,13 @@ describe('Stripe Webhook Handler Lambda', () => {
       const readingId = 'reading-456';
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Payload: new TextEncoder().encode(
           JSON.stringify({
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
       dynamoMock.on(PutCommand).resolves({});
@@ -364,11 +368,13 @@ describe('Stripe Webhook Handler Lambda', () => {
       const readingId = 'reading-789';
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Payload: new TextEncoder().encode(
           JSON.stringify({
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
       dynamoMock.on(PutCommand).resolves({});
@@ -394,11 +400,13 @@ describe('Stripe Webhook Handler Lambda', () => {
       const readingId = 'reading-async';
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Payload: new TextEncoder().encode(
           JSON.stringify({
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
       dynamoMock.on(PutCommand).resolves({});
@@ -471,11 +479,13 @@ describe('Stripe Webhook Handler Lambda', () => {
       const readingId = 'reading-after-error';
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Payload: new TextEncoder().encode(
           JSON.stringify({
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
       dynamoMock.on(PutCommand).resolves({});
@@ -498,11 +508,13 @@ describe('Stripe Webhook Handler Lambda', () => {
       const readingId = 'reading-no-table';
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Payload: new TextEncoder().encode(
           JSON.stringify({
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
 
@@ -569,6 +581,7 @@ describe('Stripe Webhook Handler Lambda', () => {
           JSON.stringify({
             errorMessage: 'Function error',
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
       dynamoMock.on(PutCommand).resolves({});
@@ -602,6 +615,7 @@ describe('Stripe Webhook Handler Lambda', () => {
             statusCode: 400,
             body: 'User profile not found',
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
       dynamoMock.on(PutCommand).resolves({});
@@ -767,11 +781,13 @@ describe('Stripe Webhook Handler Lambda', () => {
       const readingId = 'reading-base64';
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Payload: new TextEncoder().encode(
           JSON.stringify({
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
       dynamoMock.on(PutCommand).resolves({});
@@ -808,11 +824,13 @@ describe('Stripe Webhook Handler Lambda', () => {
       const readingId = 'reading-template';
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Payload: new TextEncoder().encode(
           JSON.stringify({
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
       dynamoMock.on(PutCommand).resolves({});
@@ -867,11 +885,13 @@ describe('Stripe Webhook Handler Lambda', () => {
       const readingId = 'reading-metadata';
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Payload: new TextEncoder().encode(
           JSON.stringify({
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
       dynamoMock.on(PutCommand).resolves({});
@@ -904,11 +924,13 @@ describe('Stripe Webhook Handler Lambda', () => {
       const readingId = 'reading-null-values';
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Payload: new TextEncoder().encode(
           JSON.stringify({
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
       dynamoMock.on(PutCommand).resolves({});
@@ -937,11 +959,13 @@ describe('Stripe Webhook Handler Lambda', () => {
       const readingId = 'reading-pi-object';
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Payload: new TextEncoder().encode(
           JSON.stringify({
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
       dynamoMock.on(PutCommand).resolves({});
@@ -967,11 +991,13 @@ describe('Stripe Webhook Handler Lambda', () => {
       const readingId = 'reading-record';
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Payload: new TextEncoder().encode(
           JSON.stringify({
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
       dynamoMock.on(PutCommand).resolves({});
@@ -1028,11 +1054,13 @@ describe('Stripe Webhook Handler Lambda', () => {
       const readingId = 'reading-record-fail';
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Payload: new TextEncoder().encode(
           JSON.stringify({
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
 
@@ -1077,11 +1105,13 @@ describe('Stripe Webhook Handler Lambda', () => {
       const readingId = 'reading-after-db-error';
       lambdaMock.on(InvokeCommand).resolves({
         StatusCode: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Payload: new TextEncoder().encode(
           JSON.stringify({
             statusCode: 200,
             body: JSON.stringify({ readingId }),
           }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ) as any,
       });
 

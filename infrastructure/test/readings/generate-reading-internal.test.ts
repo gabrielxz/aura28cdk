@@ -113,6 +113,7 @@ describe('Generate Reading Lambda - Internal Invocation', () => {
         Key: 'prompts/test/system.txt',
       })
       .resolves({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Body: Readable.from([systemPrompt]) as any,
         ETag: 'test-etag-1',
       });
@@ -123,6 +124,7 @@ describe('Generate Reading Lambda - Internal Invocation', () => {
         Key: 'prompts/test/user.txt',
       })
       .resolves({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         Body: Readable.from([userPromptTemplate]) as any,
         ETag: 'test-etag-2',
       });
