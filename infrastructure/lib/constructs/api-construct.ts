@@ -36,6 +36,7 @@ export class ApiConstruct extends Construct {
   public readonly adminGetReadingDetailsFunction: lambda.Function;
   public readonly adminUpdateReadingStatusFunction: lambda.Function;
   public readonly adminDeleteReadingFunction: lambda.Function;
+  public readonly createCheckoutSessionFunction: lambda.Function;
 
   constructor(scope: Construct, id: string, props: ApiConstructProps) {
     super(scope, id);
@@ -75,6 +76,26 @@ export class ApiConstruct extends Construct {
       stringValue: 'PLACEHOLDER_TO_BE_REPLACED_MANUALLY',
       tier: ssm.ParameterTier.STANDARD,
     });
+
+    // Create SSM Parameters for Stripe Configuration
+    const stripeApiKeyParameter = new ssm.StringParameter(this, 'StripeApiKeyParameter', {
+      parameterName: `/aura28/${props.environment}/stripe/api-key`,
+      description: `Stripe API key for ${props.environment} environment`,
+      stringValue: 'PLACEHOLDER_TO_BE_REPLACED_MANUALLY',
+      tier: ssm.ParameterTier.STANDARD,
+    });
+
+    // Webhook secret parameter for future webhook implementation
+    // const stripeWebhookSecretParameter = new ssm.StringParameter(
+    //   this,
+    //   'StripeWebhookSecretParameter',
+    //   {
+    //     parameterName: `/aura28/${props.environment}/stripe/webhook-secret`,
+    //     description: `Stripe webhook secret for ${props.environment} environment`,
+    //     stringValue: 'PLACEHOLDER_TO_BE_REPLACED_MANUALLY',
+    //     tier: ssm.ParameterTier.STANDARD,
+    //   },
+    // );
 
     // Simplified SSM parameters pointing to S3 keys
     const readingModelParameter = new ssm.StringParameter(this, 'ReadingModelParameter', {
@@ -419,6 +440,31 @@ export class ApiConstruct extends Construct {
     props.readingsTable.grantReadWriteData(this.adminUpdateReadingStatusFunction);
     props.readingsTable.grantReadWriteData(this.adminDeleteReadingFunction);
 
+    // Create Stripe Checkout Session Lambda function
+    this.createCheckoutSessionFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'CreateCheckoutSessionFunction',
+      {
+        functionName: `aura28-${props.environment}-create-checkout-session`,
+        entry: path.join(__dirname, '../../lambda/payments/create-checkout-session.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_20_X,
+        environment: {
+          STRIPE_API_KEY_PARAMETER_NAME: stripeApiKeyParameter.parameterName,
+          ALLOWED_PRICE_IDS: '', // To be configured with actual Stripe price IDs
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
+    // Grant SSM parameter read permission for Stripe API key
+    stripeApiKeyParameter.grantRead(this.createCheckoutSessionFunction);
+
     // Grant Cognito permissions for admin user listing
     this.adminGetAllUsersFunction.addToRolePolicy(
       new iam.PolicyStatement({
@@ -501,6 +547,17 @@ export class ApiConstruct extends Construct {
     profileResource.addMethod(
       'PUT',
       new apigateway.LambdaIntegration(this.updateUserProfileFunction),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      },
+    );
+
+    // Add /api/users/{userId}/checkout-session resource
+    const checkoutSessionResource = userIdResource.addResource('checkout-session');
+    checkoutSessionResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(this.createCheckoutSessionFunction),
       {
         authorizer,
         authorizationType: apigateway.AuthorizationType.COGNITO,

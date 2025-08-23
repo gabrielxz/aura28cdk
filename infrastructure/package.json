@@ -43,6 +43,7 @@
     "aws-cdk-lib": "2.206.0",
     "constructs": "^10.0.0",
     "ephemeris": "^2.0.0",
+    "stripe": "^18.4.0",
     "tz-lookup": "^6.1.25",
     "uuid": "^11.1.0"
   }

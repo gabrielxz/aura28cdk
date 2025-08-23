@@ -121,6 +121,20 @@ export interface GenerateReadingResponse {
   status: string;
 }
 
+export interface CreateCheckoutSessionRequest {
+  sessionType: 'subscription' | 'one-time';
+  priceId?: string;
+  successUrl: string;
+  cancelUrl: string;
+  customerEmail?: string;
+  metadata?: Record<string, string>;
+}
+
+export interface CreateCheckoutSessionResponse {
+  sessionId: string;
+  url: string;
+}
+
 export class UserApi {
   private baseUrl: string;
   private authService: AuthService;
@@ -295,6 +309,31 @@ export class UserApi {
       return data;
     } catch (error) {
       console.error('Error generating reading:', error);
+      throw error;
+    }
+  }
+
+  async createCheckoutSession(
+    userId: string,
+    request: CreateCheckoutSessionRequest,
+  ): Promise<CreateCheckoutSessionResponse> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${this.baseUrl}api/users/${userId}/checkout-session`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.error || 'Failed to create checkout session');
+      }
+
+      const session: CreateCheckoutSessionResponse = await response.json();
+      return session;
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
       throw error;
     }
   }
