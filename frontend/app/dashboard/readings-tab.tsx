@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UserApi } from '@/lib/api/user-api';
 import { formatDistanceToNow } from 'date-fns';
-import { Loader2, BookOpen, Plus, Download } from 'lucide-react';
+import { Loader2, BookOpen, Download } from 'lucide-react';
 import { generateReadingPDF, isPDFGenerationSupported } from '@/lib/pdf/reading-pdf-generator';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -32,7 +32,6 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
   const [readings, setReadings] = useState<Reading[]>([]);
   const [selectedReading, setSelectedReading] = useState<ReadingDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasNatalChart, setHasNatalChart] = useState<boolean | null>(null);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
@@ -72,21 +71,10 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
     loadReadings();
   }, [userApi, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Generate new reading
-  const generateReading = async () => {
-    try {
-      setGenerating(true);
-      setError(null);
-      await userApi.generateReading(userId);
-      // Reload readings list
-      await loadReadings();
-    } catch (error) {
-      console.error('Failed to generate reading:', error);
-      setError('Failed to generate reading. Please try again.');
-    } finally {
-      setGenerating(false);
-    }
-  };
+  // Reading generation has been removed - readings are now generated after payment
+  // const generateReading = async () => {
+  //   Reading generation is now handled automatically after successful payment
+  // };
 
   // Load reading detail
   const loadReadingDetail = async (readingId: string) => {
@@ -268,23 +256,7 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
     <div className="mt-6">
       <div className="mb-6 flex items-center justify-between">
         <h3 className="text-xl font-semibold">Your Readings</h3>
-        <Button
-          onClick={generateReading}
-          disabled={generating || hasNatalChart === false}
-          className="flex items-center gap-2"
-        >
-          {generating ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Plus className="h-4 w-4" />
-              Generate Reading
-            </>
-          )}
-        </Button>
+        {/* Reading generation button removed - readings are now generated after payment */}
       </div>
 
       {error && (

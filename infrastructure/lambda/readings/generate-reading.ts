@@ -257,7 +257,56 @@ async function callOpenAI(prompt: string, config: OpenAIConfig): Promise<string>
   return data.choices[0].message.content;
 }
 
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+// Define interface for internal invocation
+interface InternalInvocationEvent {
+  source: 'webhook';
+  userId: string;
+  internalSecret: string;
+  metadata?: Record<string, string | number | boolean>;
+  requestContext?: {
+    authorizer?: {
+      claims?: {
+        sub?: string;
+      };
+    };
+  };
+}
+
+// Type guard to check if this is an internal invocation with proper verification
+function isInternalInvocation(event: unknown): event is InternalInvocationEvent {
+  if (
+    typeof event !== 'object' ||
+    event === null ||
+    !('source' in event) ||
+    !('userId' in event) ||
+    'pathParameters' in event
+  ) {
+    return false;
+  }
+
+  const potentialInternalEvent = event as InternalInvocationEvent & { internalSecret?: string };
+
+  // Verify the internal invocation secret
+  const expectedSecret = process.env.INTERNAL_INVOCATION_SECRET;
+  if (!expectedSecret) {
+    console.error('INTERNAL_INVOCATION_SECRET not configured');
+    return false;
+  }
+
+  // Check if the event contains the correct secret
+  if (potentialInternalEvent.internalSecret !== expectedSecret) {
+    console.warn('Invalid internal invocation secret provided');
+    return false;
+  }
+
+  return (
+    potentialInternalEvent.source === 'webhook' && typeof potentialInternalEvent.userId === 'string'
+  );
+}
+
+export const handler = async (
+  event: APIGatewayProxyEvent | InternalInvocationEvent,
+): Promise<APIGatewayProxyResult> => {
   console.log('Event:', JSON.stringify(event));
 
   const corsHeaders = {
@@ -267,25 +316,53 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
   };
 
   try {
-    // Extract userId from path
-    const userId = event.pathParameters?.userId;
-    if (!userId) {
-      return {
-        statusCode: 400,
-        headers: corsHeaders,
-        body: JSON.stringify({ message: 'userId is required' }),
-      };
-    }
+    let userId: string;
+    let metadata: Record<string, string | number | boolean> = {};
 
-    // Verify authenticated user matches requested userId
-    const requestContext = event.requestContext as { authorizer?: { claims?: { sub?: string } } };
-    const authenticatedUserId = requestContext?.authorizer?.claims?.sub;
-    if (authenticatedUserId !== userId) {
-      return {
-        statusCode: 403,
-        headers: corsHeaders,
-        body: JSON.stringify({ message: 'Unauthorized to generate reading for this user' }),
+    // Check if this is an internal invocation from webhook handler
+    if (isInternalInvocation(event)) {
+      console.info('Internal invocation from webhook handler:', {
+        userId: event.userId,
+        metadata: event.metadata,
+      });
+      userId = event.userId;
+      metadata = event.metadata || {};
+    } else {
+      // Standard API Gateway invocation
+      const apiEvent = event as APIGatewayProxyEvent;
+
+      // Extract userId from path
+      userId = apiEvent.pathParameters?.userId || '';
+      if (!userId) {
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ message: 'userId is required' }),
+        };
+      }
+
+      // Verify authenticated user matches requested userId
+      const requestContext = apiEvent.requestContext as {
+        authorizer?: { claims?: { sub?: string } };
       };
+      const authenticatedUserId = requestContext?.authorizer?.claims?.sub;
+      if (authenticatedUserId !== userId) {
+        return {
+          statusCode: 403,
+          headers: corsHeaders,
+          body: JSON.stringify({ message: 'Unauthorized to generate reading for this user' }),
+        };
+      }
+
+      // Parse metadata from request body if present
+      if (apiEvent.body) {
+        try {
+          const parsed = JSON.parse(apiEvent.body);
+          metadata = parsed.metadata || {};
+        } catch {
+          // Ignore parsing errors
+        }
+      }
     }
 
     // Get user profile and natal chart
@@ -332,6 +409,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       status: 'Processing',
       createdAt: timestamp,
       updatedAt: timestamp,
+      ...(Object.keys(metadata).length > 0 && { metadata }), // Include metadata if present
     };
 
     // Save initial reading record
@@ -418,10 +496,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
   } catch (error) {
     // Use helper function to create sanitized error response
-    return createErrorResponse(error, corsHeaders, {
-      userId: event.pathParameters?.userId,
-      path: event.path,
-      method: event.httpMethod,
-    });
+    const contextData: Record<string, unknown> = isInternalInvocation(event)
+      ? { userId: event.userId, source: 'webhook' }
+      : {
+          userId: (event as APIGatewayProxyEvent).pathParameters?.userId,
+          path: (event as APIGatewayProxyEvent).path,
+          method: (event as APIGatewayProxyEvent).httpMethod,
+        };
+
+    return createErrorResponse(error, corsHeaders, contextData);
   }
 };
