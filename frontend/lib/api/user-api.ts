@@ -289,29 +289,11 @@ export class UserApi {
     }
   }
 
-  async generateReading(userId: string): Promise<GenerateReadingResponse> {
-    try {
-      const headers = await this.getAuthHeaders();
-      const response = await fetch(`${this.baseUrl}api/users/${userId}/readings`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          type: 'Soul Blueprint',
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || data.error || 'Failed to generate reading');
-      }
-
-      const data: GenerateReadingResponse = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Error generating reading:', error);
-      throw error;
-    }
-  }
+  // Reading generation has been removed - readings are now only generated after successful payment
+  // async generateReading(userId: string): Promise<GenerateReadingResponse> {
+  //   This endpoint has been removed for security. Readings are now generated
+  //   automatically after successful payment through Stripe webhook
+  // }
 
   async createCheckoutSession(
     userId: string,

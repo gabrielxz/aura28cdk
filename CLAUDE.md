@@ -41,7 +41,11 @@ aura28cdk/
 ├── infrastructure/        # AWS CDK
 │   ├── assets/           # Static assets for deployment
 │   │   └── prompts/      # Prompt templates (source of truth)
+│   ├── docs/             # Setup and configuration guides
 │   ├── lambda/           # Lambda functions
+│   │   ├── payments/     # Stripe payment handlers
+│   │   ├── readings/     # Reading generation functions
+│   │   └── users/        # User management functions
 │   └── lib/              # Stack definitions
 └── .github/workflows/    # CI/CD pipelines
 ```
@@ -77,10 +81,61 @@ interface UserProfile {
 }
 ```
 
+## Stripe Payment Integration
+
+### Payment Flow Architecture
+
+The application uses a secure two-stage payment flow:
+
+1. **Checkout Session Creation**: Frontend calls API to create Stripe checkout session
+2. **Payment Processing**: User redirected to Stripe for secure payment
+3. **Webhook Verification**: Stripe sends webhook to verify successful payment
+4. **Reading Generation**: System automatically generates reading for paid user
+
+### Lambda Functions
+
+#### Create Checkout Session (`/lambda/payments/create-checkout-session.ts`)
+
+- **Purpose**: Creates Stripe checkout sessions for payment processing
+- **Endpoint**: `POST /users/{userId}/checkout-session`
+- **Features**:
+  - Supports both subscription and one-time payment modes
+  - User authorization validation (users can only create sessions for themselves)
+  - Configurable success/cancel URLs
+  - Metadata support for tracking user context
+
+#### Stripe Webhook Handler (`/lambda/payments/stripe-webhook-handler.ts`)
+
+- **Purpose**: Processes Stripe webhook events after successful payments
+- **Endpoint**: `POST /webhooks/stripe` (public, signature verified)
+- **Features**:
+  - Webhook signature verification using Stripe signing secret
+  - Processes `checkout.session.completed` and `checkout.session.async_payment_succeeded` events
+  - Automatically invokes reading generation Lambda after successful payment
+  - Idempotency protection prevents duplicate processing
+  - Rate limiting: 100 requests/second, 200 burst limit
+  - Exponential backoff retry logic for failed reading generations
+
+### Security Features
+
+- **Webhook Signature Verification**: All webhook requests verified using Stripe signing secret
+- **Internal Lambda Authentication**: Shared secret system for Lambda-to-Lambda invocations
+- **Rate Limiting**: API Gateway throttling prevents abuse of webhook endpoint
+- **User Authorization**: Checkout session creation requires JWT token validation
+
 ## API Endpoints
+
+### User Management
 
 - `GET /users/{userId}/profile` - Get user profile (JWT required)
 - `PUT /users/{userId}/profile` - Update profile (JWT required, validates userId match)
+
+### Payment & Reading Generation
+
+- `POST /users/{userId}/checkout-session` - Create Stripe checkout session (JWT required)
+- `POST /webhooks/stripe` - Stripe webhook endpoint (public, signature verified)
+
+**Note**: Reading generation is only triggered via Stripe webhook after successful payment verification.
 
 ## Environment Variables
 
@@ -94,12 +149,39 @@ NEXT_PUBLIC_COGNITO_REGION=us-east-1
 NEXT_PUBLIC_API_GATEWAY_URL=https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com
 ```
 
-**Lambda** (auto-configured): `TABLE_NAME=Aura28-{env}-Users`
+**Lambda** (auto-configured):
+
+```bash
+TABLE_NAME=Aura28-{env}-Users
+STRIPE_API_KEY_PARAMETER_NAME=/aura28/{env}/stripe/api-key
+STRIPE_WEBHOOK_SECRET_PARAMETER_NAME=/aura28/{env}/stripe/webhook-secret
+WEBHOOK_INTERNAL_SECRET=auto-generated-per-environment
+GENERATE_READING_FUNCTION_NAME=aura28-{env}-generate-reading
+WEBHOOK_PROCESSING_TABLE_NAME=Aura28-{env}-Users
+```
 
 ## GitHub Actions Secrets
 
 **Dev**: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `NEXT_PUBLIC_API_GATEWAY_URL`  
 **Prod**: Same with `PROD_` prefix
+
+## SSM Parameters (AWS Systems Manager)
+
+**Stripe Configuration**:
+
+- `/aura28/{env}/stripe/api-key` - Stripe API secret key (SecureString)
+- `/aura28/{env}/stripe/webhook-secret` - Stripe webhook signing secret (SecureString)
+
+**Reading System**:
+
+- `/aura28/{env}/reading/system_prompt_s3key` - S3 key for system prompts
+- `/aura28/{env}/reading/user_prompt_s3key` - S3 key for user prompt templates
+
+**Setup Command**:
+
+```bash
+aws ssm put-parameter --name "/aura28/{env}/stripe/webhook-secret" --value "whsec_..." --type "SecureString"
+```
 
 ## AWS Configuration
 
@@ -145,8 +227,96 @@ infrastructure/assets/prompts/
 
 **Note**: Prompts use `{{placeholders}}` format (e.g., `{{birthName}}`, `{{natalChartData}}`)
 
+## Stripe Webhook Configuration
+
+### Prerequisites
+
+- AWS CDK stack deployed
+- Stripe account with API keys configured in SSM Parameter Store
+- Access to Stripe Dashboard
+
+### Setup Steps
+
+1. **Get Webhook Endpoint URL**: After CDK deployment, webhook endpoint is at:
+
+   ```
+   https://{api-gateway-id}.execute-api.us-east-1.amazonaws.com/{stage}/api/webhooks/stripe
+   ```
+
+2. **Configure Stripe Dashboard**:
+   - Navigate to **Developers** → **Webhooks** → **Add endpoint**
+   - Enter webhook endpoint URL
+   - Select events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`
+
+3. **Update SSM Parameter**: Copy webhook signing secret from Stripe Dashboard and store in SSM:
+   ```bash
+   aws ssm put-parameter \
+     --name "/aura28/{env}/stripe/webhook-secret" \
+     --value "whsec_your_secret_here" \
+     --type "SecureString"
+   ```
+
+### Testing
+
+- Use Stripe CLI for development testing: `stripe listen --forward-to localhost:3001/api/webhooks/stripe`
+- Monitor CloudWatch logs for webhook processing
+- Check `Aura28/Webhooks` metrics for success/failure rates
+
+**Setup Guide**: See `/infrastructure/docs/stripe-webhook-setup.md` for detailed instructions.
+
+## Frontend Integration
+
+### Payment Flow
+
+- **Checkout Session Creation**: `UserApi.createCheckoutSession()` method initiates Stripe checkout
+- **Payment Processing**: Users redirected to Stripe for secure payment
+- **Post-Payment**: Users automatically redirected back to success/cancel URLs
+- **Reading Access**: Readings generated automatically after successful payment webhook
+
+### API Methods
+
+```typescript
+// Create Stripe checkout session
+await userApi.createCheckoutSession(userId, {
+  sessionType: 'one-time' | 'subscription',
+  priceId: 'price_xyz...',
+  successUrl: 'https://app.com/success',
+  cancelUrl: 'https://app.com/cancel',
+});
+```
+
+### Security Changes
+
+- **Removed**: Direct reading generation from dashboard UI
+- **Removed**: Manual "Generate Reading" button
+- **Added**: Payment-first flow ensures readings only available after purchase
+
+## Monitoring & Observability
+
+### CloudWatch Metrics
+
+**Namespace**: `Aura28/Webhooks`
+
+- `WebhookProcessingSuccess` - Successful webhook processing count
+- `WebhookProcessingFailure` - Failed webhook processing count
+- `ReadingGenerationSuccess` - Successful reading generation count
+- `ReadingGenerationFailure` - Failed reading generation count
+- `WebhookSignatureVerificationFailure` - Invalid signature attempts
+- `DuplicateEventProcessing` - Idempotency protection activations
+
+### Alarms & Monitoring
+
+- Webhook failure rate thresholds
+- Reading generation success rate monitoring
+- Invalid signature attempt detection
+- Processing time performance metrics
+
 ## Key Notes
 
+- **Payment-First Architecture**: Reading generation only occurs after verified Stripe payment
+- **Webhook Security**: All Stripe webhooks verified with signing secrets and rate limited
+- **Internal Lambda Security**: Shared secret system prevents unauthorized Lambda invocations
+- **Idempotency Protection**: Duplicate webhook events automatically detected and prevented
 - Frontend static export for CloudFront
 - DynamoDB composite keys for extensibility
 - Lambda validates user can only access own data
