@@ -30,12 +30,12 @@ export const STRIPE_CONFIG = {
 
   // Helper function to generate success URL
   getSuccessUrl: (baseUrl: string): string => {
-    return `${baseUrl}/dashboard?tab=readings&payment=success`;
+    return `${baseUrl}/payment/success`;
   },
 
   // Helper function to generate cancel URL
   getCancelUrl: (baseUrl: string): string => {
-    return `${baseUrl}/dashboard?tab=readings&payment=cancelled`;
+    return `${baseUrl}/payment/cancel`;
   },
 } as const;
 
