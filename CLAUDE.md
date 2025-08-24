@@ -171,16 +171,21 @@ WEBHOOK_PROCESSING_TABLE_NAME=Aura28-{env}-Users
 
 - `/aura28/{env}/stripe/api-key` - Stripe API secret key (SecureString)
 - `/aura28/{env}/stripe/webhook-secret` - Stripe webhook signing secret (SecureString)
+- `/aura28/{env}/stripe/allowed-price-ids` - Comma-separated list of allowed Stripe price IDs (String)
 
 **Reading System**:
 
 - `/aura28/{env}/reading/system_prompt_s3key` - S3 key for system prompts
 - `/aura28/{env}/reading/user_prompt_s3key` - S3 key for user prompt templates
 
-**Setup Command**:
+**Setup Commands**:
 
 ```bash
+# Set webhook secret
 aws ssm put-parameter --name "/aura28/{env}/stripe/webhook-secret" --value "whsec_..." --type "SecureString"
+
+# Set allowed price IDs
+aws ssm put-parameter --name "/aura28/{env}/stripe/allowed-price-ids" --value "price_abc123,price_def456" --type "String"
 ```
 
 ## AWS Configuration
@@ -262,7 +267,10 @@ infrastructure/assets/prompts/
 - Monitor CloudWatch logs for webhook processing
 - Check `Aura28/Webhooks` metrics for success/failure rates
 
-**Setup Guide**: See `/infrastructure/docs/stripe-webhook-setup.md` for detailed instructions.
+**Setup Guides**:
+
+- Webhook setup: `/infrastructure/docs/stripe-webhook-setup.md`
+- Price ID management: `/infrastructure/docs/stripe-pricing-management.md`
 
 ## Frontend Integration
 
