@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import DashboardPage from '@/app/dashboard/page';
 import { useAuth } from '@/lib/auth/use-auth';
 import { UserApi } from '@/lib/api/user-api';
@@ -8,6 +8,7 @@ import { UserApi } from '@/lib/api/user-api';
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
+  useSearchParams: jest.fn(),
 }));
 
 // Mock auth hook
@@ -29,8 +30,16 @@ jest.mock('@/app/dashboard/readings-tab', () => {
   };
 });
 
+// Mock the toast hook
+jest.mock('@/components/ui/use-toast', () => ({
+  useToast: () => ({
+    toast: jest.fn(),
+  }),
+}));
+
 describe('Dashboard Page - Admin Welcome Message', () => {
   const mockPush = jest.fn();
+  const mockReplace = jest.fn();
   const mockUserApi = {
     getUserProfile: jest.fn(),
   };
@@ -39,6 +48,10 @@ describe('Dashboard Page - Admin Welcome Message', () => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue({
       push: mockPush,
+      replace: mockReplace,
+    });
+    (useSearchParams as jest.Mock).mockReturnValue({
+      get: jest.fn().mockReturnValue(null),
     });
     (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
   });

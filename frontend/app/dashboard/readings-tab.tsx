@@ -6,9 +6,10 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UserApi } from '@/lib/api/user-api';
 import { formatDistanceToNow } from 'date-fns';
-import { Loader2, BookOpen, Download } from 'lucide-react';
+import { Loader2, BookOpen, Download, ShoppingCart } from 'lucide-react';
 import { generateReadingPDF, isPDFGenerationSupported } from '@/lib/pdf/reading-pdf-generator';
 import { useToast } from '@/components/ui/use-toast';
+import { STRIPE_CONFIG } from '@/lib/config/stripe';
 
 interface Reading {
   readingId: string;
@@ -36,6 +37,8 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
   const [hasNatalChart, setHasNatalChart] = useState<boolean | null>(null);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [pdfProgress, setPdfProgress] = useState(0);
+  const [purchasingReading, setPurchasingReading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Check if user has natal chart
@@ -84,6 +87,45 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
     } catch (error) {
       console.error('Failed to load reading detail:', error);
       setError('Failed to load reading detail');
+    }
+  };
+
+  // Handle purchase reading - creates Stripe checkout session
+  const handlePurchaseReading = async () => {
+    try {
+      setPurchasingReading(true);
+      setCheckoutError(null);
+
+      const baseUrl = window.location.origin;
+      const session = await userApi.createCheckoutSession(userId, {
+        sessionType: 'one-time',
+        priceId: STRIPE_CONFIG.readingPriceId,
+        successUrl: STRIPE_CONFIG.getSuccessUrl(baseUrl),
+        cancelUrl: STRIPE_CONFIG.getCancelUrl(baseUrl),
+        metadata: {
+          userId,
+          readingType: STRIPE_CONFIG.readingTypes.SOUL_BLUEPRINT,
+        },
+      });
+
+      // Redirect to Stripe checkout
+      if (session.url) {
+        window.location.href = session.url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (error) {
+      console.error('Failed to create checkout session:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to start checkout. Please try again.';
+      setCheckoutError(errorMessage);
+      toast({
+        title: 'Checkout Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setPurchasingReading(false);
     }
   };
 
@@ -256,12 +298,37 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
     <div className="mt-6">
       <div className="mb-6 flex items-center justify-between">
         <h3 className="text-xl font-semibold">Your Readings</h3>
-        {/* Reading generation button removed - readings are now generated after payment */}
+        {hasNatalChart && (
+          <Button
+            onClick={handlePurchaseReading}
+            disabled={purchasingReading || !hasNatalChart}
+            variant="default"
+            className="flex items-center gap-2"
+          >
+            {purchasingReading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Creating checkout session...
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="h-4 w-4" />
+                Purchase Reading
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-600 dark:bg-red-900/20">
           <p>{error}</p>
+        </div>
+      )}
+
+      {checkoutError && (
+        <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-600 dark:bg-red-900/20">
+          <p>{checkoutError}</p>
         </div>
       )}
 
@@ -278,8 +345,28 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
           <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
           <h4 className="mt-4 text-lg font-semibold">No Readings Yet</h4>
           <p className="mt-2 text-gray-600">
-            Generate your first Soul Blueprint reading to discover your astrological insights.
+            Purchase your first Soul Blueprint reading to discover your astrological insights.
           </p>
+          {hasNatalChart && (
+            <Button
+              onClick={handlePurchaseReading}
+              disabled={purchasingReading || !hasNatalChart}
+              variant="default"
+              className="mt-6 mx-auto flex items-center gap-2"
+            >
+              {purchasingReading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating checkout session...
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="h-4 w-4" />
+                  Purchase Your First Reading
+                </>
+              )}
+            </Button>
+          )}
         </Card>
       ) : (
         <div className="space-y-4">

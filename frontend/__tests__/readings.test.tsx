@@ -119,7 +119,7 @@ describe('ReadingsTab', () => {
       expect(screen.getByText('No Readings Yet')).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Generate your first Soul Blueprint reading/)).toBeInTheDocument();
+    expect(screen.getByText(/Purchase your first Soul Blueprint reading/)).toBeInTheDocument();
   });
 
   // NOTE: These tests are commented out as reading generation is now handled through Stripe payment flow
