@@ -98,6 +98,14 @@ export class ApiConstruct extends Construct {
       },
     );
 
+    // Create SSM Parameter for allowed Stripe price IDs
+    const allowedPriceIdsParameter = new ssm.StringParameter(this, 'AllowedPriceIdsParameter', {
+      parameterName: `/aura28/${props.environment}/stripe/allowed-price-ids`,
+      description: `Comma-separated list of allowed Stripe price IDs for ${props.environment} environment`,
+      stringValue: 'price_placeholder_1,price_placeholder_2', // Initial placeholder values
+      tier: ssm.ParameterTier.STANDARD,
+    });
+
     // Simplified SSM parameters pointing to S3 keys
     const readingModelParameter = new ssm.StringParameter(this, 'ReadingModelParameter', {
       parameterName: `/aura28/${props.environment}/reading/model`,
@@ -456,7 +464,10 @@ export class ApiConstruct extends Construct {
         runtime: lambda.Runtime.NODEJS_20_X,
         environment: {
           STRIPE_API_KEY_PARAMETER_NAME: stripeApiKeyParameter.parameterName,
-          ALLOWED_PRICE_IDS: '', // To be configured with actual Stripe price IDs
+          ALLOWED_PRICE_IDS_PARAMETER_NAME: allowedPriceIdsParameter.parameterName,
+          // Keep for backward compatibility during transition
+          ALLOWED_PRICE_IDS: '', // Will be deprecated
+          PRICE_ID_CACHE_TTL_SECONDS: '300', // 5 minutes cache
         },
         timeout: cdk.Duration.seconds(30),
         memorySize: 256,
@@ -467,8 +478,9 @@ export class ApiConstruct extends Construct {
       },
     );
 
-    // Grant SSM parameter read permission for Stripe API key
+    // Grant SSM parameter read permissions
     stripeApiKeyParameter.grantRead(this.createCheckoutSessionFunction);
+    allowedPriceIdsParameter.grantRead(this.createCheckoutSessionFunction);
 
     // Create Stripe Webhook Handler Lambda function
     this.stripeWebhookHandlerFunction = new lambdaNodeJs.NodejsFunction(

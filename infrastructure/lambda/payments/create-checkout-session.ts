@@ -5,6 +5,16 @@ import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 const ssmClient = new SSMClient({});
 let stripeClient: Stripe | null = null;
 
+// Cache for allowed price IDs
+let cachedAllowedPriceIds: string[] | null = null;
+let cacheExpiry: number = 0;
+
+// Export for testing purposes
+export function clearCache() {
+  cachedAllowedPriceIds = null;
+  cacheExpiry = 0;
+}
+
 // Cache the Stripe client across Lambda invocations
 async function getStripeClient(): Promise<Stripe> {
   if (stripeClient) return stripeClient;
@@ -31,6 +41,61 @@ async function getStripeClient(): Promise<Stripe> {
     console.error('Error fetching Stripe API key:', error);
     throw new Error('Failed to initialize Stripe client');
   }
+}
+
+// Get allowed price IDs from SSM with caching
+async function getAllowedPriceIds(): Promise<string[]> {
+  const now = Date.now();
+  const ttl = parseInt(process.env.PRICE_ID_CACHE_TTL_SECONDS || '300') * 1000;
+
+  // Return cached value if still valid
+  if (cachedAllowedPriceIds && cacheExpiry > now) {
+    return cachedAllowedPriceIds;
+  }
+
+  try {
+    // Try to fetch from SSM first
+    if (process.env.ALLOWED_PRICE_IDS_PARAMETER_NAME) {
+      const priceIdsParam = await ssmClient.send(
+        new GetParameterCommand({
+          Name: process.env.ALLOWED_PRICE_IDS_PARAMETER_NAME,
+          WithDecryption: false, // Not a secure string
+        }),
+      );
+
+      if (priceIdsParam.Parameter?.Value) {
+        cachedAllowedPriceIds = priceIdsParam.Parameter.Value.split(',')
+          .map((id) => id.trim())
+          .filter((id) => id.length > 0);
+        cacheExpiry = now + ttl;
+        console.info('Loaded allowed price IDs from SSM:', {
+          count: cachedAllowedPriceIds.length,
+          cacheExpiryTime: new Date(cacheExpiry).toISOString(),
+        });
+        return cachedAllowedPriceIds;
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching allowed price IDs from SSM:', error);
+    // Fall through to environment variable fallback
+  }
+
+  // Fallback to environment variable for backward compatibility
+  const envPriceIds =
+    process.env.ALLOWED_PRICE_IDS?.split(',')
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0) || [];
+
+  if (envPriceIds.length > 0) {
+    console.warn('Using price IDs from environment variable (deprecated)');
+    cachedAllowedPriceIds = envPriceIds;
+    cacheExpiry = now + ttl;
+    return envPriceIds;
+  }
+
+  // Return empty array if no configuration found
+  console.warn('No allowed price IDs configured');
+  return [];
 }
 
 interface CreateCheckoutSessionRequest {
@@ -185,7 +250,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       }
 
       // Validate that the price ID is in the allowed list (if configured)
-      const allowedPriceIds = process.env.ALLOWED_PRICE_IDS?.split(',') || [];
+      const allowedPriceIds = await getAllowedPriceIds();
       if (allowedPriceIds.length > 0 && !allowedPriceIds.includes(priceId)) {
         console.warn('Attempted to use disallowed price ID:', { priceId, userId });
         return {
@@ -205,6 +270,20 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     } else {
       // For one-time payments, we can either use a price ID or create a dynamic price
       if (priceId) {
+        // Validate that the price ID is in the allowed list (if configured)
+        const allowedPriceIds = await getAllowedPriceIds();
+        if (allowedPriceIds.length > 0 && !allowedPriceIds.includes(priceId)) {
+          console.warn('Attempted to use disallowed price ID:', { priceId, userId });
+          return {
+            statusCode: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+            },
+            body: JSON.stringify({ error: 'Invalid price ID' }),
+          };
+        }
+
         lineItems.push({
           price: priceId,
           quantity: 1,
