@@ -75,27 +75,25 @@ describe('STRIPE_CONFIG', () => {
       it('should generate correct success URL with base URL', () => {
         const baseUrl = 'https://example.com';
         const result = STRIPE_CONFIG.getSuccessUrl(baseUrl);
-        expect(result).toBe('https://example.com/dashboard?tab=readings&payment=success');
+        expect(result).toBe('https://example.com/payment/success');
       });
 
       it('should handle base URL with trailing slash', () => {
         const baseUrl = 'https://example.com/';
         const result = STRIPE_CONFIG.getSuccessUrl(baseUrl);
-        expect(result).toBe('https://example.com//dashboard?tab=readings&payment=success');
+        expect(result).toBe('https://example.com//payment/success');
       });
 
       it('should work with localhost URLs', () => {
         const baseUrl = 'http://localhost:3000';
         const result = STRIPE_CONFIG.getSuccessUrl(baseUrl);
-        expect(result).toBe('http://localhost:3000/dashboard?tab=readings&payment=success');
+        expect(result).toBe('http://localhost:3000/payment/success');
       });
 
       it('should preserve existing query parameters in base URL', () => {
         const baseUrl = 'https://example.com?existing=param';
         const result = STRIPE_CONFIG.getSuccessUrl(baseUrl);
-        expect(result).toBe(
-          'https://example.com?existing=param/dashboard?tab=readings&payment=success',
-        );
+        expect(result).toBe('https://example.com?existing=param/payment/success');
       });
     });
 
@@ -103,57 +101,56 @@ describe('STRIPE_CONFIG', () => {
       it('should generate correct cancel URL with base URL', () => {
         const baseUrl = 'https://example.com';
         const result = STRIPE_CONFIG.getCancelUrl(baseUrl);
-        expect(result).toBe('https://example.com/dashboard?tab=readings&payment=cancelled');
+        expect(result).toBe('https://example.com/payment/cancel');
       });
 
       it('should handle base URL with trailing slash', () => {
         const baseUrl = 'https://example.com/';
         const result = STRIPE_CONFIG.getCancelUrl(baseUrl);
-        expect(result).toBe('https://example.com//dashboard?tab=readings&payment=cancelled');
+        expect(result).toBe('https://example.com//payment/cancel');
       });
 
       it('should work with localhost URLs', () => {
         const baseUrl = 'http://localhost:3000';
         const result = STRIPE_CONFIG.getCancelUrl(baseUrl);
-        expect(result).toBe('http://localhost:3000/dashboard?tab=readings&payment=cancelled');
+        expect(result).toBe('http://localhost:3000/payment/cancel');
       });
 
-      it('should use "cancelled" spelling consistently', () => {
+      it('should generate cancel URL with correct path', () => {
         const baseUrl = 'https://example.com';
         const result = STRIPE_CONFIG.getCancelUrl(baseUrl);
-        // British spelling "cancelled" with double 'l'
-        expect(result).toContain('payment=cancelled');
+        expect(result).toContain('/payment/cancel');
       });
     });
 
     describe('URL consistency', () => {
-      it('should use consistent dashboard path in both success and cancel URLs', () => {
+      it('should use consistent payment path prefix in both success and cancel URLs', () => {
         const baseUrl = 'https://example.com';
         const successUrl = STRIPE_CONFIG.getSuccessUrl(baseUrl);
         const cancelUrl = STRIPE_CONFIG.getCancelUrl(baseUrl);
 
-        expect(successUrl).toContain('/dashboard');
-        expect(cancelUrl).toContain('/dashboard');
+        expect(successUrl).toContain('/payment/');
+        expect(cancelUrl).toContain('/payment/');
       });
 
-      it('should use consistent tab parameter in both URLs', () => {
+      it('should use dedicated pages for success and cancel', () => {
         const baseUrl = 'https://example.com';
         const successUrl = STRIPE_CONFIG.getSuccessUrl(baseUrl);
         const cancelUrl = STRIPE_CONFIG.getCancelUrl(baseUrl);
 
-        expect(successUrl).toContain('tab=readings');
-        expect(cancelUrl).toContain('tab=readings');
+        expect(successUrl).toContain('/payment/success');
+        expect(cancelUrl).toContain('/payment/cancel');
       });
 
-      it('should use different payment status parameters', () => {
+      it('should not use query parameters for payment status', () => {
         const baseUrl = 'https://example.com';
         const successUrl = STRIPE_CONFIG.getSuccessUrl(baseUrl);
         const cancelUrl = STRIPE_CONFIG.getCancelUrl(baseUrl);
 
-        expect(successUrl).toContain('payment=success');
-        expect(cancelUrl).toContain('payment=cancelled');
-        expect(successUrl).not.toContain('payment=cancelled');
-        expect(cancelUrl).not.toContain('payment=success');
+        expect(successUrl).not.toContain('?');
+        expect(cancelUrl).not.toContain('?');
+        expect(successUrl).not.toContain('payment=');
+        expect(cancelUrl).not.toContain('payment=');
       });
     });
   });
