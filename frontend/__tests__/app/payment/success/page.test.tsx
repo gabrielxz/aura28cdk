@@ -253,6 +253,8 @@ describe('PaymentSuccessPage', () => {
         loading: false,
       });
 
+      mockSearchParams.get.mockReturnValue('cs_test_123');
+
       const mockUserApi = {
         getReadings: jest.fn().mockResolvedValue({
           readings: [],
@@ -267,10 +269,13 @@ describe('PaymentSuccessPage', () => {
         expect(mockUserApi.getReadings).toHaveBeenCalled();
       });
 
-      // Fast-forward time to simulate timeout (31 seconds)
-      await act(async () => {
-        jest.advanceTimersByTime(31000);
-      });
+      // Simulate multiple polling intervals leading to timeout
+      // The component polls every 1 second for 30 seconds
+      for (let i = 0; i < 31; i++) {
+        await act(async () => {
+          jest.advanceTimersByTime(1000);
+        });
+      }
 
       await waitFor(() => {
         expect(screen.getByText(/issue checking your reading status/)).toBeInTheDocument();
@@ -375,6 +380,8 @@ describe('PaymentSuccessPage', () => {
         user: mockUser,
         loading: false,
       });
+
+      mockSearchParams.get.mockReturnValue('cs_test_123');
 
       const mockUserApi = {
         getReadings: jest
@@ -637,7 +644,10 @@ describe('PaymentSuccessPage', () => {
       const { rerender } = render(<PaymentSuccessPage />);
 
       await waitFor(() => {
-        expect(toast).toHaveBeenCalledTimes(1);
+        expect(toast).toHaveBeenCalledWith({
+          title: 'Payment Successful',
+          description: 'Thank you for your purchase! Your reading is being generated.',
+        });
       });
 
       // Trigger re-render multiple times

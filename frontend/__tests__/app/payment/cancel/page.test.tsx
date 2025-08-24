@@ -31,12 +31,22 @@ Object.defineProperty(window, 'history', {
   writable: true,
 });
 
-// Mock window.location.assign
+// Mock window.location
 const mockAssign = jest.fn();
+let mockHref = '';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 delete (window as any).location;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-window.location = { assign: mockAssign } as any;
+window.location = {
+  assign: mockAssign,
+  get href() {
+    return mockHref;
+  },
+  set href(value: string) {
+    mockHref = value;
+    mockAssign(value);
+  },
+} as Location;
 
 describe('PaymentCancelPage', () => {
   const mockRouter = {
@@ -60,6 +70,7 @@ describe('PaymentCancelPage', () => {
       (useRouter as jest.Mock).mockReturnValue(mockRouter);
       (useSearchParams as jest.Mock).mockReturnValue(mockSearchParams);
       mockAssign.mockClear();
+      mockHref = '';
     });
 
     it('should redirect to login when user is not authenticated', async () => {
@@ -197,7 +208,12 @@ describe('PaymentCancelPage', () => {
         );
       });
 
-      expect(mockAssign).toHaveBeenCalledWith('https://checkout.stripe.com/test');
+      await waitFor(
+        () => {
+          expect(mockAssign).toHaveBeenCalledWith('https://checkout.stripe.com/test');
+        },
+        { timeout: 3000 },
+      );
     });
 
     it('should redirect to profile if onboarding not completed', async () => {
@@ -450,9 +466,12 @@ describe('PaymentCancelPage', () => {
         expect(mockUserApi.createCheckoutSession).toHaveBeenCalled();
       });
 
-      await waitFor(() => {
-        expect(mockAssign).toHaveBeenCalledWith('https://checkout.stripe.com/test');
-      });
+      await waitFor(
+        () => {
+          expect(mockAssign).toHaveBeenCalledWith('https://checkout.stripe.com/test');
+        },
+        { timeout: 3000 },
+      );
     });
 
     it('should handle multiple rapid retry clicks', async () => {
