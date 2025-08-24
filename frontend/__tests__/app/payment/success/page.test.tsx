@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import PaymentSuccessPage from '@/app/payment/success/page';
 import { useAuth } from '@/lib/auth/use-auth';
@@ -211,10 +211,13 @@ describe('PaymentSuccessPage', () => {
       });
 
       // Advance timer past 5 seconds to trigger generating status
-      jest.advanceTimersByTime(6000);
+      await act(async () => {
+        jest.advanceTimersByTime(6000);
+      });
 
       await waitFor(() => {
-        expect(screen.getByText(/being generated/)).toBeInTheDocument();
+        const elements = screen.getAllByText(/being generated/);
+        expect(elements[0]).toBeInTheDocument();
       });
     });
 
@@ -265,7 +268,9 @@ describe('PaymentSuccessPage', () => {
       });
 
       // Fast-forward time to simulate timeout (31 seconds)
-      jest.advanceTimersByTime(31000);
+      await act(async () => {
+        jest.advanceTimersByTime(31000);
+      });
 
       await waitFor(() => {
         expect(screen.getByText(/issue checking your reading status/)).toBeInTheDocument();
@@ -294,7 +299,9 @@ describe('PaymentSuccessPage', () => {
       });
 
       // Advance timer to trigger polling
-      jest.advanceTimersByTime(1000);
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
 
       // Wait for second call with new reading
       await waitFor(() => {
@@ -387,19 +394,25 @@ describe('PaymentSuccessPage', () => {
       });
 
       // First polling attempt (will succeed)
-      jest.advanceTimersByTime(1000);
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
       await waitFor(() => {
         expect(mockUserApi.getReadings).toHaveBeenCalledTimes(2);
       });
 
       // Second polling attempt (will fail but continue silently)
-      jest.advanceTimersByTime(1000);
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
       await waitFor(() => {
         expect(mockUserApi.getReadings).toHaveBeenCalledTimes(3);
       });
 
       // Third polling attempt (will succeed with reading)
-      jest.advanceTimersByTime(1000);
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
       await waitFor(() => {
         expect(mockUserApi.getReadings).toHaveBeenCalledTimes(4);
       });
@@ -453,7 +466,9 @@ describe('PaymentSuccessPage', () => {
       });
 
       // After 5 seconds: generating
-      jest.advanceTimersByTime(5000);
+      await act(async () => {
+        jest.advanceTimersByTime(5000);
+      });
       await waitFor(() => {
         expect(screen.getByText('Generating')).toBeInTheDocument();
       });
@@ -462,7 +477,9 @@ describe('PaymentSuccessPage', () => {
       mockUserApi.getReadings.mockResolvedValue({ readings: [{ id: 'reading1' }] });
 
       // Advance timer to trigger next check
-      jest.advanceTimersByTime(1000);
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
 
       // Final state: ready
       await waitFor(() => {
@@ -557,7 +574,9 @@ describe('PaymentSuccessPage', () => {
       });
 
       // Start polling
-      jest.advanceTimersByTime(1000);
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
 
       // Unmount component
       unmount();
@@ -607,6 +626,8 @@ describe('PaymentSuccessPage', () => {
         user: mockUser,
         loading: false,
       });
+
+      mockSearchParams.get.mockReturnValue('cs_test_123');
 
       const mockUserApi = {
         getReadings: jest.fn().mockResolvedValue({ readings: [] }),
@@ -660,7 +681,9 @@ describe('PaymentSuccessPage', () => {
       });
 
       // Advance timer to trigger polling
-      jest.advanceTimersByTime(1000);
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
 
       // Wait for reading ready toast
       await waitFor(() => {
