@@ -91,6 +91,11 @@ function PaymentSuccessContent() {
                 title: 'Reading Ready',
                 description: 'Your Soul Blueprint reading is now available!',
               });
+
+              // Automatically redirect to dashboard with refresh trigger after a short delay
+              setTimeout(() => {
+                router.push('/dashboard?tab=readings&refresh=true');
+              }, 2000);
             } else if (attempts < 5) {
               // First 5 attempts, show as checking
               setReadingStatus('checking');
@@ -214,7 +219,12 @@ function PaymentSuccessContent() {
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 sm:flex-row">
             {readingStatus === 'ready' ? (
-              <Button className="flex-1" onClick={() => router.push('/dashboard?tab=readings')}>
+              <Button
+                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                onClick={() => router.push('/dashboard?tab=readings&refresh=true')}
+                size="lg"
+              >
+                <Sparkles className="mr-2 h-5 w-5" />
                 View Your Reading
               </Button>
             ) : (

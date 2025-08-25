@@ -321,7 +321,7 @@ describe('PaymentSuccessPage', () => {
       // Click the button and verify navigation
       const viewButton = screen.getByText('View Your Reading');
       fireEvent.click(viewButton);
-      expect(mockRouter.push).toHaveBeenCalledWith('/dashboard?tab=readings');
+      expect(mockRouter.push).toHaveBeenCalledWith('/dashboard?tab=readings&refresh=true');
     });
 
     it('should handle edge case when no session ID is provided', async () => {
@@ -665,6 +665,134 @@ describe('PaymentSuccessPage', () => {
 
       // Toast should still only be called once due to processingRef guard
       expect(toast).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Automatic Refresh Integration (KAN-71)', () => {
+    it('should redirect with refresh=true parameter when reading becomes ready', async () => {
+      (useAuth as jest.Mock).mockReturnValue({
+        user: mockUser,
+        loading: false,
+      });
+
+      const mockUserApi = {
+        getReadings: jest
+          .fn()
+          .mockResolvedValueOnce({ readings: [] })
+          .mockResolvedValueOnce({ readings: [{ id: 'reading1' }] }),
+      };
+      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
+
+      render(<PaymentSuccessPage />);
+
+      // Wait for initial check
+      await waitFor(() => {
+        expect(mockUserApi.getReadings).toHaveBeenCalled();
+      });
+
+      // Advance timer to trigger polling
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      // Wait for reading to be detected
+      await waitFor(() => {
+        expect(screen.getByText(/Your reading is ready!/)).toBeInTheDocument();
+      });
+
+      // Wait for automatic redirect (component waits 2 seconds before redirecting)
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      // Should redirect with refresh=true to trigger reading list update
+      expect(mockRouter.push).toHaveBeenCalledWith('/dashboard?tab=readings&refresh=true');
+    });
+
+    it('should navigate to dashboard with refresh trigger automatically', async () => {
+      (useAuth as jest.Mock).mockReturnValue({
+        user: mockUser,
+        loading: false,
+      });
+
+      const mockUserApi = {
+        getReadings: jest
+          .fn()
+          .mockResolvedValueOnce({ readings: [] })
+          .mockResolvedValueOnce({ readings: [{ id: 'reading1', createdAt: '2024-01-01' }] }),
+      };
+      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
+
+      render(<PaymentSuccessPage />);
+
+      // Wait for initial check
+      await waitFor(() => {
+        expect(mockUserApi.getReadings).toHaveBeenCalledTimes(1);
+      });
+
+      // Advance timer to trigger polling and get new reading
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      // Wait for reading to be detected
+      await waitFor(() => {
+        expect(mockUserApi.getReadings).toHaveBeenCalledTimes(2);
+      });
+
+      // Wait for automatic redirect with refresh trigger after detecting new reading
+      await act(async () => {
+        jest.advanceTimersByTime(2000); // Wait for the 2-second delay
+      });
+
+      await waitFor(() => {
+        expect(mockRouter.push).toHaveBeenCalledWith('/dashboard?tab=readings&refresh=true');
+      });
+    });
+
+    it('should handle rapid status changes correctly', async () => {
+      (useAuth as jest.Mock).mockReturnValue({
+        user: mockUser,
+        loading: false,
+      });
+
+      const mockUserApi = {
+        getReadings: jest
+          .fn()
+          .mockResolvedValueOnce({ readings: [] }) // Initial empty
+          .mockResolvedValueOnce({ readings: [] }) // Still empty
+          .mockResolvedValueOnce({ readings: [{ id: 'reading1' }] }), // Now ready
+      };
+      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
+
+      render(<PaymentSuccessPage />);
+
+      // Initial state
+      await waitFor(() => {
+        expect(screen.getByText('Checking')).toBeInTheDocument();
+      });
+
+      // First poll - still empty
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      // Second poll - reading appears
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Ready')).toBeInTheDocument();
+      });
+
+      // Wait for automatic redirect
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      // Should have redirected with refresh
+      expect(mockRouter.push).toHaveBeenCalledWith('/dashboard?tab=readings&refresh=true');
     });
   });
 

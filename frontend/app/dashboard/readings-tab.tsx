@@ -349,32 +349,75 @@ export default function ReadingsTab({ userApi, userId, onNeedRefresh }: Readings
       )}
 
       {readings.length === 0 ? (
-        <Card className="p-12 text-center">
-          <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
-          <h4 className="mt-4 text-lg font-semibold">No Readings Yet</h4>
-          <p className="mt-2 text-gray-600">
-            Purchase your first Soul Blueprint reading to discover your astrological insights.
-          </p>
-          {hasNatalChart && (
-            <Button
-              onClick={handlePurchaseReading}
-              disabled={purchasingReading || !hasNatalChart}
-              variant="default"
-              className="mt-6 mx-auto flex items-center gap-2"
-            >
-              {purchasingReading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Creating checkout session...
-                </>
+        <Card className="overflow-hidden">
+          <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-8 dark:from-purple-900/20 dark:to-blue-900/20">
+            <div className="mx-auto max-w-2xl text-center">
+              <BookOpen className="mx-auto h-12 w-12 text-purple-600 dark:text-purple-400" />
+              <h4 className="mt-4 text-2xl font-bold">Unlock Your Soul Blueprint</h4>
+
+              {/* Product Description */}
+              <p className="mt-4 text-gray-700 dark:text-gray-300 leading-relaxed">
+                {STRIPE_CONFIG.productDescription}
+              </p>
+
+              {/* Pricing Section */}
+              <div className="mt-8 inline-flex flex-col items-center rounded-lg bg-white/80 dark:bg-gray-900/80 backdrop-blur p-6 shadow-lg">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-purple-600 dark:text-purple-400">
+                    {STRIPE_CONFIG.displayPrice}
+                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {STRIPE_CONFIG.paymentType}
+                  </span>
+                </div>
+
+                {/* Benefits List */}
+                <ul className="mt-4 space-y-2 text-left text-sm text-gray-700 dark:text-gray-300">
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 dark:text-purple-400">✓</span>
+                    <span>Personalized to your exact birth chart</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 dark:text-purple-400">✓</span>
+                    <span>AI-powered deep astrological analysis</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 dark:text-purple-400">✓</span>
+                    <span>Instant PDF download available</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Purchase Button */}
+              {hasNatalChart ? (
+                <Button
+                  onClick={handlePurchaseReading}
+                  disabled={purchasingReading || !hasNatalChart}
+                  size="lg"
+                  className="mt-8 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  {purchasingReading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Creating checkout session...
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="mr-2 h-5 w-5" />
+                      Purchase Soul Blueprint Reading
+                    </>
+                  )}
+                </Button>
               ) : (
-                <>
-                  <ShoppingCart className="h-4 w-4" />
-                  Purchase Your First Reading
-                </>
+                <div className="mt-8 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 p-4">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    Please complete your profile and generate your natal chart before purchasing a
+                    reading.
+                  </p>
+                </div>
               )}
-            </Button>
-          )}
+            </div>
+          </div>
         </Card>
       ) : (
         <div className="space-y-4">

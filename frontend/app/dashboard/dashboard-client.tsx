@@ -31,10 +31,18 @@ export default function DashboardClient() {
 
     const tab = searchParams.get('tab');
     const payment = searchParams.get('payment');
+    const refresh = searchParams.get('refresh');
 
     // Set the active tab if specified in URL
     if (tab === 'readings') {
       setActiveTab('readings');
+    }
+
+    // Handle refresh trigger from payment success page
+    if (refresh === 'true') {
+      setShouldRefreshReadings(true);
+      // Clean up URL parameters but keep the tab
+      router.replace('/dashboard?tab=readings');
     }
 
     // Show payment status messages
