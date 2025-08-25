@@ -346,9 +346,10 @@ describe('STRIPE_CONFIG', () => {
       });
     });
 
-    it('should provide detailed error message in production when env var is missing', () => {
+    it('should provide detailed error message in CI/production when env var is missing', () => {
       delete process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
       process.env.NODE_ENV = 'production';
+      process.env.CI = 'true'; // Simulate CI environment
       jest.resetModules();
 
       let errorMessage = '';
@@ -361,6 +362,9 @@ describe('STRIPE_CONFIG', () => {
 
       expect(errorMessage).toContain('NEXT_PUBLIC_STRIPE_PRICE_ID');
       expect(errorMessage).toContain('SSM Parameter Store');
+
+      // Clean up CI env var
+      delete process.env.CI;
     });
 
     it('should use dev price ID fallback in development when env var missing', () => {
@@ -372,6 +376,18 @@ describe('STRIPE_CONFIG', () => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { STRIPE_CONFIG: devConfig } = require('@/lib/config/stripe');
       expect(devConfig.readingPriceId).toBe('price_1QbGXuRuJDBzRJSkCbG4a9Xo');
+    });
+
+    it('should use dev price ID fallback in production without CI', () => {
+      delete process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
+      process.env.NODE_ENV = 'production';
+      delete process.env.CI; // Ensure CI is not set
+      jest.resetModules();
+
+      // Should use dev fallback for local production builds
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { STRIPE_CONFIG: prodConfig } = require('@/lib/config/stripe');
+      expect(prodConfig.readingPriceId).toBe('price_1QbGXuRuJDBzRJSkCbG4a9Xo');
     });
   });
 });
