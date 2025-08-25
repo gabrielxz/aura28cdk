@@ -1,28 +1,57 @@
+// Set a default test price ID for imports that happen before tests run
+process.env.NEXT_PUBLIC_STRIPE_PRICE_ID =
+  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID || 'price_test_default_123';
+
+// Import the real module - it should use the env var we just set
 import { STRIPE_CONFIG } from '@/lib/config/stripe';
 
 describe('STRIPE_CONFIG', () => {
   describe('Price ID Configuration', () => {
-    it('should use development price ID in non-production environment', () => {
-      // Default NODE_ENV in test is 'test', not 'production'
-      expect(STRIPE_CONFIG.readingPriceId).toBe('price_1QbGXuRuJDBzRJSkCbG4a9Xo');
+    const originalEnv = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
+
+    beforeEach(() => {
+      // Reset modules before each test to ensure fresh imports
+      jest.resetModules();
+      // Clear the environment variable
+      delete process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
     });
 
-    it('should have placeholder for production price ID', () => {
-      // Save original NODE_ENV
-      const originalEnv = process.env.NODE_ENV;
+    afterEach(() => {
+      // Restore original environment variable
+      if (originalEnv !== undefined) {
+        process.env.NEXT_PUBLIC_STRIPE_PRICE_ID = originalEnv;
+      } else {
+        delete process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
+      }
+      jest.resetModules();
+    });
 
-      // Mock production environment
-      process.env.NODE_ENV = 'production';
-
-      // Re-import to get fresh module
+    it('should use environment variable price ID when defined', () => {
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_ID = 'price_test_123abc';
+      // Re-import to get new config with the environment variable
       jest.resetModules();
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { STRIPE_CONFIG: prodConfig } = require('@/lib/config/stripe');
+      const { STRIPE_CONFIG: testConfig } = require('@/lib/config/stripe');
+      expect(testConfig.readingPriceId).toBe('price_test_123abc');
+    });
 
-      expect(prodConfig.readingPriceId).toBe('price_REPLACE_WITH_PRODUCTION_ID');
+    it('should throw error when NEXT_PUBLIC_STRIPE_PRICE_ID is not defined', () => {
+      delete process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
+      jest.resetModules();
 
-      // Restore original NODE_ENV
-      process.env.NODE_ENV = originalEnv;
+      // The error is thrown during module initialization
+      expect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('@/lib/config/stripe');
+      }).toThrow('NEXT_PUBLIC_STRIPE_PRICE_ID environment variable is not defined');
+    });
+
+    it('should validate price ID format starts with price_', () => {
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_ID = 'price_valid_id_12345';
+      jest.resetModules();
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { STRIPE_CONFIG: validConfig } = require('@/lib/config/stripe');
+      expect(validConfig.readingPriceId).toMatch(/^price_/);
     });
   });
 
@@ -250,22 +279,86 @@ describe('STRIPE_CONFIG', () => {
   });
 
   describe('Environment-specific Configuration', () => {
-    it('should use different price IDs for different environments', () => {
-      const devPriceId = 'price_1QbGXuRuJDBzRJSkCbG4a9Xo';
-      const prodPriceId = 'price_REPLACE_WITH_PRODUCTION_ID';
+    it('should support different price IDs for different environments via SSM', () => {
+      // This configuration is now handled by SSM parameters:
+      // - /aura28/dev/stripe/default-price-id for development
+      // - /aura28/prod/stripe/default-price-id for production
+      // The CI/CD pipeline fetches these values and injects them as NEXT_PUBLIC_STRIPE_PRICE_ID
 
-      expect(devPriceId).not.toBe(prodPriceId);
-      expect(devPriceId).toMatch(/^price_/);
-      expect(prodPriceId).toMatch(/^price_/);
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_ID = 'price_from_ssm_12345';
+      jest.resetModules();
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { STRIPE_CONFIG: ssmConfig } = require('@/lib/config/stripe');
+
+      expect(ssmConfig.readingPriceId).toBe('price_from_ssm_12345');
+      expect(ssmConfig.readingPriceId).toMatch(/^price_/);
     });
 
-    it('should have TODO comment for production price ID', () => {
-      // This test serves as a reminder that the production price ID needs to be configured
-      expect(STRIPE_CONFIG.readingPriceId).toBeTruthy();
-      // In production, this should not be the placeholder value
-      if (process.env.NODE_ENV === 'production') {
-        expect(STRIPE_CONFIG.readingPriceId).not.toBe('price_REPLACE_WITH_PRODUCTION_ID');
+    it('should ensure price ID is configured through environment variable', () => {
+      // Verify that we're no longer using hardcoded or NODE_ENV-based price IDs
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_ID = 'price_configured_via_env';
+      jest.resetModules();
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { STRIPE_CONFIG: envConfig } = require('@/lib/config/stripe');
+
+      expect(envConfig.readingPriceId).toBe('price_configured_via_env');
+      // Should not contain any hardcoded development or production IDs
+      expect(envConfig.readingPriceId).not.toBe('price_1QbGXuRuJDBzRJSkCbG4a9Xo');
+      expect(envConfig.readingPriceId).not.toBe('price_REPLACE_WITH_PRODUCTION_ID');
+    });
+
+    it('should handle empty string environment variable as undefined', () => {
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_ID = '';
+      jest.resetModules();
+
+      expect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('@/lib/config/stripe');
+      }).toThrow('NEXT_PUBLIC_STRIPE_PRICE_ID environment variable is not defined');
+    });
+
+    it('should handle whitespace-only environment variable as invalid', () => {
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_ID = '   ';
+      jest.resetModules();
+
+      // Whitespace-only values should be treated as invalid and throw an error
+      expect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('@/lib/config/stripe');
+      }).toThrow('NEXT_PUBLIC_STRIPE_PRICE_ID environment variable is not defined');
+    });
+
+    it('should accept any valid Stripe price ID format', () => {
+      const validPriceIds = [
+        'price_1234567890abcdef',
+        'price_test_abc123',
+        'price_live_xyz789',
+        'price_0J2bxyz',
+      ];
+
+      validPriceIds.forEach((priceId) => {
+        process.env.NEXT_PUBLIC_STRIPE_PRICE_ID = priceId;
+        jest.resetModules();
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { STRIPE_CONFIG } = require('@/lib/config/stripe');
+        expect(STRIPE_CONFIG.readingPriceId).toBe(priceId);
+      });
+    });
+
+    it('should provide detailed error message when environment variable is missing', () => {
+      delete process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
+      jest.resetModules();
+
+      let errorMessage = '';
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('@/lib/config/stripe');
+      } catch (error) {
+        errorMessage = (error as Error).message;
       }
+
+      expect(errorMessage).toContain('NEXT_PUBLIC_STRIPE_PRICE_ID');
+      expect(errorMessage).toContain('SSM Parameter Store');
     });
   });
 });
