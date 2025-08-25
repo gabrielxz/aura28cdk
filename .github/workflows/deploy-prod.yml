@@ -146,11 +146,14 @@ jobs:
           echo "Fetching Stripe default price ID from SSM Parameter Store..."
           PRICE_ID=$(aws ssm get-parameter --name "/aura28/prod/stripe/default-price-id" --query "Parameter.Value" --output text 2>/dev/null || echo "")
           if [ -z "$PRICE_ID" ]; then
-            echo "Error: Failed to fetch Stripe price ID from SSM parameter /aura28/prod/stripe/default-price-id"
-            echo "Please ensure the SSM parameter exists with the correct Stripe price ID for the production environment."
-            exit 1
+            echo "Warning: SSM parameter /aura28/prod/stripe/default-price-id not found"
+            echo "Using placeholder for initial deployment: price_REPLACE_WITH_PRODUCTION_ID"
+            echo "IMPORTANT: Update the SSM parameter with the actual production price ID after deployment"
+            PRICE_ID="price_REPLACE_WITH_PRODUCTION_ID"
+          else
+            echo "Successfully fetched Stripe price ID from SSM"
           fi
-          echo "Successfully fetched Stripe price ID: price_***" 
+          echo "Using Stripe price ID: price_***" 
           echo "STRIPE_PRICE_ID=$PRICE_ID" >> $GITHUB_OUTPUT
 
       - name: Build frontend
