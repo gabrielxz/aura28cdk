@@ -1,11 +1,9 @@
 import '@testing-library/jest-dom';
 
-// Set default test environment variables for Stripe configuration (KAN-72)
-// This ensures all tests have a valid NEXT_PUBLIC_STRIPE_PRICE_ID
-// Individual tests can override this value as needed
-if (!process.env.NEXT_PUBLIC_STRIPE_PRICE_ID) {
-  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID = 'price_test_default_jest_setup';
-}
+// KAN-72: Stripe price ID configuration is now handled automatically
+// In test environment, the stripe.ts config will use 'price_test_12345' as fallback
+// In development, it uses 'price_1QbGXuRuJDBzRJSkCbG4a9Xo' as fallback
+// In production builds, the CI/CD pipeline sets NEXT_PUBLIC_STRIPE_PRICE_ID from SSM
 
 // Mock fetch globally for tests
 global.fetch = jest.fn(() =>

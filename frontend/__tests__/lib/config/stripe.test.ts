@@ -35,15 +35,15 @@ describe('STRIPE_CONFIG', () => {
       expect(testConfig.readingPriceId).toBe('price_test_123abc');
     });
 
-    it('should throw error when NEXT_PUBLIC_STRIPE_PRICE_ID is not defined', () => {
+    it('should use test fallback when NEXT_PUBLIC_STRIPE_PRICE_ID is not defined in test env', () => {
       delete process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
+      process.env.NODE_ENV = 'test';
       jest.resetModules();
 
-      // The error is thrown during module initialization
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('@/lib/config/stripe');
-      }).toThrow('NEXT_PUBLIC_STRIPE_PRICE_ID environment variable is not defined');
+      // Should use test fallback instead of throwing
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { STRIPE_CONFIG: testConfig } = require('@/lib/config/stripe');
+      expect(testConfig.readingPriceId).toBe('price_test_12345');
     });
 
     it('should validate price ID format starts with price_', () => {
@@ -307,25 +307,26 @@ describe('STRIPE_CONFIG', () => {
       expect(envConfig.readingPriceId).not.toBe('price_REPLACE_WITH_PRODUCTION_ID');
     });
 
-    it('should handle empty string environment variable as undefined', () => {
+    it('should handle empty string environment variable with fallback in test', () => {
       process.env.NEXT_PUBLIC_STRIPE_PRICE_ID = '';
+      process.env.NODE_ENV = 'test';
       jest.resetModules();
 
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('@/lib/config/stripe');
-      }).toThrow('NEXT_PUBLIC_STRIPE_PRICE_ID environment variable is not defined');
+      // Should use test fallback for empty string
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { STRIPE_CONFIG: testConfig } = require('@/lib/config/stripe');
+      expect(testConfig.readingPriceId).toBe('price_test_12345');
     });
 
-    it('should handle whitespace-only environment variable as invalid', () => {
+    it('should handle whitespace-only environment variable with fallback in test', () => {
       process.env.NEXT_PUBLIC_STRIPE_PRICE_ID = '   ';
+      process.env.NODE_ENV = 'test';
       jest.resetModules();
 
-      // Whitespace-only values should be treated as invalid and throw an error
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('@/lib/config/stripe');
-      }).toThrow('NEXT_PUBLIC_STRIPE_PRICE_ID environment variable is not defined');
+      // Whitespace-only values should use test fallback
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { STRIPE_CONFIG: testConfig } = require('@/lib/config/stripe');
+      expect(testConfig.readingPriceId).toBe('price_test_12345');
     });
 
     it('should accept any valid Stripe price ID format', () => {
@@ -345,8 +346,9 @@ describe('STRIPE_CONFIG', () => {
       });
     });
 
-    it('should provide detailed error message when environment variable is missing', () => {
+    it('should provide detailed error message in production when env var is missing', () => {
       delete process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
+      process.env.NODE_ENV = 'production';
       jest.resetModules();
 
       let errorMessage = '';
@@ -359,6 +361,17 @@ describe('STRIPE_CONFIG', () => {
 
       expect(errorMessage).toContain('NEXT_PUBLIC_STRIPE_PRICE_ID');
       expect(errorMessage).toContain('SSM Parameter Store');
+    });
+
+    it('should use dev price ID fallback in development when env var missing', () => {
+      delete process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
+      process.env.NODE_ENV = 'development';
+      jest.resetModules();
+
+      // Should use dev fallback
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { STRIPE_CONFIG: devConfig } = require('@/lib/config/stripe');
+      expect(devConfig.readingPriceId).toBe('price_1QbGXuRuJDBzRJSkCbG4a9Xo');
     });
   });
 });

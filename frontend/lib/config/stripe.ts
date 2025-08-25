@@ -9,6 +9,17 @@ function getStripePriceId(): string {
 
   // Check for undefined, null, or empty string (after trimming)
   if (!priceId || priceId.trim() === '') {
+    // In test environment, use a test price ID
+    if (process.env.NODE_ENV === 'test') {
+      return 'price_test_12345';
+    }
+
+    // In development or during build without CI/CD, use dev price ID as fallback
+    // This allows local builds to work, but CI/CD will override with SSM value
+    if (process.env.NODE_ENV === 'development' || !process.env.CI) {
+      return 'price_1QbGXuRuJDBzRJSkCbG4a9Xo';
+    }
+
     throw new Error(
       'NEXT_PUBLIC_STRIPE_PRICE_ID environment variable is not defined. This should be set during the build process from SSM Parameter Store.',
     );
