@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import NatalChartTab from './natal-chart-tab';
 import ReadingsTab from './readings-tab';
 import { useToast } from '@/components/ui/use-toast';
+import { ErrorBoundary } from '@/components/error-boundary';
 
 export default function DashboardClient() {
   const { user, isAdmin, loading, authService } = useAuth();
@@ -19,6 +20,7 @@ export default function DashboardClient() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('profile');
+  const [shouldRefreshReadings, setShouldRefreshReadings] = useState(false);
 
   // Handle payment success/cancel URL parameters
   useEffect(() => {
@@ -41,6 +43,8 @@ export default function DashboardClient() {
         title: 'Payment Successful',
         description: 'Your payment was successful! Your reading will be generated shortly.',
       });
+      // Trigger readings refresh
+      setShouldRefreshReadings(true);
       // Clean up URL parameters
       router.replace('/dashboard?tab=readings');
     } else if (payment === 'cancelled') {
@@ -168,7 +172,15 @@ export default function DashboardClient() {
           <NatalChartTab userApi={userApi} userId={user.sub} />
         </TabsContent>
         <TabsContent value="readings">
-          <ReadingsTab userApi={userApi} userId={user.sub} />
+          <ErrorBoundary>
+            <ReadingsTab
+              userApi={userApi}
+              userId={user.sub}
+              onNeedRefresh={
+                shouldRefreshReadings ? () => setShouldRefreshReadings(false) : undefined
+              }
+            />
+          </ErrorBoundary>
         </TabsContent>
       </Tabs>
     </div>
