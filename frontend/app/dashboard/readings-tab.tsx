@@ -27,9 +27,10 @@ interface ReadingDetail extends Reading {
 interface ReadingsTabProps {
   userApi: UserApi;
   userId: string;
+  onNeedRefresh?: () => void;
 }
 
-export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
+export default function ReadingsTab({ userApi, userId, onNeedRefresh }: ReadingsTabProps) {
   const [readings, setReadings] = useState<Reading[]>([]);
   const [selectedReading, setSelectedReading] = useState<ReadingDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +74,13 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
   useEffect(() => {
     loadReadings();
   }, [userApi, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Trigger refresh when requested by parent
+  useEffect(() => {
+    if (onNeedRefresh) {
+      loadReadings();
+    }
+  }, [onNeedRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reading generation has been removed - readings are now generated after payment
   // const generateReading = async () => {
