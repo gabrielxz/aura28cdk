@@ -3,13 +3,35 @@
  * Centralized configuration for Stripe integration
  */
 
+// Helper function to get the price ID with proper validation
+function getStripePriceId(): string {
+  const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
+
+  // Check for undefined, null, or empty string (after trimming)
+  if (!priceId || priceId.trim() === '') {
+    // In test environment, use a test price ID
+    if (process.env.NODE_ENV === 'test') {
+      return 'price_test_12345';
+    }
+
+    // In development or during build without CI/CD, use dev price ID as fallback
+    // This allows local builds to work, but CI/CD will override with SSM value
+    if (process.env.NODE_ENV === 'development' || !process.env.CI) {
+      return 'price_1QbGXuRuJDBzRJSkCbG4a9Xo';
+    }
+
+    throw new Error(
+      'NEXT_PUBLIC_STRIPE_PRICE_ID environment variable is not defined. This should be set during the build process from SSM Parameter Store.',
+    );
+  }
+
+  return priceId;
+}
+
 export const STRIPE_CONFIG = {
-  // Price IDs for different environments
-  // These should be configured in Stripe Dashboard and match your product pricing
-  readingPriceId:
-    process.env.NODE_ENV === 'production'
-      ? 'price_REPLACE_WITH_PRODUCTION_ID' // TODO: Replace with actual production price ID from Stripe Dashboard
-      : 'price_1QbGXuRuJDBzRJSkCbG4a9Xo', // Development/test price ID
+  // Price ID fetched from SSM Parameter Store during build time
+  // Configured via CI/CD pipeline from /aura28/{env}/stripe/default-price-id
+  readingPriceId: getStripePriceId(),
 
   // Display configuration for pricing
   displayPrice: '$29.99',

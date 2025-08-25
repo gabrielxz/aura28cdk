@@ -1,3 +1,6 @@
+// Set test environment variable before imports
+process.env.NEXT_PUBLIC_STRIPE_PRICE_ID = 'price_test_readings_123';
+
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

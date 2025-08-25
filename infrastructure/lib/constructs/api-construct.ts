@@ -106,6 +106,17 @@ export class ApiConstruct extends Construct {
       tier: ssm.ParameterTier.STANDARD,
     });
 
+    // Create SSM Parameter for default Stripe price ID (used by frontend build)
+    new ssm.StringParameter(this, 'DefaultPriceIdParameter', {
+      parameterName: `/aura28/${props.environment}/stripe/default-price-id`,
+      description: `Default Stripe price ID for frontend build in ${props.environment} environment`,
+      stringValue:
+        props.environment === 'dev'
+          ? 'price_1QbGXuRuJDBzRJSkCbG4a9Xo' // Existing dev price ID
+          : 'price_REPLACE_WITH_PRODUCTION_ID', // Placeholder for production
+      tier: ssm.ParameterTier.STANDARD,
+    });
+
     // Simplified SSM parameters pointing to S3 keys
     const readingModelParameter = new ssm.StringParameter(this, 'ReadingModelParameter', {
       parameterName: `/aura28/${props.environment}/reading/model`,

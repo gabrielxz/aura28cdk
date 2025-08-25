@@ -1,5 +1,10 @@
 import '@testing-library/jest-dom';
 
+// KAN-72: Stripe price ID configuration is now handled automatically
+// In test environment, the stripe.ts config will use 'price_test_12345' as fallback
+// In development, it uses 'price_1QbGXuRuJDBzRJSkCbG4a9Xo' as fallback
+// In production builds, the CI/CD pipeline sets NEXT_PUBLIC_STRIPE_PRICE_ID from SSM
+
 // Mock fetch globally for tests
 global.fetch = jest.fn(() =>
   Promise.resolve({
