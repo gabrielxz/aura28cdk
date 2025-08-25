@@ -11,6 +11,12 @@ export const STRIPE_CONFIG = {
       ? 'price_REPLACE_WITH_PRODUCTION_ID' // TODO: Replace with actual production price ID from Stripe Dashboard
       : 'price_1QbGXuRuJDBzRJSkCbG4a9Xo', // Development/test price ID
 
+  // Display configuration for pricing
+  displayPrice: '$29.99',
+  paymentType: 'one-time payment',
+  productDescription:
+    "Unlock deep insights into your cosmic blueprint with our AI-powered astrological reading, personalized to your unique birth chart. Discover your soul's purpose, karmic patterns, and spiritual potential through ancient wisdom combined with modern AI technology.",
+
   // Session types
   sessionTypes: {
     ONE_TIME: 'one-time' as const,

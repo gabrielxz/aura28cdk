@@ -116,10 +116,10 @@ describe('ReadingsTab', () => {
     render(<ReadingsTab userApi={mockUserApi} userId="test-user" />);
 
     await waitFor(() => {
-      expect(screen.getByText('No Readings Yet')).toBeInTheDocument();
+      expect(screen.getByText('Unlock Your Soul Blueprint')).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Purchase your first Soul Blueprint reading/)).toBeInTheDocument();
+    expect(screen.getByText(/Unlock deep insights into your cosmic blueprint/)).toBeInTheDocument();
   });
 
   // NOTE: These tests are commented out as reading generation is now handled through Stripe payment flow

@@ -26,7 +26,14 @@ jest.mock('@/app/dashboard/natal-chart-tab', () => {
 });
 
 jest.mock('@/app/dashboard/readings-tab', () => {
-  return function ReadingsTab() {
+  return function ReadingsTab({ onNeedRefresh }: { onNeedRefresh?: () => void }) {
+    // Trigger refresh callback if provided
+    React.useEffect(() => {
+      if (onNeedRefresh) {
+        // Simulate that the component has checked and will trigger refresh
+        onNeedRefresh();
+      }
+    }, [onNeedRefresh]);
     return <div>Readings Tab</div>;
   };
 });
@@ -389,6 +396,127 @@ describe('DashboardClient - Payment Status Handling', () => {
 
       // Should not process payment parameters while loading
       expect(mockToast).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Refresh Mechanism (KAN-71)', () => {
+    it('should trigger readings refresh when refresh=true parameter is present', async () => {
+      const mockSearchParams = new URLSearchParams();
+      mockSearchParams.set('tab', 'readings');
+      mockSearchParams.set('refresh', 'true');
+
+      (useSearchParams as jest.Mock).mockReturnValue({
+        get: (key: string) => mockSearchParams.get(key),
+      });
+
+      render(<DashboardClient />);
+
+      await waitFor(() => {
+        // Should switch to readings tab
+        expect(screen.getByText('Readings Tab')).toBeInTheDocument();
+      });
+
+      // Should clean up URL after processing
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith('/dashboard?tab=readings');
+      });
+    });
+
+    it('should set refresh trigger state when refresh parameter is true', async () => {
+      const mockSearchParams = new URLSearchParams();
+      mockSearchParams.set('tab', 'readings');
+      mockSearchParams.set('refresh', 'true');
+
+      (useSearchParams as jest.Mock).mockReturnValue({
+        get: (key: string) => mockSearchParams.get(key),
+      });
+
+      render(<DashboardClient />);
+
+      await waitFor(() => {
+        // Should be on readings tab
+        expect(screen.getByText('Readings Tab')).toBeInTheDocument();
+        // URL should be cleaned
+        expect(mockReplace).toHaveBeenCalledWith('/dashboard?tab=readings');
+      });
+    });
+
+    it('should not trigger refresh when refresh parameter is false or missing', async () => {
+      const mockSearchParams = new URLSearchParams();
+      mockSearchParams.set('tab', 'readings');
+      // No refresh parameter
+
+      (useSearchParams as jest.Mock).mockReturnValue({
+        get: (key: string) => mockSearchParams.get(key),
+      });
+
+      render(<DashboardClient />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Readings Tab')).toBeInTheDocument();
+      });
+
+      // Should not call replace since there's no refresh parameter
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it('should handle both payment=success and automatic refresh', async () => {
+      // First render with payment success
+      const mockSearchParams1 = new URLSearchParams();
+      mockSearchParams1.set('tab', 'readings');
+      mockSearchParams1.set('payment', 'success');
+
+      (useSearchParams as jest.Mock).mockReturnValue({
+        get: (key: string) => mockSearchParams1.get(key),
+      });
+
+      const { rerender } = render(<DashboardClient />);
+
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith({
+          title: 'Payment Successful',
+          description: 'Your payment was successful! Your reading will be generated shortly.',
+        });
+      });
+
+      // Clear mocks for next check
+      mockReplace.mockClear();
+      mockToast.mockClear();
+
+      // Now simulate refresh trigger from payment success page
+      const mockSearchParams2 = new URLSearchParams();
+      mockSearchParams2.set('tab', 'readings');
+      mockSearchParams2.set('refresh', 'true');
+
+      (useSearchParams as jest.Mock).mockReturnValue({
+        get: (key: string) => mockSearchParams2.get(key),
+      });
+
+      rerender(<DashboardClient />);
+
+      await waitFor(() => {
+        // Should clean URL but not show another toast
+        expect(mockReplace).toHaveBeenCalledWith('/dashboard?tab=readings');
+        expect(mockToast).not.toHaveBeenCalled();
+      });
+    });
+
+    it('should preserve tab parameter when cleaning refresh parameter', async () => {
+      const mockSearchParams = new URLSearchParams();
+      mockSearchParams.set('tab', 'readings');
+      mockSearchParams.set('refresh', 'true');
+
+      (useSearchParams as jest.Mock).mockReturnValue({
+        get: (key: string) => mockSearchParams.get(key),
+      });
+
+      render(<DashboardClient />);
+
+      await waitFor(() => {
+        // Should keep tab=readings but remove refresh parameter
+        expect(mockReplace).toHaveBeenCalledWith('/dashboard?tab=readings');
+        expect(mockReplace).not.toHaveBeenCalledWith('/dashboard');
+      });
     });
   });
 

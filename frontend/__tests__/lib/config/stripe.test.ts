@@ -26,6 +26,46 @@ describe('STRIPE_CONFIG', () => {
     });
   });
 
+  describe('Display Configuration (KAN-71)', () => {
+    it('should have displayPrice field with formatted price', () => {
+      expect(STRIPE_CONFIG.displayPrice).toBe('$29.99');
+      expect(STRIPE_CONFIG.displayPrice).toMatch(/^\$\d+(\.\d{2})?$/);
+    });
+
+    it('should have paymentType field describing payment structure', () => {
+      expect(STRIPE_CONFIG.paymentType).toBe('one-time payment');
+      expect(STRIPE_CONFIG.paymentType).toBeTruthy();
+      expect(typeof STRIPE_CONFIG.paymentType).toBe('string');
+    });
+
+    it('should have productDescription field with compelling copy', () => {
+      expect(STRIPE_CONFIG.productDescription).toBeDefined();
+      expect(typeof STRIPE_CONFIG.productDescription).toBe('string');
+      expect(STRIPE_CONFIG.productDescription.length).toBeGreaterThan(50);
+      // Check for key marketing terms
+      expect(STRIPE_CONFIG.productDescription.toLowerCase()).toContain('ai');
+      expect(STRIPE_CONFIG.productDescription.toLowerCase()).toContain('personalized');
+      expect(STRIPE_CONFIG.productDescription.toLowerCase()).toContain('birth chart');
+    });
+
+    it('should have consistent pricing display format', () => {
+      // Ensure displayPrice matches a standard currency format
+      const priceRegex = /^\$\d+(\.\d{2})?$/;
+      expect(STRIPE_CONFIG.displayPrice).toMatch(priceRegex);
+
+      // Ensure price is a reasonable amount (between $1 and $1000)
+      const priceValue = parseFloat(STRIPE_CONFIG.displayPrice.replace('$', ''));
+      expect(priceValue).toBeGreaterThan(0);
+      expect(priceValue).toBeLessThan(1000);
+    });
+
+    it('should maintain all display fields as non-empty strings', () => {
+      expect(STRIPE_CONFIG.displayPrice).not.toBe('');
+      expect(STRIPE_CONFIG.paymentType).not.toBe('');
+      expect(STRIPE_CONFIG.productDescription).not.toBe('');
+    });
+  });
+
   describe('Session Types', () => {
     it('should define ONE_TIME session type', () => {
       expect(STRIPE_CONFIG.sessionTypes.ONE_TIME).toBe('one-time');

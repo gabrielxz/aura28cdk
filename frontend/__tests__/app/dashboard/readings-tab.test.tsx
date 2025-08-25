@@ -17,6 +17,10 @@ jest.mock('@/components/ui/use-toast', () => ({
 jest.mock('@/lib/config/stripe', () => ({
   STRIPE_CONFIG: {
     readingPriceId: 'price_test_reading_id',
+    displayPrice: '$29.99',
+    paymentType: 'one-time payment',
+    productDescription:
+      "Unlock deep insights into your cosmic blueprint with our AI-powered astrological reading, personalized to your unique birth chart. Discover your soul's purpose, karmic patterns, and spiritual potential through ancient wisdom combined with modern AI technology.",
     sessionTypes: {
       ONE_TIME: 'one-time',
       SUBSCRIPTION: 'subscription',
@@ -33,6 +37,259 @@ jest.mock('date-fns', () => ({
   formatDistanceToNow: jest.fn(() => '2 days'),
 }));
 
+describe('ReadingsTab - KAN-71 Enhanced Empty State with Pricing Display', () => {
+  let mockUserApi: jest.Mocked<UserApi>;
+  let mockToast: jest.Mock;
+  const mockUserId = 'test-user-123';
+  const mockOnNeedRefresh = jest.fn();
+
+  beforeEach(() => {
+    // Clear mocks
+    jest.clearAllMocks();
+
+    // Mock window.location without triggering navigation
+    // Only define if not already defined or if it's configurable
+    const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
+    if (!locationDescriptor || locationDescriptor.configurable) {
+      Object.defineProperty(window, 'location', {
+        value: {
+          href: 'http://localhost/',
+          origin: 'http://localhost',
+        },
+        writable: true,
+        configurable: true,
+      });
+    } else {
+      // If already defined and not configurable, just update the values
+      window.location.href = 'http://localhost/';
+    }
+
+    // Setup toast mock
+    mockToast = jest.fn();
+    (useToast as jest.Mock).mockReturnValue({
+      toast: mockToast,
+    });
+
+    // Setup UserApi mock
+    mockUserApi = {
+      getNatalChart: jest.fn(),
+      getReadings: jest.fn(),
+      getReadingDetail: jest.fn(),
+      getUserProfile: jest.fn(),
+      createCheckoutSession: jest.fn(),
+    } as unknown as jest.Mocked<UserApi>;
+  });
+
+  describe('Enhanced Empty State Display', () => {
+    it('should display pricing information in empty state', async () => {
+      // Setup: User has natal chart but no readings
+      mockUserApi.getNatalChart.mockResolvedValue({
+        userId: mockUserId,
+        chartType: 'natal',
+        createdAt: '2024-01-01T00:00:00Z',
+        planets: {},
+        isTimeEstimated: false,
+      });
+      mockUserApi.getReadings.mockResolvedValue({
+        readings: [],
+        count: 0,
+      });
+
+      render(<ReadingsTab userApi={mockUserApi} userId={mockUserId} />);
+
+      await waitFor(() => {
+        // Check for pricing display
+        expect(screen.getByText('$29.99')).toBeInTheDocument();
+        expect(screen.getByText('one-time payment')).toBeInTheDocument();
+      });
+    });
+
+    it('should display product description in empty state', async () => {
+      // Setup: User has natal chart but no readings
+      mockUserApi.getNatalChart.mockResolvedValue({
+        userId: mockUserId,
+        chartType: 'natal',
+        createdAt: '2024-01-01T00:00:00Z',
+        planets: {},
+        isTimeEstimated: false,
+      });
+      mockUserApi.getReadings.mockResolvedValue({
+        readings: [],
+        count: 0,
+      });
+
+      render(<ReadingsTab userApi={mockUserApi} userId={mockUserId} />);
+
+      await waitFor(() => {
+        // Check for product description
+        expect(
+          screen.getByText(/Unlock deep insights into your cosmic blueprint/),
+        ).toBeInTheDocument();
+        expect(screen.getByText(/AI-powered astrological reading/)).toBeInTheDocument();
+      });
+    });
+
+    it('should display benefits list in empty state', async () => {
+      // Setup: User has natal chart but no readings
+      mockUserApi.getNatalChart.mockResolvedValue({
+        userId: mockUserId,
+        chartType: 'natal',
+        createdAt: '2024-01-01T00:00:00Z',
+        planets: {},
+        isTimeEstimated: false,
+      });
+      mockUserApi.getReadings.mockResolvedValue({
+        readings: [],
+        count: 0,
+      });
+
+      render(<ReadingsTab userApi={mockUserApi} userId={mockUserId} />);
+
+      await waitFor(() => {
+        // Check for benefits list items
+        expect(screen.getByText(/Personalized to your exact birth chart/)).toBeInTheDocument();
+        expect(screen.getByText(/AI-powered deep astrological analysis/)).toBeInTheDocument();
+        expect(screen.getByText(/Instant PDF download available/)).toBeInTheDocument();
+      });
+    });
+
+    it('should display prominent purchase button with enhanced styling', async () => {
+      // Setup: User has natal chart but no readings
+      mockUserApi.getNatalChart.mockResolvedValue({
+        userId: mockUserId,
+        chartType: 'natal',
+        createdAt: '2024-01-01T00:00:00Z',
+        planets: {},
+        isTimeEstimated: false,
+      });
+      mockUserApi.getReadings.mockResolvedValue({
+        readings: [],
+        count: 0,
+      });
+
+      render(<ReadingsTab userApi={mockUserApi} userId={mockUserId} />);
+
+      await waitFor(() => {
+        const purchaseButton = screen.getByRole('button', {
+          name: /Purchase Soul Blueprint Reading/i,
+        });
+        expect(purchaseButton).toBeInTheDocument();
+        // Check for enhanced styling classes
+        expect(purchaseButton.className).toContain('bg-gradient-to-r');
+        expect(purchaseButton.className).toContain('shadow-lg');
+      });
+    });
+
+    it('should use card layout for empty state content', async () => {
+      // Setup: User has natal chart but no readings
+      mockUserApi.getNatalChart.mockResolvedValue({
+        userId: mockUserId,
+        chartType: 'natal',
+        createdAt: '2024-01-01T00:00:00Z',
+        planets: {},
+        isTimeEstimated: false,
+      });
+      mockUserApi.getReadings.mockResolvedValue({
+        readings: [],
+        count: 0,
+      });
+
+      render(<ReadingsTab userApi={mockUserApi} userId={mockUserId} />);
+
+      await waitFor(() => {
+        // Check for "Unlock Your Soul Blueprint" heading
+        expect(screen.getByText('Unlock Your Soul Blueprint')).toBeInTheDocument();
+        // Verify card structure exists (checking for gradient background)
+        const gradientElements = document.querySelectorAll('.bg-gradient-to-br');
+        expect(gradientElements.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe('Refresh Mechanism Integration', () => {
+    it('should trigger refresh when onNeedRefresh prop is provided', async () => {
+      // Setup: Initial readings
+      mockUserApi.getNatalChart.mockResolvedValue({
+        userId: mockUserId,
+        chartType: 'natal',
+        createdAt: '2024-01-01T00:00:00Z',
+        planets: {},
+        isTimeEstimated: false,
+      });
+      mockUserApi.getReadings.mockResolvedValue({
+        readings: [],
+        count: 0,
+      });
+
+      const { rerender } = render(
+        <ReadingsTab userApi={mockUserApi} userId={mockUserId} onNeedRefresh={undefined} />,
+      );
+
+      await waitFor(() => {
+        expect(mockUserApi.getReadings).toHaveBeenCalledTimes(1);
+      });
+
+      // Trigger refresh by providing the callback
+      rerender(
+        <ReadingsTab userApi={mockUserApi} userId={mockUserId} onNeedRefresh={mockOnNeedRefresh} />,
+      );
+
+      await waitFor(() => {
+        // Should call getReadings again due to refresh
+        expect(mockUserApi.getReadings).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it('should handle refresh callback properly', async () => {
+      // Setup with a new reading appearing after refresh
+      mockUserApi.getNatalChart.mockResolvedValue({
+        userId: mockUserId,
+        chartType: 'natal',
+        createdAt: '2024-01-01T00:00:00Z',
+        planets: {},
+        isTimeEstimated: false,
+      });
+      mockUserApi.getReadings
+        .mockResolvedValueOnce({
+          readings: [],
+          count: 0,
+        })
+        .mockResolvedValueOnce({
+          readings: [
+            {
+              readingId: 'new-reading-1',
+              type: 'Soul Blueprint',
+              status: 'Ready' as const,
+              createdAt: '2024-01-01T00:00:00Z',
+              updatedAt: '2024-01-01T00:01:00Z',
+            },
+          ],
+          count: 1,
+        });
+
+      const { rerender } = render(
+        <ReadingsTab userApi={mockUserApi} userId={mockUserId} onNeedRefresh={undefined} />,
+      );
+
+      // Initially should show empty state
+      await waitFor(() => {
+        expect(screen.getByText('Unlock Your Soul Blueprint')).toBeInTheDocument();
+      });
+
+      // Trigger refresh
+      rerender(
+        <ReadingsTab userApi={mockUserApi} userId={mockUserId} onNeedRefresh={mockOnNeedRefresh} />,
+      );
+
+      // After refresh, should show the new reading
+      await waitFor(() => {
+        expect(screen.getByText('Soul Blueprint')).toBeInTheDocument();
+        expect(screen.getByText('Ready')).toBeInTheDocument();
+      });
+    });
+  });
+});
+
 describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
   let mockUserApi: jest.Mocked<UserApi>;
   let mockToast: jest.Mock;
@@ -42,14 +299,22 @@ describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
     // Clear mocks
     jest.clearAllMocks();
 
-    // Mock window.location
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    delete (window as any).location;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).location = {
-      href: 'http://localhost/',
-      origin: 'http://localhost',
-    };
+    // Mock window.location without triggering navigation
+    // Only define if not already defined or if it's configurable
+    const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
+    if (!locationDescriptor || locationDescriptor.configurable) {
+      Object.defineProperty(window, 'location', {
+        value: {
+          href: 'http://localhost/',
+          origin: 'http://localhost',
+        },
+        writable: true,
+        configurable: true,
+      });
+    } else {
+      // If already defined and not configurable, just update the values
+      window.location.href = 'http://localhost/';
+    }
 
     // Setup toast mock
     mockToast = jest.fn();
@@ -86,7 +351,7 @@ describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /Purchase Your First Reading/i }),
+          screen.getByRole('button', { name: /Purchase Soul Blueprint Reading/i }),
         ).toBeInTheDocument();
       });
     });
@@ -131,7 +396,7 @@ describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
       render(<ReadingsTab userApi={mockUserApi} userId={mockUserId} />);
 
       await waitFor(() => {
-        expect(screen.getByText('No Readings Yet')).toBeInTheDocument();
+        expect(screen.getByText('Unlock Your Soul Blueprint')).toBeInTheDocument();
       });
 
       // Button should not be present
@@ -183,11 +448,13 @@ describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /Purchase Your First Reading/i }),
+          screen.getByRole('button', { name: /Purchase Soul Blueprint Reading/i }),
         ).toBeInTheDocument();
       });
 
-      const purchaseButton = screen.getByRole('button', { name: /Purchase Your First Reading/i });
+      const purchaseButton = screen.getByRole('button', {
+        name: /Purchase Soul Blueprint Reading/i,
+      });
       fireEvent.click(purchaseButton);
 
       await waitFor(() => {
@@ -237,11 +504,13 @@ describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /Purchase Your First Reading/i }),
+          screen.getByRole('button', { name: /Purchase Soul Blueprint Reading/i }),
         ).toBeInTheDocument();
       });
 
-      const purchaseButton = screen.getByRole('button', { name: /Purchase Your First Reading/i });
+      const purchaseButton = screen.getByRole('button', {
+        name: /Purchase Soul Blueprint Reading/i,
+      });
       fireEvent.click(purchaseButton);
 
       // Check that button gets disabled (loading state)
@@ -272,11 +541,13 @@ describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /Purchase Your First Reading/i }),
+          screen.getByRole('button', { name: /Purchase Soul Blueprint Reading/i }),
         ).toBeInTheDocument();
       });
 
-      const purchaseButton = screen.getByRole('button', { name: /Purchase Your First Reading/i });
+      const purchaseButton = screen.getByRole('button', {
+        name: /Purchase Soul Blueprint Reading/i,
+      });
       fireEvent.click(purchaseButton);
 
       await waitFor(() => {
@@ -322,11 +593,13 @@ describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /Purchase Your First Reading/i }),
+          screen.getByRole('button', { name: /Purchase Soul Blueprint Reading/i }),
         ).toBeInTheDocument();
       });
 
-      const purchaseButton = screen.getByRole('button', { name: /Purchase Your First Reading/i });
+      const purchaseButton = screen.getByRole('button', {
+        name: /Purchase Soul Blueprint Reading/i,
+      });
       fireEvent.click(purchaseButton);
 
       await waitFor(() => {
@@ -364,11 +637,13 @@ describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /Purchase Your First Reading/i }),
+          screen.getByRole('button', { name: /Purchase Soul Blueprint Reading/i }),
         ).toBeInTheDocument();
       });
 
-      const purchaseButton = screen.getByRole('button', { name: /Purchase Your First Reading/i });
+      const purchaseButton = screen.getByRole('button', {
+        name: /Purchase Soul Blueprint Reading/i,
+      });
       fireEvent.click(purchaseButton);
 
       // Button should be disabled during purchase
@@ -395,7 +670,7 @@ describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
       render(<ReadingsTab userApi={mockUserApi} userId={mockUserId} />);
 
       await waitFor(() => {
-        const button = screen.getByRole('button', { name: /Purchase Your First Reading/i });
+        const button = screen.getByRole('button', { name: /Purchase Soul Blueprint Reading/i });
         expect(button).toBeInTheDocument();
         // Check that the button contains the ShoppingCart icon class
         expect(button.querySelector('svg')).toBeInTheDocument();
@@ -428,11 +703,13 @@ describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /Purchase Your First Reading/i }),
+          screen.getByRole('button', { name: /Purchase Soul Blueprint Reading/i }),
         ).toBeInTheDocument();
       });
 
-      const purchaseButton = screen.getByRole('button', { name: /Purchase Your First Reading/i });
+      const purchaseButton = screen.getByRole('button', {
+        name: /Purchase Soul Blueprint Reading/i,
+      });
 
       // First click - should fail
       fireEvent.click(purchaseButton);
@@ -578,11 +855,13 @@ describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /Purchase Your First Reading/i }),
+          screen.getByRole('button', { name: /Purchase Soul Blueprint Reading/i }),
         ).toBeInTheDocument();
       });
 
-      const purchaseButton = screen.getByRole('button', { name: /Purchase Your First Reading/i });
+      const purchaseButton = screen.getByRole('button', {
+        name: /Purchase Soul Blueprint Reading/i,
+      });
 
       // Rapid clicks
       fireEvent.click(purchaseButton);
@@ -607,7 +886,7 @@ describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
       render(<ReadingsTab userApi={mockUserApi} userId={mockUserId} />);
 
       await waitFor(() => {
-        expect(screen.getByText('No Readings Yet')).toBeInTheDocument();
+        expect(screen.getByText('Unlock Your Soul Blueprint')).toBeInTheDocument();
       });
 
       // Button should not be present when natal chart is undefined
@@ -656,7 +935,7 @@ describe('ReadingsTab - KAN-67 Purchase Reading Feature', () => {
         () => {
           // After both resolve, button should appear
           expect(
-            screen.getByRole('button', { name: /Purchase Your First Reading/i }),
+            screen.getByRole('button', { name: /Purchase Soul Blueprint Reading/i }),
           ).toBeInTheDocument();
         },
         { timeout: 200 },
