@@ -17,7 +17,7 @@ function getStripePriceId(): string {
     // In development or during build without CI/CD, use dev price ID as fallback
     // This allows local builds to work, but CI/CD will override with SSM value
     if (process.env.NODE_ENV === 'development' || !process.env.CI) {
-      return 'price_1QbGXuRuJDBzRJSkCbG4a9Xo';
+      return 'price_1RxUOjErRRGs6tYsTV4RF1Qu';
     }
 
     throw new Error(

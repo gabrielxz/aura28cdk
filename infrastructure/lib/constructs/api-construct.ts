@@ -102,7 +102,7 @@ export class ApiConstruct extends Construct {
     const allowedPriceIdsParameter = new ssm.StringParameter(this, 'AllowedPriceIdsParameter', {
       parameterName: `/aura28/${props.environment}/stripe/allowed-price-ids`,
       description: `Comma-separated list of allowed Stripe price IDs for ${props.environment} environment`,
-      stringValue: 'price_placeholder_1,price_placeholder_2', // Initial placeholder values
+      stringValue: 'price_1RxUOjErRRGs6tYsTV4RF1Qu,price_placeholder_2', // Updated with valid dev price ID
       tier: ssm.ParameterTier.STANDARD,
     });
 
@@ -112,7 +112,7 @@ export class ApiConstruct extends Construct {
       description: `Default Stripe price ID for frontend build in ${props.environment} environment`,
       stringValue:
         props.environment === 'dev'
-          ? 'price_1QbGXuRuJDBzRJSkCbG4a9Xo' // Existing dev price ID
+          ? 'price_1RxUOjErRRGs6tYsTV4RF1Qu' // Valid dev price ID
           : 'price_REPLACE_WITH_PRODUCTION_ID', // Placeholder for production
       tier: ssm.ParameterTier.STANDARD,
     });

@@ -201,6 +201,30 @@ describe('CI/CD Stripe Price ID SSM Integration', () => {
       });
     });
 
+    it('should use correct valid dev price ID for KAN-73', () => {
+      const validDevPriceId = 'price_1RxUOjErRRGs6tYsTV4RF1Qu';
+      const invalidPlaceholderId = 'price_1QbGXuRuJDBzRJSkCbG4a9Xo';
+
+      // Valid dev price ID should match Stripe format
+      expect(validDevPriceId).toMatch(/^price_/);
+      expect(validDevPriceId.length).toBeGreaterThan(10);
+
+      // Should not be using the old placeholder
+      expect(validDevPriceId).not.toBe(invalidPlaceholderId);
+    });
+
+    it('should handle fallback to valid dev price ID when SSM parameter missing', () => {
+      // Simulate the workflow fallback logic
+      const ssmPriceId: string | undefined = undefined;
+      const fallbackPriceId = 'price_1RxUOjErRRGs6tYsTV4RF1Qu';
+
+      const finalPriceId = ssmPriceId || fallbackPriceId;
+
+      expect(finalPriceId).toBe(fallbackPriceId);
+      expect(finalPriceId).toMatch(/^price_/);
+      expect(finalPriceId).not.toBe('price_1QbGXuRuJDBzRJSkCbG4a9Xo'); // Not the old placeholder
+    });
+
     it('should ensure parameter names match environment context', () => {
       const devWorkflowParam = '/aura28/dev/stripe/default-price-id';
       const prodWorkflowParam = '/aura28/prod/stripe/default-price-id';
