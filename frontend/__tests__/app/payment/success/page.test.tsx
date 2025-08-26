@@ -134,7 +134,7 @@ describe('PaymentSuccessPage', () => {
       await waitFor(() => {
         expect(toast).toHaveBeenCalledWith({
           title: 'Payment Successful',
-          description: 'Thank you for your purchase! Your reading is being generated.',
+          description: 'Thank you for your purchase!',
         });
       });
     });
@@ -161,64 +161,14 @@ describe('PaymentSuccessPage', () => {
       });
     });
 
-    it('should poll for reading status', async () => {
-      (useAuth as jest.Mock).mockReturnValue({
-        user: mockUser,
-        loading: false,
-      });
-
-      mockSearchParams.get.mockReturnValue('cs_test_123');
-
-      const mockUserApi = {
-        getReadings: jest
-          .fn()
-          .mockResolvedValueOnce({ readings: [] })
-          .mockResolvedValueOnce({ readings: [] })
-          .mockResolvedValueOnce({ readings: [{ id: 'reading1' }] }),
-      };
-      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
-
-      render(<PaymentSuccessPage />);
-
-      await waitFor(
-        () => {
-          expect(mockUserApi.getReadings).toHaveBeenCalledTimes(3);
-        },
-        { timeout: 3000 },
-      );
-
-      expect(screen.getByText(/Your reading is ready/)).toBeInTheDocument();
+    it.skip('should poll for reading status - removed in simplified version', async () => {
+      // This functionality has been removed in the simplified version
+      // Reading status polling is no longer part of the payment success page
     });
 
-    it('should show generating status while waiting for reading', async () => {
-      (useAuth as jest.Mock).mockReturnValue({
-        user: mockUser,
-        loading: false,
-      });
-
-      const mockUserApi = {
-        getReadings: jest.fn().mockResolvedValue({
-          readings: [],
-        }),
-      };
-      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
-
-      render(<PaymentSuccessPage />);
-
-      // Wait for initial check
-      await waitFor(() => {
-        expect(mockUserApi.getReadings).toHaveBeenCalled();
-      });
-
-      // Advance timer past 5 seconds to trigger generating status
-      await act(async () => {
-        jest.advanceTimersByTime(6000);
-      });
-
-      await waitFor(() => {
-        const elements = screen.getAllByText(/being generated/);
-        expect(elements[0]).toBeInTheDocument();
-      });
+    it.skip('should show generating status while waiting for reading - removed in simplified version', async () => {
+      // This functionality has been removed in the simplified version
+      // No longer shows generating status
     });
 
     it('should navigate to dashboard when button is clicked', async () => {
@@ -237,91 +187,24 @@ describe('PaymentSuccessPage', () => {
       render(<PaymentSuccessPage />);
 
       await waitFor(() => {
-        const dashboardButton = screen.getByText('Go to Dashboard');
+        const dashboardButton = screen.getByText('Return to Dashboard');
         expect(dashboardButton).toBeInTheDocument();
       });
 
-      const dashboardButton = screen.getByText('Go to Dashboard');
+      const dashboardButton = screen.getByText('Return to Dashboard');
       dashboardButton.click();
 
       expect(mockRouter.push).toHaveBeenCalledWith('/dashboard?tab=readings');
     });
 
-    it('should show error state when reading check fails after timeout', async () => {
-      (useAuth as jest.Mock).mockReturnValue({
-        user: mockUser,
-        loading: false,
-      });
-
-      mockSearchParams.get.mockReturnValue('cs_test_123');
-
-      const mockUserApi = {
-        getReadings: jest.fn().mockResolvedValue({
-          readings: [],
-        }),
-      };
-      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
-
-      render(<PaymentSuccessPage />);
-
-      // Wait for initial check
-      await waitFor(() => {
-        expect(mockUserApi.getReadings).toHaveBeenCalled();
-      });
-
-      // Simulate multiple polling intervals leading to timeout
-      // The component polls every 1 second for 30 seconds
-      for (let i = 0; i < 31; i++) {
-        await act(async () => {
-          jest.advanceTimersByTime(1000);
-        });
-      }
-
-      await waitFor(() => {
-        expect(screen.getByText(/issue checking your reading status/)).toBeInTheDocument();
-      });
+    it.skip('should show error state when reading check fails after timeout - removed in simplified version', async () => {
+      // This functionality has been removed in the simplified version
+      // No longer polls for reading status
     });
 
-    it('should display "View Your Reading" button when reading is ready', async () => {
-      (useAuth as jest.Mock).mockReturnValue({
-        user: mockUser,
-        loading: false,
-      });
-
-      const mockUserApi = {
-        getReadings: jest
-          .fn()
-          .mockResolvedValueOnce({ readings: [] })
-          .mockResolvedValueOnce({ readings: [{ id: 'reading1', createdAt: '2024-01-01' }] }),
-      };
-      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
-
-      render(<PaymentSuccessPage />);
-
-      // Wait for initial check
-      await waitFor(() => {
-        expect(mockUserApi.getReadings).toHaveBeenCalledTimes(1);
-      });
-
-      // Advance timer to trigger polling
-      await act(async () => {
-        jest.advanceTimersByTime(1000);
-      });
-
-      // Wait for second call with new reading
-      await waitFor(() => {
-        expect(mockUserApi.getReadings).toHaveBeenCalledTimes(2);
-      });
-
-      await waitFor(() => {
-        const viewButton = screen.getByText('View Your Reading');
-        expect(viewButton).toBeInTheDocument();
-      });
-
-      // Click the button and verify navigation
-      const viewButton = screen.getByText('View Your Reading');
-      fireEvent.click(viewButton);
-      expect(mockRouter.push).toHaveBeenCalledWith('/dashboard?tab=readings&refresh=true');
+    it.skip('should display "View Your Reading" button when reading is ready - removed in simplified version', async () => {
+      // This functionality has been removed in the simplified version
+      // No longer dynamically changes button based on reading status
     });
 
     it('should handle edge case when no session ID is provided', async () => {
@@ -348,31 +231,15 @@ describe('PaymentSuccessPage', () => {
       // Should still show success message even without session ID
       expect(toast).toHaveBeenCalledWith({
         title: 'Payment Successful',
-        description: 'Thank you for your purchase! Your reading is being generated.',
+        description: 'Thank you for your purchase!',
       });
     });
   });
 
   describe('Error Handling', () => {
-    it('should handle API errors gracefully during initial reading check', async () => {
-      (useAuth as jest.Mock).mockReturnValue({
-        user: mockUser,
-        loading: false,
-      });
-
-      const mockUserApi = {
-        getReadings: jest.fn().mockRejectedValue(new Error('API Error')),
-      };
-      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
-
-      render(<PaymentSuccessPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText(/issue checking your reading status/)).toBeInTheDocument();
-      });
-
-      // Error should be handled silently without console.error
-      // UI should show error state to user
+    it.skip('should handle API errors gracefully during initial reading check - removed in simplified version', async () => {
+      // This functionality has been removed in the simplified version
+      // No longer checks reading status
     });
 
     // Skipping: This test fails due to complex async timing issues in jsdom environment.
@@ -452,80 +319,19 @@ describe('PaymentSuccessPage', () => {
       });
 
       // Should handle undefined readings array gracefully
-      expect(screen.getByText(/Checking reading status.../)).toBeInTheDocument();
+      expect(screen.getByText(/being prepared/)).toBeInTheDocument();
     });
   });
 
   describe('Status Progression', () => {
-    it('should show correct status progression: checking -> generating -> ready', async () => {
-      (useAuth as jest.Mock).mockReturnValue({
-        user: mockUser,
-        loading: false,
-      });
-
-      const mockUserApi = {
-        getReadings: jest.fn().mockResolvedValue({ readings: [] }),
-      };
-      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
-
-      render(<PaymentSuccessPage />);
-
-      // Initial state: checking
-      await waitFor(() => {
-        expect(screen.getByText('Checking')).toBeInTheDocument();
-      });
-
-      // After 5 seconds: generating
-      await act(async () => {
-        jest.advanceTimersByTime(5000);
-      });
-      await waitFor(() => {
-        expect(screen.getByText('Generating')).toBeInTheDocument();
-      });
-
-      // Update mock to return a reading
-      mockUserApi.getReadings.mockResolvedValue({ readings: [{ id: 'reading1' }] });
-
-      // Advance timer to trigger next check
-      await act(async () => {
-        jest.advanceTimersByTime(1000);
-      });
-
-      // Final state: ready
-      await waitFor(() => {
-        expect(screen.getByText('Ready')).toBeInTheDocument();
-      });
+    it.skip('should show correct status progression: checking -> generating -> ready - removed in simplified version', async () => {
+      // This functionality has been removed in the simplified version
+      // No longer shows status progression
     });
 
-    it('should show different UI elements based on status', async () => {
-      (useAuth as jest.Mock).mockReturnValue({
-        user: mockUser,
-        loading: false,
-      });
-
-      const mockUserApi = {
-        getReadings: jest.fn().mockResolvedValue({ readings: [] }),
-      };
-      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
-
-      render(<PaymentSuccessPage />);
-
-      // Wait for initial check
-      await waitFor(() => {
-        expect(mockUserApi.getReadings).toHaveBeenCalled();
-      });
-
-      // Advance time to trigger generating status
-      jest.advanceTimersByTime(6000);
-
-      await waitFor(() => {
-        // Should show generating button (disabled)
-        const generatingButton = screen.getByRole('button', { name: /Generating.../ });
-        expect(generatingButton).toBeDisabled();
-
-        // Should show generation time estimate
-        expect(screen.getByText(/typically takes 30-60 seconds/)).toBeInTheDocument();
-      });
+    it.skip('should show different UI elements based on status - removed in simplified version', async () => {
+      // This functionality has been removed in the simplified version
+      // UI is now static
     });
   });
 
@@ -544,15 +350,11 @@ describe('PaymentSuccessPage', () => {
       render(<PaymentSuccessPage />);
 
       await waitFor(() => {
-        expect(mockUserApi.getReadings).toHaveBeenCalled();
-      });
-
-      await waitFor(() => {
-        const dashboardButton = screen.getByText('Go to Dashboard');
+        const dashboardButton = screen.getByText('Return to Dashboard');
         expect(dashboardButton).toBeInTheDocument();
       });
 
-      const dashboardButton = screen.getByText('Go to Dashboard');
+      const dashboardButton = screen.getByText('Return to Dashboard');
 
       // Multiple rapid clicks
       fireEvent.click(dashboardButton);
@@ -564,37 +366,9 @@ describe('PaymentSuccessPage', () => {
       expect(mockRouter.push).toHaveBeenCalledWith('/dashboard?tab=readings');
     });
 
-    it('should cleanup polling interval on unmount', async () => {
-      (useAuth as jest.Mock).mockReturnValue({
-        user: mockUser,
-        loading: false,
-      });
-
-      const mockUserApi = {
-        getReadings: jest.fn().mockResolvedValue({ readings: [] }),
-      };
-      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
-
-      const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
-
-      const { unmount } = render(<PaymentSuccessPage />);
-
-      await waitFor(() => {
-        expect(mockUserApi.getReadings).toHaveBeenCalled();
-      });
-
-      // Start polling
-      await act(async () => {
-        jest.advanceTimersByTime(1000);
-      });
-
-      // Unmount component
-      unmount();
-
-      // Verify interval was cleared
-      expect(clearIntervalSpy).toHaveBeenCalled();
-
-      clearIntervalSpy.mockRestore();
+    it.skip('should cleanup polling interval on unmount - removed in simplified version', async () => {
+      // This functionality has been removed in the simplified version
+      // No longer uses polling intervals
     });
   });
 
@@ -652,7 +426,7 @@ describe('PaymentSuccessPage', () => {
       await waitFor(() => {
         expect(toast).toHaveBeenCalledWith({
           title: 'Payment Successful',
-          description: 'Thank you for your purchase! Your reading is being generated.',
+          description: 'Thank you for your purchase!',
         });
       });
 
@@ -669,176 +443,26 @@ describe('PaymentSuccessPage', () => {
   });
 
   describe('Automatic Refresh Integration (KAN-71)', () => {
-    it('should redirect with refresh=true parameter when reading becomes ready', async () => {
-      (useAuth as jest.Mock).mockReturnValue({
-        user: mockUser,
-        loading: false,
-      });
-
-      const mockUserApi = {
-        getReadings: jest
-          .fn()
-          .mockResolvedValueOnce({ readings: [] })
-          .mockResolvedValueOnce({ readings: [{ id: 'reading1' }] }),
-      };
-      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
-
-      render(<PaymentSuccessPage />);
-
-      // Wait for initial check
-      await waitFor(() => {
-        expect(mockUserApi.getReadings).toHaveBeenCalled();
-      });
-
-      // Advance timer to trigger polling
-      await act(async () => {
-        jest.advanceTimersByTime(1000);
-      });
-
-      // Wait for reading to be detected
-      await waitFor(() => {
-        expect(screen.getByText(/Your reading is ready!/)).toBeInTheDocument();
-      });
-
-      // Wait for automatic redirect (component waits 2 seconds before redirecting)
-      await act(async () => {
-        jest.advanceTimersByTime(2000);
-      });
-
-      // Should redirect with refresh=true to trigger reading list update
-      expect(mockRouter.push).toHaveBeenCalledWith('/dashboard?tab=readings&refresh=true');
+    it.skip('should redirect with refresh=true parameter when reading becomes ready - removed in simplified version', async () => {
+      // This functionality has been removed in the simplified version
+      // No automatic redirect based on reading status
     });
 
-    it('should navigate to dashboard with refresh trigger automatically', async () => {
-      (useAuth as jest.Mock).mockReturnValue({
-        user: mockUser,
-        loading: false,
-      });
-
-      const mockUserApi = {
-        getReadings: jest
-          .fn()
-          .mockResolvedValueOnce({ readings: [] })
-          .mockResolvedValueOnce({ readings: [{ id: 'reading1', createdAt: '2024-01-01' }] }),
-      };
-      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
-
-      render(<PaymentSuccessPage />);
-
-      // Wait for initial check
-      await waitFor(() => {
-        expect(mockUserApi.getReadings).toHaveBeenCalledTimes(1);
-      });
-
-      // Advance timer to trigger polling and get new reading
-      await act(async () => {
-        jest.advanceTimersByTime(1000);
-      });
-
-      // Wait for reading to be detected
-      await waitFor(() => {
-        expect(mockUserApi.getReadings).toHaveBeenCalledTimes(2);
-      });
-
-      // Wait for automatic redirect with refresh trigger after detecting new reading
-      await act(async () => {
-        jest.advanceTimersByTime(2000); // Wait for the 2-second delay
-      });
-
-      await waitFor(() => {
-        expect(mockRouter.push).toHaveBeenCalledWith('/dashboard?tab=readings&refresh=true');
-      });
+    it.skip('should navigate to dashboard with refresh trigger automatically - removed in simplified version', async () => {
+      // This functionality has been removed in the simplified version
+      // No automatic navigation
     });
 
-    it('should handle rapid status changes correctly', async () => {
-      (useAuth as jest.Mock).mockReturnValue({
-        user: mockUser,
-        loading: false,
-      });
-
-      const mockUserApi = {
-        getReadings: jest
-          .fn()
-          .mockResolvedValueOnce({ readings: [] }) // Initial empty
-          .mockResolvedValueOnce({ readings: [] }) // Still empty
-          .mockResolvedValueOnce({ readings: [{ id: 'reading1' }] }), // Now ready
-      };
-      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
-
-      render(<PaymentSuccessPage />);
-
-      // Initial state
-      await waitFor(() => {
-        expect(screen.getByText('Checking')).toBeInTheDocument();
-      });
-
-      // First poll - still empty
-      await act(async () => {
-        jest.advanceTimersByTime(1000);
-      });
-
-      // Second poll - reading appears
-      await act(async () => {
-        jest.advanceTimersByTime(1000);
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Ready')).toBeInTheDocument();
-      });
-
-      // Wait for automatic redirect
-      await act(async () => {
-        jest.advanceTimersByTime(2000);
-      });
-
-      // Should have redirected with refresh
-      expect(mockRouter.push).toHaveBeenCalledWith('/dashboard?tab=readings&refresh=true');
+    it.skip('should handle rapid status changes correctly - removed in simplified version', async () => {
+      // This functionality has been removed in the simplified version
+      // No status changes
     });
   });
 
   describe('Toast Notifications', () => {
-    it('should show success toast when new reading is detected', async () => {
-      (useAuth as jest.Mock).mockReturnValue({
-        user: mockUser,
-        loading: false,
-      });
-
-      const mockUserApi = {
-        getReadings: jest
-          .fn()
-          .mockResolvedValueOnce({ readings: [] })
-          .mockResolvedValueOnce({ readings: [{ id: 'reading1' }] }),
-      };
-      (UserApi as jest.Mock).mockImplementation(() => mockUserApi);
-
-      // Clear previous toast calls
-      (toast as jest.Mock).mockClear();
-
-      render(<PaymentSuccessPage />);
-
-      // Wait for initial success toast
-      await waitFor(() => {
-        expect(toast).toHaveBeenCalledWith({
-          title: 'Payment Successful',
-          description: 'Thank you for your purchase! Your reading is being generated.',
-        });
-      });
-
-      // Advance timer to trigger polling
-      await act(async () => {
-        jest.advanceTimersByTime(1000);
-      });
-
-      // Wait for reading ready toast
-      await waitFor(() => {
-        expect(toast).toHaveBeenCalledWith({
-          title: 'Reading Ready',
-          description: 'Your Soul Blueprint reading is now available!',
-        });
-      });
-
-      // Should have been called exactly twice
-      expect(toast).toHaveBeenCalledTimes(2);
+    it.skip('should show success toast when new reading is detected - removed in simplified version', async () => {
+      // This functionality has been removed in the simplified version
+      // Only shows initial toast now
     });
   });
 });
