@@ -303,7 +303,7 @@ describe('STRIPE_CONFIG', () => {
 
       expect(envConfig.readingPriceId).toBe('price_configured_via_env');
       // Should not contain any hardcoded development or production IDs
-      expect(envConfig.readingPriceId).not.toBe('price_1QbGXuRuJDBzRJSkCbG4a9Xo');
+      expect(envConfig.readingPriceId).not.toBe('price_1RxUOjErRRGs6tYsTV4RF1Qu');
       expect(envConfig.readingPriceId).not.toBe('price_REPLACE_WITH_PRODUCTION_ID');
     });
 
@@ -375,7 +375,7 @@ describe('STRIPE_CONFIG', () => {
       // Should use dev fallback
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { STRIPE_CONFIG: devConfig } = require('@/lib/config/stripe');
-      expect(devConfig.readingPriceId).toBe('price_1QbGXuRuJDBzRJSkCbG4a9Xo');
+      expect(devConfig.readingPriceId).toBe('price_1RxUOjErRRGs6tYsTV4RF1Qu');
     });
 
     it('should use dev price ID fallback in production without CI', () => {
@@ -387,7 +387,7 @@ describe('STRIPE_CONFIG', () => {
       // Should use dev fallback for local production builds
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { STRIPE_CONFIG: prodConfig } = require('@/lib/config/stripe');
-      expect(prodConfig.readingPriceId).toBe('price_1QbGXuRuJDBzRJSkCbG4a9Xo');
+      expect(prodConfig.readingPriceId).toBe('price_1RxUOjErRRGs6tYsTV4RF1Qu');
     });
   });
 });
