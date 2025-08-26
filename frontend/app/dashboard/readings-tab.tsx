@@ -62,7 +62,16 @@ export default function ReadingsTab({ userApi, userId, onNeedRefresh }: Readings
       setLoading(true);
       setError(null);
       const data = await userApi.getReadings(userId);
-      setReadings(data.readings);
+      // KAN-54: Sort readings by createdAt date in descending order (newest first)
+      const sortedReadings = [...data.readings].sort((a, b) => {
+        const dateA = new Date(a.createdAt);
+        const dateB = new Date(b.createdAt);
+        // Handle invalid dates by treating them as very old dates
+        const timeA = isNaN(dateA.getTime()) ? 0 : dateA.getTime();
+        const timeB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
+        return timeB - timeA;
+      });
+      setReadings(sortedReadings);
     } catch (error) {
       console.error('Failed to load readings:', error);
       setError('Failed to load readings');
