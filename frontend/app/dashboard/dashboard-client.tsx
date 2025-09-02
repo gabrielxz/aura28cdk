@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth/use-auth';
 import { UserApi, UserProfileResponse } from '@/lib/api/user-api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AuthenticatedLayout from '@/components/AuthenticatedLayout';
 import NatalChartTab from './natal-chart-tab';
 import ReadingsTab from './readings-tab';
 import { useToast } from '@/components/ui/use-toast';
@@ -100,11 +101,13 @@ export default function DashboardClient() {
 
   if (loading || profileLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <h1 className="mb-4 text-2xl font-bold">Loading...</h1>
+      <AuthenticatedLayout>
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="text-center">
+            <h1 className="mb-4 text-2xl font-bold text-white">Loading...</h1>
+          </div>
         </div>
-      </div>
+      </AuthenticatedLayout>
     );
   }
 
@@ -113,84 +116,106 @@ export default function DashboardClient() {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl p-8">
-      <h1 className="mb-4 text-3xl font-bold">Dashboard</h1>
-      <h2 className="mb-8 text-xl text-gray-600 dark:text-gray-400">
-        Welcome back, {isAdmin ? 'Admin ' : ''}
-        {profile?.profile.birthName || user.email}!
-      </h2>
+    <AuthenticatedLayout>
+      <div className="container mx-auto max-w-4xl p-8">
+        <h1 className="mb-4 text-3xl font-bold text-white">Dashboard</h1>
+        <h2 className="mb-8 text-xl text-white/80">
+          Welcome back, {isAdmin ? 'Admin ' : ''}
+          {profile?.profile.birthName || user.email}!
+        </h2>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="natal-chart">Natal Chart</TabsTrigger>
-          <TabsTrigger value="readings">Readings</TabsTrigger>
-        </TabsList>
-        <TabsContent value="profile">
-          <div className="mt-6 rounded-lg bg-gray-50 p-6 dark:bg-gray-900">
-            <h3 className="mb-4 text-xl font-semibold">User Profile</h3>
-            <div className="space-y-2">
-              <p>
-                <strong>User ID:</strong> {user.sub}
-              </p>
-              <p>
-                <strong>Email:</strong> {user.email}
-              </p>
-              <p>
-                <strong>Email Verified:</strong> {user.email_verified ? 'Yes' : 'No'}
-              </p>
-            </div>
-
-            {profileError && (
-              <div className="mt-4 rounded-lg bg-red-50 p-4 text-red-600">
-                <p>{profileError}</p>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 bg-white/10 backdrop-blur-md border border-white/20">
+            <TabsTrigger
+              value="profile"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#ff8a65] data-[state=active]:to-[#ffb74d] data-[state=active]:text-[#1a1b3a] text-white/80"
+            >
+              Profile
+            </TabsTrigger>
+            <TabsTrigger
+              value="natal-chart"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#ff8a65] data-[state=active]:to-[#ffb74d] data-[state=active]:text-[#1a1b3a] text-white/80"
+            >
+              Natal Chart
+            </TabsTrigger>
+            <TabsTrigger
+              value="readings"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#ff8a65] data-[state=active]:to-[#ffb74d] data-[state=active]:text-[#1a1b3a] text-white/80"
+            >
+              Readings
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="profile">
+            <div className="mt-6 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 p-6">
+              <h3 className="mb-4 text-xl font-semibold text-[#ffb74d]">User Profile</h3>
+              <div className="space-y-2 text-white/90">
+                <p>
+                  <strong className="text-[#ffb74d]">User ID:</strong> {user.sub}
+                </p>
+                <p>
+                  <strong className="text-[#ffb74d]">Email:</strong> {user.email}
+                </p>
+                <p>
+                  <strong className="text-[#ffb74d]">Email Verified:</strong>{' '}
+                  {user.email_verified ? 'Yes' : 'No'}
+                </p>
               </div>
-            )}
 
-            {profile && (
-              <div className="mt-6">
-                <h3 className="mb-2 text-lg font-semibold">Birth Information</h3>
-                <div className="space-y-2">
-                  <p>
-                    <strong>Birth Name:</strong> {profile.profile.birthName}
-                  </p>
-                  <p>
-                    <strong>Birth Date:</strong>{' '}
-                    {new Date(profile.profile.birthDate).toLocaleDateString('en-US', {
-                      timeZone: 'UTC',
-                    })}
-                  </p>
-                  {profile.profile.birthTime && (
-                    <p>
-                      <strong>Birth Time:</strong> {profile.profile.birthTime}
-                    </p>
-                  )}
-                  <p>
-                    <strong>Birth Location:</strong> {profile.profile.standardizedLocationName}
-                  </p>
-                  <p className="mt-2 text-sm text-gray-500">
-                    <strong>Profile Updated:</strong> {new Date(profile.updatedAt).toLocaleString()}
-                  </p>
+              {profileError && (
+                <div className="mt-4 rounded-lg bg-red-500/20 backdrop-blur-sm border border-red-500/30 p-4 text-red-300">
+                  <p>{profileError}</p>
                 </div>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-        <TabsContent value="natal-chart">
-          <NatalChartTab userApi={userApi} userId={user.sub} />
-        </TabsContent>
-        <TabsContent value="readings">
-          <ErrorBoundary>
-            <ReadingsTab
-              userApi={userApi}
-              userId={user.sub}
-              onNeedRefresh={
-                shouldRefreshReadings ? () => setShouldRefreshReadings(false) : undefined
-              }
-            />
-          </ErrorBoundary>
-        </TabsContent>
-      </Tabs>
-    </div>
+              )}
+
+              {profile && (
+                <div className="mt-6">
+                  <h3 className="mb-2 text-lg font-semibold text-[#ffb74d]">Birth Information</h3>
+                  <div className="space-y-2 text-white/90">
+                    <p>
+                      <strong className="text-[#ffb74d]">Birth Name:</strong>{' '}
+                      {profile.profile.birthName}
+                    </p>
+                    <p>
+                      <strong className="text-[#ffb74d]">Birth Date:</strong>{' '}
+                      {new Date(profile.profile.birthDate).toLocaleDateString('en-US', {
+                        timeZone: 'UTC',
+                      })}
+                    </p>
+                    {profile.profile.birthTime && (
+                      <p>
+                        <strong className="text-[#ffb74d]">Birth Time:</strong>{' '}
+                        {profile.profile.birthTime}
+                      </p>
+                    )}
+                    <p>
+                      <strong className="text-[#ffb74d]">Birth Location:</strong>{' '}
+                      {profile.profile.standardizedLocationName}
+                    </p>
+                    <p className="mt-2 text-sm text-white/60">
+                      <strong className="text-[#ffb74d]">Profile Updated:</strong>{' '}
+                      {new Date(profile.updatedAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          <TabsContent value="natal-chart">
+            <NatalChartTab userApi={userApi} userId={user.sub} />
+          </TabsContent>
+          <TabsContent value="readings">
+            <ErrorBoundary>
+              <ReadingsTab
+                userApi={userApi}
+                userId={user.sub}
+                onNeedRefresh={
+                  shouldRefreshReadings ? () => setShouldRefreshReadings(false) : undefined
+                }
+              />
+            </ErrorBoundary>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </AuthenticatedLayout>
   );
 }
