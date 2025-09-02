@@ -10,6 +10,7 @@ import { ReadingDetailsSheet } from '@/components/admin/reading-details-sheet';
 import { DeleteReadingDialog } from '@/components/admin/delete-reading-dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import AuthenticatedLayout from '@/components/AuthenticatedLayout';
 import { AdminApi, AdminReading } from '@/lib/api/admin-api';
 
 export default function AdminDashboard() {
@@ -116,126 +117,134 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-muted-foreground">
-          Manage and monitor all user readings across the platform
-        </p>
-      </div>
+    <AuthenticatedLayout>
+      <div className="container mx-auto py-8 px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+          <p className="text-white/70">Manage and monitor all user readings across the platform</p>
+        </div>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      {/* Filters */}
-      <div className="mb-6">
-        <ReadingsFilters
-          filters={filters}
-          onFiltersChange={updateFilters}
-          pageSize={pageSize}
-          onPageSizeChange={(size) => {
-            setPageSize(size);
-            goToPage(1);
+        {/* Filters */}
+        <div className="mb-6">
+          <ReadingsFilters
+            filters={filters}
+            onFiltersChange={updateFilters}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              goToPage(1);
+            }}
+          />
+        </div>
+
+        {/* Stats Bar */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="text-sm text-white/70">
+            {loading ? (
+              'Loading...'
+            ) : (
+              <>
+                Showing {Math.min((currentPage - 1) * pageSize + 1, totalCount)} to{' '}
+                {Math.min(currentPage * pageSize, totalCount)} of {totalCount} readings
+              </>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refresh}
+            disabled={loading}
+            className="border-white/20 text-white hover:bg-white/10"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+
+        {/* Table */}
+        <div className="mb-6">
+          <ReadingsTable
+            readings={readings}
+            loading={loading}
+            sortField={sortField}
+            sortOrder={sortOrder}
+            onSort={handleSort}
+            onViewDetails={handleViewDetails}
+            onDelete={handleDeleteClick}
+            onStatusUpdate={handleStatusUpdate}
+          />
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-white/70">
+              Page {currentPage} of {totalPages}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1 || loading}
+                className="border-white/20 text-white hover:bg-white/10"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages || loading}
+                className="border-white/20 text-white hover:bg-white/10"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Reading Details Sheet */}
+        <ReadingDetailsSheet
+          userId={selectedReading?.userId || null}
+          readingId={selectedReading?.readingId || null}
+          open={detailsSheetOpen}
+          onOpenChange={(open) => {
+            setDetailsSheetOpen(open);
+            if (!open) {
+              // Clear the selection when sheet closes
+              setSelectedReading(null);
+            }
           }}
+          adminApi={adminApi}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <DeleteReadingDialog
+          userId={readingToDelete?.userId || ''}
+          readingId={readingToDelete?.id || ''}
+          userEmail={readingToDelete?.email}
+          open={deleteDialogOpen}
+          onOpenChange={(open) => {
+            setDeleteDialogOpen(open);
+            if (!open) {
+              // Clear the selection when dialog closes
+              setReadingToDelete(null);
+            }
+          }}
+          onConfirm={handleDeleteConfirm}
         />
       </div>
-
-      {/* Stats Bar */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {loading ? (
-            'Loading...'
-          ) : (
-            <>
-              Showing {Math.min((currentPage - 1) * pageSize + 1, totalCount)} to{' '}
-              {Math.min(currentPage * pageSize, totalCount)} of {totalCount} readings
-            </>
-          )}
-        </div>
-        <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
-
-      {/* Table */}
-      <div className="mb-6">
-        <ReadingsTable
-          readings={readings}
-          loading={loading}
-          sortField={sortField}
-          sortOrder={sortOrder}
-          onSort={handleSort}
-          onViewDetails={handleViewDetails}
-          onDelete={handleDeleteClick}
-          onStatusUpdate={handleStatusUpdate}
-        />
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Page {currentPage} of {totalPages}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1 || loading}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages || loading}
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Reading Details Sheet */}
-      <ReadingDetailsSheet
-        userId={selectedReading?.userId || null}
-        readingId={selectedReading?.readingId || null}
-        open={detailsSheetOpen}
-        onOpenChange={(open) => {
-          setDetailsSheetOpen(open);
-          if (!open) {
-            // Clear the selection when sheet closes
-            setSelectedReading(null);
-          }
-        }}
-        adminApi={adminApi}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <DeleteReadingDialog
-        userId={readingToDelete?.userId || ''}
-        readingId={readingToDelete?.id || ''}
-        userEmail={readingToDelete?.email}
-        open={deleteDialogOpen}
-        onOpenChange={(open) => {
-          setDeleteDialogOpen(open);
-          if (!open) {
-            // Clear the selection when dialog closes
-            setReadingToDelete(null);
-          }
-        }}
-        onConfirm={handleDeleteConfirm}
-      />
-    </div>
+    </AuthenticatedLayout>
   );
 }
