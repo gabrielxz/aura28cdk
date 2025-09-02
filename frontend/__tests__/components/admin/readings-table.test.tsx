@@ -193,7 +193,7 @@ describe('ReadingsTable', () => {
     // Each user cell should have email and ID
     mockReadings.forEach((reading) => {
       const userId = screen.getByText(reading.userId);
-      expect(userId).toHaveClass('text-xs', 'text-muted-foreground');
+      expect(userId).toHaveClass('text-xs', 'text-white/60');
     });
   });
 
