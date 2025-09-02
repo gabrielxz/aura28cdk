@@ -243,7 +243,11 @@ export default function ReadingsTab({ userApi, userId, onNeedRefresh }: Readings
     return (
       <div className="mt-6">
         <div className="mb-4 flex items-center justify-between">
-          <Button onClick={() => setSelectedReading(null)} variant="outline">
+          <Button
+            onClick={() => setSelectedReading(null)}
+            variant="outline"
+            className="border-white/20 text-white hover:bg-white/10"
+          >
             ← Back to Readings
           </Button>
           {selectedReading.status === 'Ready' && selectedReading.content && (
@@ -251,7 +255,7 @@ export default function ReadingsTab({ userApi, userId, onNeedRefresh }: Readings
               onClick={handleDownloadPDF}
               disabled={downloadingPDF}
               variant="default"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-gradient-to-r from-[#ff8a65] to-[#ffb74d] text-[#1a1b3a] hover:opacity-90"
               aria-label="Download reading as PDF"
             >
               {downloadingPDF ? (
@@ -320,7 +324,7 @@ export default function ReadingsTab({ userApi, userId, onNeedRefresh }: Readings
             onClick={handlePurchaseReading}
             disabled={purchasingReading || !hasNatalChart}
             variant="default"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 bg-gradient-to-r from-[#ff8a65] to-[#ffb74d] text-[#1a1b3a] hover:opacity-90"
           >
             {purchasingReading ? (
               <>
@@ -403,7 +407,7 @@ export default function ReadingsTab({ userApi, userId, onNeedRefresh }: Readings
                   onClick={handlePurchaseReading}
                   disabled={purchasingReading || !hasNatalChart}
                   size="lg"
-                  className="mt-8 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="mt-8 bg-gradient-to-r from-[#ff8a65] to-[#ffb74d] hover:opacity-90 text-[#1a1b3a] px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   {purchasingReading ? (
                     <>
