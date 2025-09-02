@@ -24,37 +24,43 @@ describe('Home Page', () => {
     });
   });
 
-  it('renders Aura28 heading', () => {
+  it('renders main heading', () => {
     render(<Home />);
 
     const heading = screen.getByRole('heading', {
-      name: /aura28/i,
+      name: /your personal blueprint revealed/i,
     });
 
     expect(heading).toBeInTheDocument();
   });
 
-  it('renders coming soon message', () => {
+  it('renders subheading', () => {
     render(<Home />);
 
-    const comingSoonText = screen.getByText(/your personalized astrology readings are on the way/i);
+    const subheadingText = screen.getByText(
+      /a reflection of yourself like you.*ve never seen before/i,
+    );
 
-    expect(comingSoonText).toBeInTheDocument();
+    expect(subheadingText).toBeInTheDocument();
   });
 
-  it('renders launch soon message', () => {
+  it('renders description text', () => {
     render(<Home />);
 
-    const launchText = screen.getByText(/we.*re preparing to launch soon/i);
+    const descriptionText = screen.getByText(
+      /this isn.*t some generic feel-good spiel or vague horoscope/i,
+    );
 
-    expect(launchText).toBeInTheDocument();
+    expect(descriptionText).toBeInTheDocument();
   });
 
-  it('renders contact email', () => {
+  it('renders discover button', () => {
     render(<Home />);
 
-    const contactText = screen.getByText(/contact: support@aura28.com/i);
+    const button = screen.getByRole('button', {
+      name: /discover your blueprint/i,
+    });
 
-    expect(contactText).toBeInTheDocument();
+    expect(button).toBeInTheDocument();
   });
 });
