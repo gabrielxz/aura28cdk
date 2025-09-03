@@ -246,7 +246,7 @@ export default function ReadingsTab({ userApi, userId, onNeedRefresh }: Readings
           <Button
             onClick={() => setSelectedReading(null)}
             variant="outline"
-            className="bg-transparent border-white/20 text-white hover:bg-white/10"
+            className="bg-transparent border-white/20 text-white hover:bg-white/20 hover:border-white/40"
           >
             ← Back to Readings
           </Button>
