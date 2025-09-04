@@ -36,6 +36,8 @@ export class ApiConstruct extends Construct {
   public readonly adminGetReadingDetailsFunction: lambda.Function;
   public readonly adminUpdateReadingStatusFunction: lambda.Function;
   public readonly adminDeleteReadingFunction: lambda.Function;
+  public readonly createCheckoutSessionFunction: lambda.Function;
+  public readonly stripeWebhookHandlerFunction: lambda.Function;
 
   constructor(scope: Construct, id: string, props: ApiConstructProps) {
     super(scope, id);
@@ -73,6 +75,45 @@ export class ApiConstruct extends Construct {
       parameterName: `/aura28/${props.environment}/openai-api-key`,
       description: `OpenAI API key for ${props.environment} environment`,
       stringValue: 'PLACEHOLDER_TO_BE_REPLACED_MANUALLY',
+      tier: ssm.ParameterTier.STANDARD,
+    });
+
+    // Create SSM Parameters for Stripe Configuration
+    const stripeApiKeyParameter = new ssm.StringParameter(this, 'StripeApiKeyParameter', {
+      parameterName: `/aura28/${props.environment}/stripe/api-key`,
+      description: `Stripe API key for ${props.environment} environment`,
+      stringValue: 'PLACEHOLDER_TO_BE_REPLACED_MANUALLY',
+      tier: ssm.ParameterTier.STANDARD,
+    });
+
+    // Webhook secret parameter for webhook signature verification
+    const stripeWebhookSecretParameter = new ssm.StringParameter(
+      this,
+      'StripeWebhookSecretParameter',
+      {
+        parameterName: `/aura28/${props.environment}/stripe/webhook-secret`,
+        description: `Stripe webhook secret for ${props.environment} environment`,
+        stringValue: 'PLACEHOLDER_TO_BE_REPLACED_MANUALLY',
+        tier: ssm.ParameterTier.STANDARD,
+      },
+    );
+
+    // Create SSM Parameter for allowed Stripe price IDs
+    const allowedPriceIdsParameter = new ssm.StringParameter(this, 'AllowedPriceIdsParameter', {
+      parameterName: `/aura28/${props.environment}/stripe/allowed-price-ids`,
+      description: `Comma-separated list of allowed Stripe price IDs for ${props.environment} environment`,
+      stringValue: 'price_1RxUOjErRRGs6tYsTV4RF1Qu,price_placeholder_2', // Updated with valid dev price ID
+      tier: ssm.ParameterTier.STANDARD,
+    });
+
+    // Create SSM Parameter for default Stripe price ID (used by frontend build)
+    new ssm.StringParameter(this, 'DefaultPriceIdParameter', {
+      parameterName: `/aura28/${props.environment}/stripe/default-price-id`,
+      description: `Default Stripe price ID for frontend build in ${props.environment} environment`,
+      stringValue:
+        props.environment === 'dev'
+          ? 'price_1RxUOjErRRGs6tYsTV4RF1Qu' // Valid dev price ID
+          : 'price_REPLACE_WITH_PRODUCTION_ID', // Placeholder for production
       tier: ssm.ParameterTier.STANDARD,
     });
 
@@ -222,6 +263,9 @@ export class ApiConstruct extends Construct {
     // Grant invocation permission
     this.generateNatalChartFunction.grantInvoke(this.updateUserProfileFunction);
 
+    // Generate a unique internal invocation secret for this environment (defined early for both functions)
+    const internalInvocationSecret = `webhook-internal-${props.environment}-${cdk.Stack.of(this).stackId}`;
+
     // Create Lambda functions for readings
     this.generateReadingFunction = new lambdaNodeJs.NodejsFunction(
       this,
@@ -242,6 +286,7 @@ export class ApiConstruct extends Construct {
           READING_MAX_TOKENS_PARAMETER_NAME: readingMaxTokensParameter.parameterName,
           SYSTEM_PROMPT_S3KEY_PARAMETER_NAME: systemPromptS3KeyParameter.parameterName,
           USER_PROMPT_S3KEY_PARAMETER_NAME: userPromptS3KeyParameter.parameterName,
+          INTERNAL_INVOCATION_SECRET: internalInvocationSecret,
         },
         timeout: cdk.Duration.seconds(120), // Extended timeout for OpenAI API calls
         memorySize: 512,
@@ -419,6 +464,66 @@ export class ApiConstruct extends Construct {
     props.readingsTable.grantReadWriteData(this.adminUpdateReadingStatusFunction);
     props.readingsTable.grantReadWriteData(this.adminDeleteReadingFunction);
 
+    // Create Stripe Checkout Session Lambda function
+    this.createCheckoutSessionFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'CreateCheckoutSessionFunction',
+      {
+        functionName: `aura28-${props.environment}-create-checkout-session`,
+        entry: path.join(__dirname, '../../lambda/payments/create-checkout-session.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_20_X,
+        environment: {
+          STRIPE_API_KEY_PARAMETER_NAME: stripeApiKeyParameter.parameterName,
+          ALLOWED_PRICE_IDS_PARAMETER_NAME: allowedPriceIdsParameter.parameterName,
+          // Keep for backward compatibility during transition
+          ALLOWED_PRICE_IDS: '', // Will be deprecated
+          PRICE_ID_CACHE_TTL_SECONDS: '300', // 5 minutes cache
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
+    // Grant SSM parameter read permissions
+    stripeApiKeyParameter.grantRead(this.createCheckoutSessionFunction);
+    allowedPriceIdsParameter.grantRead(this.createCheckoutSessionFunction);
+
+    // Create Stripe Webhook Handler Lambda function
+    this.stripeWebhookHandlerFunction = new lambdaNodeJs.NodejsFunction(
+      this,
+      'StripeWebhookHandlerFunction',
+      {
+        functionName: `aura28-${props.environment}-stripe-webhook-handler`,
+        entry: path.join(__dirname, '../../lambda/payments/stripe-webhook-handler.ts'),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_20_X,
+        environment: {
+          STRIPE_API_KEY_PARAMETER_NAME: stripeApiKeyParameter.parameterName,
+          STRIPE_WEBHOOK_SECRET_PARAMETER_NAME: stripeWebhookSecretParameter.parameterName,
+          GENERATE_READING_FUNCTION_NAME: this.generateReadingFunction.functionName,
+          WEBHOOK_PROCESSING_TABLE_NAME: props.readingsTable.tableName, // Reuse readings table for now
+          INTERNAL_INVOCATION_SECRET: internalInvocationSecret,
+        },
+        timeout: cdk.Duration.seconds(30), // Reduced timeout for webhook processing
+        memorySize: 256,
+        bundling: {
+          externalModules: ['@aws-sdk/*'],
+          forceDockerBundling: false,
+        },
+      },
+    );
+
+    // Grant permissions to webhook handler
+    stripeApiKeyParameter.grantRead(this.stripeWebhookHandlerFunction);
+    stripeWebhookSecretParameter.grantRead(this.stripeWebhookHandlerFunction);
+    this.generateReadingFunction.grantInvoke(this.stripeWebhookHandlerFunction);
+    props.readingsTable.grantReadWriteData(this.stripeWebhookHandlerFunction); // For idempotency tracking
+
     // Grant Cognito permissions for admin user listing
     this.adminGetAllUsersFunction.addToRolePolicy(
       new iam.PolicyStatement({
@@ -507,6 +612,64 @@ export class ApiConstruct extends Construct {
       },
     );
 
+    // Add /api/users/{userId}/checkout-session resource
+    const checkoutSessionResource = userIdResource.addResource('checkout-session');
+    checkoutSessionResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(this.createCheckoutSessionFunction),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      },
+    );
+
+    // Add /api/webhooks/stripe resource (public, no authentication)
+    const webhooksResource = apiResource.addResource('webhooks');
+    const stripeWebhookResource = webhooksResource.addResource('stripe');
+
+    // Configure webhook endpoint to handle raw body for signature verification
+    const webhookIntegration = new apigateway.LambdaIntegration(this.stripeWebhookHandlerFunction, {
+      // Pass the raw body to Lambda for signature verification
+      passthroughBehavior: apigateway.PassthroughBehavior.WHEN_NO_MATCH,
+      requestTemplates: {
+        'application/json':
+          '{"body": "$util.base64Encode($input.body)", "headers": $input.params().header}',
+      },
+    });
+
+    const webhookMethod = stripeWebhookResource.addMethod('POST', webhookIntegration, {
+      // No authorization - Stripe will call this endpoint directly
+      authorizationType: apigateway.AuthorizationType.NONE,
+      requestModels: {
+        'application/json': apigateway.Model.EMPTY_MODEL,
+      },
+    });
+
+    // Add rate limiting to prevent abuse
+    const webhookThrottleSettings: apigateway.ThrottleSettings = {
+      rateLimit: 100, // 100 requests per second
+      burstLimit: 200, // Allow bursts up to 200 requests
+    };
+
+    // Create usage plan for webhook rate limiting
+    new apigateway.UsagePlan(this, 'WebhookUsagePlan', {
+      name: `aura28-${props.environment}-webhook-usage-plan`,
+      description: 'Usage plan for Stripe webhook endpoint',
+      throttle: webhookThrottleSettings,
+      apiStages: [
+        {
+          api: this.api,
+          stage: this.api.deploymentStage,
+          throttle: [
+            {
+              method: webhookMethod,
+              throttle: webhookThrottleSettings,
+            },
+          ],
+        },
+      ],
+    });
+
     // Add /api/users/{userId}/readings resource
     const readingsResource = userIdResource.addResource('readings');
 
@@ -516,15 +679,8 @@ export class ApiConstruct extends Construct {
       authorizationType: apigateway.AuthorizationType.COGNITO,
     });
 
-    // POST /api/users/{userId}/readings - Generate a new reading
-    readingsResource.addMethod(
-      'POST',
-      new apigateway.LambdaIntegration(this.generateReadingFunction),
-      {
-        authorizer,
-        authorizationType: apigateway.AuthorizationType.COGNITO,
-      },
-    );
+    // POST endpoint for reading generation has been removed
+    // Readings are now only generated through Stripe webhook after successful payment
 
     // Add /api/users/{userId}/readings/{readingId} resource
     const readingIdResource = readingsResource.addResource('{readingId}');

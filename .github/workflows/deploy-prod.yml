@@ -133,6 +133,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Configure AWS credentials for SSM
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Fetch Stripe Price ID from SSM
+        id: fetch-price-id
+        run: |
+          echo "Fetching Stripe default price ID from SSM Parameter Store..."
+          PRICE_ID=$(aws ssm get-parameter --name "/aura28/prod/stripe/default-price-id" --query "Parameter.Value" --output text 2>/dev/null || echo "")
+          if [ -z "$PRICE_ID" ]; then
+            echo "Warning: SSM parameter /aura28/prod/stripe/default-price-id not found"
+            echo "Using placeholder for initial deployment: price_REPLACE_WITH_PRODUCTION_ID"
+            echo "IMPORTANT: Update the SSM parameter with the actual production price ID after deployment"
+            PRICE_ID="price_REPLACE_WITH_PRODUCTION_ID"
+          else
+            echo "Successfully fetched Stripe price ID from SSM"
+          fi
+          echo "Using Stripe price ID: price_***" 
+          echo "STRIPE_PRICE_ID=$PRICE_ID" >> $GITHUB_OUTPUT
+
       - name: Build frontend
         working-directory: ./frontend
         env:
@@ -141,6 +164,7 @@ jobs:
           NEXT_PUBLIC_COGNITO_DOMAIN: ${{ secrets.PROD_NEXT_PUBLIC_COGNITO_DOMAIN }}
           NEXT_PUBLIC_COGNITO_REGION: ${{ secrets.PROD_NEXT_PUBLIC_COGNITO_REGION }}
           NEXT_PUBLIC_API_GATEWAY_URL: ${{ secrets.PROD_NEXT_PUBLIC_API_GATEWAY_URL }}
+          NEXT_PUBLIC_STRIPE_PRICE_ID: ${{ steps.fetch-price-id.outputs.STRIPE_PRICE_ID }}
         run: npm run build
 
       - name: Upload build artifacts

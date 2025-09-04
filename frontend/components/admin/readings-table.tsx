@@ -75,9 +75,9 @@ export function ReadingsTable({
   if (loading) {
     return (
       <div className="space-y-3">
-        <div className="h-10 animate-pulse rounded bg-muted"></div>
+        <div className="h-10 animate-pulse rounded bg-white/10"></div>
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-16 animate-pulse rounded bg-muted"></div>
+          <div key={i} className="h-16 animate-pulse rounded bg-white/10"></div>
         ))}
       </div>
     );
@@ -85,19 +85,17 @@ export function ReadingsTable({
 
   if (readings.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed">
+      <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-white/20">
         <div className="text-center">
-          <p className="text-lg font-semibold">No readings found</p>
-          <p className="text-sm text-muted-foreground">
-            Try adjusting your filters or check back later
-          </p>
+          <p className="text-lg font-semibold text-white">No readings found</p>
+          <p className="text-sm text-white/70">Try adjusting your filters or check back later</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <div className="overflow-x-auto rounded-lg border border-white/20 bg-white/10 backdrop-blur-md">
       <Table>
         <TableHeader>
           <TableRow>
@@ -105,7 +103,7 @@ export function ReadingsTable({
               <Button
                 variant="ghost"
                 onClick={() => onSort('createdAt')}
-                className="h-auto p-0 font-semibold hover:bg-transparent"
+                className="h-auto p-0 font-semibold text-white hover:bg-transparent"
                 aria-sort={getAriaSortValue('createdAt')}
                 aria-label={`Sort by Date Generated, currently ${getAriaSortValue('createdAt')}`}
               >
@@ -117,7 +115,7 @@ export function ReadingsTable({
               <Button
                 variant="ghost"
                 onClick={() => onSort('userEmail')}
-                className="h-auto p-0 font-semibold hover:bg-transparent"
+                className="h-auto p-0 font-semibold text-white hover:bg-transparent"
                 aria-sort={getAriaSortValue('userEmail')}
                 aria-label={`Sort by User, currently ${getAriaSortValue('userEmail')}`}
               >
@@ -129,7 +127,7 @@ export function ReadingsTable({
               <Button
                 variant="ghost"
                 onClick={() => onSort('type')}
-                className="h-auto p-0 font-semibold hover:bg-transparent"
+                className="h-auto p-0 font-semibold text-white hover:bg-transparent"
                 aria-sort={getAriaSortValue('type')}
                 aria-label={`Sort by Reading Type, currently ${getAriaSortValue('type')}`}
               >
@@ -141,7 +139,7 @@ export function ReadingsTable({
               <Button
                 variant="ghost"
                 onClick={() => onSort('status')}
-                className="h-auto p-0 font-semibold hover:bg-transparent"
+                className="h-auto p-0 font-semibold text-white hover:bg-transparent"
                 aria-sort={getAriaSortValue('status')}
                 aria-label={`Sort by Status, currently ${getAriaSortValue('status')}`}
               >
@@ -149,8 +147,10 @@ export function ReadingsTable({
                 {getSortIcon('status')}
               </Button>
             </TableHead>
-            <TableHead scope="col">Reading ID</TableHead>
-            <TableHead scope="col" className="text-right">
+            <TableHead scope="col" className="text-white">
+              Reading ID
+            </TableHead>
+            <TableHead scope="col" className="text-right text-white">
               Actions
             </TableHead>
           </TableRow>
@@ -160,20 +160,22 @@ export function ReadingsTable({
             <TableRow
               key={reading.readingId}
               onClick={() => onViewDetails(reading.userId, reading.readingId)}
-              className="cursor-pointer hover:bg-muted/50"
+              className="cursor-pointer hover:bg-white/10 border-b border-white/10"
             >
-              <TableCell>{format(new Date(reading.createdAt), 'MMM dd, yyyy HH:mm')}</TableCell>
+              <TableCell className="text-white/90">
+                {format(new Date(reading.createdAt), 'MMM dd, yyyy HH:mm')}
+              </TableCell>
               <TableCell>
                 <div>
-                  <p className="font-medium">{reading.userEmail || 'Unknown'}</p>
-                  <p className="text-xs text-muted-foreground">{reading.userId}</p>
+                  <p className="font-medium text-white">{reading.userEmail || 'Unknown'}</p>
+                  <p className="text-xs text-white/60">{reading.userId}</p>
                 </div>
               </TableCell>
-              <TableCell>{reading.type}</TableCell>
+              <TableCell className="text-white/90">{reading.type}</TableCell>
               <TableCell>
                 <Badge variant={getStatusBadgeVariant(reading.status)}>{reading.status}</Badge>
               </TableCell>
-              <TableCell className="font-mono text-xs">
+              <TableCell className="font-mono text-xs text-white/80">
                 {reading.readingId.slice(0, 8)}...
               </TableCell>
               <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>

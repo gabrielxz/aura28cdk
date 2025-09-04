@@ -89,14 +89,19 @@ export function ReadingsFilters({
     userSearchValue;
 
   return (
-    <div className="space-y-4 rounded-lg border p-4">
+    <div className="space-y-4 rounded-lg border border-white/20 bg-white/10 backdrop-blur-md p-4">
       <div className="flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-lg font-semibold">
+        <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
           <Filter className="h-5 w-5" />
           Filters
         </h3>
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-sm">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="text-sm text-white/80 hover:text-white hover:bg-white/10"
+          >
             <X className="mr-1 h-4 w-4" />
             Clear all
           </Button>
@@ -106,10 +111,13 @@ export function ReadingsFilters({
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Date Range */}
         <div className="space-y-2">
-          <Label>Start Date</Label>
+          <Label className="text-white/90">Start Date</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start">
+              <Button
+                variant="outline"
+                className="w-full justify-start bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
                 <Calendar className="mr-2 h-4 w-4" />
                 {localFilters.startDate || 'Select date'}
               </Button>
@@ -125,10 +133,13 @@ export function ReadingsFilters({
         </div>
 
         <div className="space-y-2">
-          <Label>End Date</Label>
+          <Label className="text-white/90">End Date</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start">
+              <Button
+                variant="outline"
+                className="w-full justify-start bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
                 <Calendar className="mr-2 h-4 w-4" />
                 {localFilters.endDate || 'Select date'}
               </Button>
@@ -145,7 +156,7 @@ export function ReadingsFilters({
 
         {/* Status Filter */}
         <div className="space-y-2">
-          <Label>Status</Label>
+          <Label className="text-white/90">Status</Label>
           <Select value={localFilters.status || 'all'} onValueChange={handleStatusChange}>
             <SelectTrigger>
               <SelectValue placeholder="All statuses" />
@@ -162,7 +173,7 @@ export function ReadingsFilters({
 
         {/* Type Filter */}
         <div className="space-y-2">
-          <Label>Reading Type</Label>
+          <Label className="text-white/90">Reading Type</Label>
           <Select value={localFilters.type || 'all'} onValueChange={handleTypeChange}>
             <SelectTrigger>
               <SelectValue placeholder="All types" />
@@ -178,10 +189,11 @@ export function ReadingsFilters({
       <div className="grid gap-4 md:grid-cols-2">
         {/* User Search */}
         <div className="space-y-2">
-          <Label>Search User</Label>
+          <Label className="text-white/90">Search User</Label>
           <Input
             type="text"
             placeholder="Search by email or name..."
+            className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
             value={userSearchValue}
             onChange={(e) => setUserSearchValue(e.target.value)}
           />
@@ -189,7 +201,7 @@ export function ReadingsFilters({
 
         {/* Page Size */}
         <div className="space-y-2">
-          <Label>Items per page</Label>
+          <Label className="text-white/90">Items per page</Label>
           <Select
             value={pageSize.toString()}
             onValueChange={(value) => onPageSizeChange(Number(value))}

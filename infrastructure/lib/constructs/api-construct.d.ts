@@ -27,5 +27,7 @@ export declare class ApiConstruct extends Construct {
     readonly adminGetReadingDetailsFunction: lambda.Function;
     readonly adminUpdateReadingStatusFunction: lambda.Function;
     readonly adminDeleteReadingFunction: lambda.Function;
+    readonly createCheckoutSessionFunction: lambda.Function;
+    readonly stripeWebhookHandlerFunction: lambda.Function;
     constructor(scope: Construct, id: string, props: ApiConstructProps);
 }

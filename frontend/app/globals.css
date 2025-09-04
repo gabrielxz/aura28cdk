@@ -24,6 +24,18 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
+
+    /* Aura28 Custom Properties */
+    --aura-primary: #0f1c3f;
+    --aura-secondary: #1a2963;
+    --aura-accent-orange: #ff8a65;
+    --aura-accent-amber: #ffb74d;
+    --aura-gradient: linear-gradient(
+      to bottom right,
+      var(--aura-primary),
+      var(--aura-secondary),
+      var(--aura-primary)
+    );
   }
 
   .dark {
@@ -55,5 +67,60 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Aura28 Custom Styles */
+.bg-aura-gradient {
+  background: var(--aura-gradient);
+}
+
+.bg-aura-primary {
+  background-color: var(--aura-primary);
+}
+
+.bg-aura-secondary {
+  background-color: var(--aura-secondary);
+}
+
+.text-aura-accent {
+  background: linear-gradient(to right, var(--aura-accent-orange), var(--aura-accent-amber));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Star animation styles */
+.star {
+  position: absolute;
+  background: #ffffff;
+  border-radius: 50%;
+  animation: twinkle 3s infinite ease-in-out;
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Float animation for logo */
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
   }
 }

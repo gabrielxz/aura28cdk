@@ -6,9 +6,10 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UserApi } from '@/lib/api/user-api';
 import { formatDistanceToNow } from 'date-fns';
-import { Loader2, BookOpen, Plus, Download } from 'lucide-react';
+import { Loader2, BookOpen, Download, ShoppingCart } from 'lucide-react';
 import { generateReadingPDF, isPDFGenerationSupported } from '@/lib/pdf/reading-pdf-generator';
 import { useToast } from '@/components/ui/use-toast';
+import { STRIPE_CONFIG } from '@/lib/config/stripe';
 
 interface Reading {
   readingId: string;
@@ -26,17 +27,19 @@ interface ReadingDetail extends Reading {
 interface ReadingsTabProps {
   userApi: UserApi;
   userId: string;
+  onNeedRefresh?: () => void;
 }
 
-export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
+export default function ReadingsTab({ userApi, userId, onNeedRefresh }: ReadingsTabProps) {
   const [readings, setReadings] = useState<Reading[]>([]);
   const [selectedReading, setSelectedReading] = useState<ReadingDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasNatalChart, setHasNatalChart] = useState<boolean | null>(null);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [pdfProgress, setPdfProgress] = useState(0);
+  const [purchasingReading, setPurchasingReading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Check if user has natal chart
@@ -59,7 +62,16 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
       setLoading(true);
       setError(null);
       const data = await userApi.getReadings(userId);
-      setReadings(data.readings);
+      // KAN-54: Sort readings by createdAt date in descending order (newest first)
+      const sortedReadings = [...data.readings].sort((a, b) => {
+        const dateA = new Date(a.createdAt);
+        const dateB = new Date(b.createdAt);
+        // Handle invalid dates by treating them as very old dates
+        const timeA = isNaN(dateA.getTime()) ? 0 : dateA.getTime();
+        const timeB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
+        return timeB - timeA;
+      });
+      setReadings(sortedReadings);
     } catch (error) {
       console.error('Failed to load readings:', error);
       setError('Failed to load readings');
@@ -72,21 +84,17 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
     loadReadings();
   }, [userApi, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Generate new reading
-  const generateReading = async () => {
-    try {
-      setGenerating(true);
-      setError(null);
-      await userApi.generateReading(userId);
-      // Reload readings list
-      await loadReadings();
-    } catch (error) {
-      console.error('Failed to generate reading:', error);
-      setError('Failed to generate reading. Please try again.');
-    } finally {
-      setGenerating(false);
+  // Trigger refresh when requested by parent
+  useEffect(() => {
+    if (onNeedRefresh) {
+      loadReadings();
     }
-  };
+  }, [onNeedRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reading generation has been removed - readings are now generated after payment
+  // const generateReading = async () => {
+  //   Reading generation is now handled automatically after successful payment
+  // };
 
   // Load reading detail
   const loadReadingDetail = async (readingId: string) => {
@@ -96,6 +104,45 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
     } catch (error) {
       console.error('Failed to load reading detail:', error);
       setError('Failed to load reading detail');
+    }
+  };
+
+  // Handle purchase reading - creates Stripe checkout session
+  const handlePurchaseReading = async () => {
+    try {
+      setPurchasingReading(true);
+      setCheckoutError(null);
+
+      const baseUrl = window.location.origin;
+      const session = await userApi.createCheckoutSession(userId, {
+        sessionType: 'one-time',
+        priceId: STRIPE_CONFIG.readingPriceId,
+        successUrl: STRIPE_CONFIG.getSuccessUrl(baseUrl),
+        cancelUrl: STRIPE_CONFIG.getCancelUrl(baseUrl),
+        metadata: {
+          userId,
+          readingType: STRIPE_CONFIG.readingTypes.SOUL_BLUEPRINT,
+        },
+      });
+
+      // Redirect to Stripe checkout
+      if (session.url) {
+        window.location.href = session.url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (error) {
+      console.error('Failed to create checkout session:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to start checkout. Please try again.';
+      setCheckoutError(errorMessage);
+      toast({
+        title: 'Checkout Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setPurchasingReading(false);
     }
   };
 
@@ -196,7 +243,11 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
     return (
       <div className="mt-6">
         <div className="mb-4 flex items-center justify-between">
-          <Button onClick={() => setSelectedReading(null)} variant="outline">
+          <Button
+            onClick={() => setSelectedReading(null)}
+            variant="outline"
+            className="bg-transparent border-white/20 text-white hover:bg-white/20 hover:border-white/40"
+          >
             ← Back to Readings
           </Button>
           {selectedReading.status === 'Ready' && selectedReading.content && (
@@ -204,7 +255,7 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
               onClick={handleDownloadPDF}
               disabled={downloadingPDF}
               variant="default"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-gradient-to-r from-[#ff8a65] to-[#ffb74d] text-[#1a1b3a] hover:opacity-90"
               aria-label="Download reading as PDF"
             >
               {downloadingPDF ? (
@@ -268,28 +319,37 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
     <div className="mt-6">
       <div className="mb-6 flex items-center justify-between">
         <h3 className="text-xl font-semibold">Your Readings</h3>
-        <Button
-          onClick={generateReading}
-          disabled={generating || hasNatalChart === false}
-          className="flex items-center gap-2"
-        >
-          {generating ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Plus className="h-4 w-4" />
-              Generate Reading
-            </>
-          )}
-        </Button>
+        {hasNatalChart && (
+          <Button
+            onClick={handlePurchaseReading}
+            disabled={purchasingReading || !hasNatalChart}
+            variant="default"
+            className="flex items-center gap-2 bg-gradient-to-r from-[#ff8a65] to-[#ffb74d] text-[#1a1b3a] hover:opacity-90"
+          >
+            {purchasingReading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Creating checkout session...
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="h-4 w-4" />
+                Purchase Reading
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-600 dark:bg-red-900/20">
           <p>{error}</p>
+        </div>
+      )}
+
+      {checkoutError && (
+        <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-600 dark:bg-red-900/20">
+          <p>{checkoutError}</p>
         </div>
       )}
 
@@ -302,12 +362,75 @@ export default function ReadingsTab({ userApi, userId }: ReadingsTabProps) {
       )}
 
       {readings.length === 0 ? (
-        <Card className="p-12 text-center">
-          <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
-          <h4 className="mt-4 text-lg font-semibold">No Readings Yet</h4>
-          <p className="mt-2 text-gray-600">
-            Generate your first Soul Blueprint reading to discover your astrological insights.
-          </p>
+        <Card className="overflow-hidden">
+          <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-8 dark:from-purple-900/20 dark:to-blue-900/20">
+            <div className="mx-auto max-w-2xl text-center">
+              <BookOpen className="mx-auto h-12 w-12 text-purple-600 dark:text-purple-400" />
+              <h4 className="mt-4 text-2xl font-bold">Unlock Your Soul Blueprint</h4>
+
+              {/* Product Description */}
+              <p className="mt-4 text-gray-700 dark:text-gray-300 leading-relaxed">
+                {STRIPE_CONFIG.productDescription}
+              </p>
+
+              {/* Pricing Section */}
+              <div className="mt-8 inline-flex flex-col items-center rounded-lg bg-white/80 dark:bg-gray-900/80 backdrop-blur p-6 shadow-lg">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-purple-600 dark:text-purple-400">
+                    {STRIPE_CONFIG.displayPrice}
+                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {STRIPE_CONFIG.paymentType}
+                  </span>
+                </div>
+
+                {/* Benefits List */}
+                <ul className="mt-4 space-y-2 text-left text-sm text-gray-700 dark:text-gray-300">
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 dark:text-purple-400">✓</span>
+                    <span>Personalized to your exact birth chart</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 dark:text-purple-400">✓</span>
+                    <span>AI-powered deep astrological analysis</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 dark:text-purple-400">✓</span>
+                    <span>Instant PDF download available</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Purchase Button */}
+              {hasNatalChart ? (
+                <Button
+                  onClick={handlePurchaseReading}
+                  disabled={purchasingReading || !hasNatalChart}
+                  size="lg"
+                  className="mt-8 bg-gradient-to-r from-[#ff8a65] to-[#ffb74d] hover:opacity-90 text-[#1a1b3a] px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  {purchasingReading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Creating checkout session...
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="mr-2 h-5 w-5" />
+                      Purchase Soul Blueprint Reading
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <div className="mt-8 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 p-4">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    Please complete your profile and generate your natal chart before purchasing a
+                    reading.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </Card>
       ) : (
         <div className="space-y-4">

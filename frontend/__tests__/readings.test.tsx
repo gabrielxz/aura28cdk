@@ -1,3 +1,6 @@
+// Set test environment variable before imports
+process.env.NEXT_PUBLIC_STRIPE_PRICE_ID = 'price_test_readings_123';
+
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -51,7 +54,7 @@ describe('ReadingsTab', () => {
     mockUserApi = {
       getNatalChart: jest.fn(),
       getReadings: jest.fn(),
-      generateReading: jest.fn(),
+      // generateReading: removed in KAN-66 - reading generation now happens through Stripe webhook
       getReadingDetail: jest.fn(),
       getUserProfile: jest.fn(),
     } as unknown as jest.Mocked<UserApi>;
@@ -116,63 +119,22 @@ describe('ReadingsTab', () => {
     render(<ReadingsTab userApi={mockUserApi} userId="test-user" />);
 
     await waitFor(() => {
-      expect(screen.getByText('No Readings Yet')).toBeInTheDocument();
+      expect(screen.getByText('Unlock Your Soul Blueprint')).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Generate your first Soul Blueprint reading/)).toBeInTheDocument();
+    expect(screen.getByText(/Unlock deep insights into your cosmic blueprint/)).toBeInTheDocument();
   });
 
-  it('should disable generate button when natal chart is not available', async () => {
-    mockUserApi.getNatalChart.mockRejectedValue(new Error('Not found'));
-    mockUserApi.getReadings.mockResolvedValue({
-      readings: [],
-      count: 0,
-    });
+  // NOTE: These tests are commented out as reading generation is now handled through Stripe payment flow
+  // Direct reading generation button was removed in KAN-66
 
-    render(<ReadingsTab userApi={mockUserApi} userId="test-user" />);
+  // it('should disable generate button when natal chart is not available', async () => {
+  //   // Test removed - reading generation now happens through payment flow
+  // });
 
-    await waitFor(() => {
-      const generateButton = screen.getByRole('button', { name: /Generate Reading/i });
-      expect(generateButton).toBeDisabled();
-    });
-
-    expect(
-      screen.getByText(/Please complete your profile and generate your natal chart/),
-    ).toBeInTheDocument();
-  });
-
-  it('should handle generate reading', async () => {
-    mockUserApi.getNatalChart.mockResolvedValue({
-      userId: 'test-user',
-      chartType: 'natal',
-      createdAt: '2024-01-01T00:00:00Z',
-      planets: {},
-      isTimeEstimated: false,
-    });
-    mockUserApi.getReadings.mockResolvedValue({
-      readings: [],
-      count: 0,
-    });
-    mockUserApi.generateReading.mockResolvedValue({
-      message: 'Reading generated successfully',
-      readingId: 'new-reading-id',
-      status: 'Processing',
-    });
-
-    render(<ReadingsTab userApi={mockUserApi} userId="test-user" />);
-
-    await waitFor(() => {
-      const generateButton = screen.getByRole('button', { name: /Generate Reading/i });
-      expect(generateButton).toBeEnabled();
-    });
-
-    const generateButton = screen.getByRole('button', { name: /Generate Reading/i });
-    fireEvent.click(generateButton);
-
-    await waitFor(() => {
-      expect(mockUserApi.generateReading).toHaveBeenCalledWith('test-user');
-    });
-  });
+  // it('should handle generate reading', async () => {
+  //   // Test removed - reading generation now happens through payment flow
+  // });
 
   it('should load reading detail when clicking on a reading', async () => {
     const mockReadings = {
