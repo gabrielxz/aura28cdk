@@ -575,4 +575,304 @@ describe('AuthCallbackPage', () => {
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
   });
+
+  describe('Google OAuth specific scenarios', () => {
+    it('should handle Google OAuth callback with authorization code', async () => {
+      // Setup - Google OAuth returns with code and state parameters
+      mockSearchParams.set('code', 'google-auth-code-123');
+      mockSearchParams.set('state', 'google-state-123');
+
+      const mockAuthService = {
+        hasValidSession: jest.fn().mockReturnValue(false),
+        isAuthenticated: jest.fn().mockReturnValue(false),
+        handleCallback: jest.fn().mockResolvedValue({
+          idToken: 'google-id-token',
+          accessToken: 'google-access-token',
+          refreshToken: 'google-refresh-token',
+          expiresAt: Date.now() + 3600000,
+        }),
+      };
+
+      (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+      // Render component
+      render(<AuthCallbackPage />);
+
+      // Wait for authentication to complete
+      await waitFor(() => {
+        expect(mockAuthService.handleCallback).toHaveBeenCalledWith('google-auth-code-123');
+      });
+
+      await waitFor(() => {
+        expect(mockRefreshUser).toHaveBeenCalled();
+      });
+
+      // Verify redirect to dashboard
+      expect(mockRouter.replace).toHaveBeenCalledWith('/dashboard');
+    });
+
+    it('should handle Google OAuth error responses', async () => {
+      // Setup - Google OAuth returns with error
+      mockSearchParams.set('error', 'access_denied');
+      mockSearchParams.set('error_description', 'User+denied+access+to+Google+account');
+
+      const mockAuthService = {
+        hasValidSession: jest.fn().mockReturnValue(false),
+        isAuthenticated: jest.fn().mockReturnValue(false),
+        handleCallback: jest.fn(),
+      };
+
+      (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+      // Render component
+      render(<AuthCallbackPage />);
+
+      // Verify error message is displayed
+      await waitFor(() => {
+        expect(screen.getByText('Authentication Error')).toBeInTheDocument();
+        expect(screen.getByText('Authentication failed: access_denied')).toBeInTheDocument();
+      });
+
+      // Wait for redirect to home
+      await waitFor(
+        () => {
+          expect(mockRouter.replace).toHaveBeenCalledWith('/');
+        },
+        { timeout: 4000 },
+      );
+    });
+
+    it('should handle Google user with federated identity in token', async () => {
+      // Setup - simulating Google federated user
+      mockSearchParams.set('code', 'google-federated-code');
+
+      const mockGoogleTokens = {
+        idToken: 'google-jwt-token',
+        accessToken: 'google-access-token',
+        refreshToken: 'google-refresh-token',
+        expiresAt: Date.now() + 3600000,
+        // Google federated users might have additional claims
+        identityProvider: 'Google',
+        federatedIdentity: true,
+      };
+
+      const mockAuthService = {
+        hasValidSession: jest.fn().mockReturnValue(false),
+        isAuthenticated: jest.fn().mockReturnValue(false),
+        handleCallback: jest.fn().mockResolvedValue(mockGoogleTokens),
+      };
+
+      (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+      // Render component
+      render(<AuthCallbackPage />);
+
+      // Wait for authentication to complete
+      await waitFor(() => {
+        expect(mockAuthService.handleCallback).toHaveBeenCalledWith('google-federated-code');
+      });
+
+      // Verify user context was refreshed
+      await waitFor(() => {
+        expect(mockRefreshUser).toHaveBeenCalled();
+      });
+
+      // Verify redirect to dashboard regardless of identity provider
+      expect(mockRouter.replace).toHaveBeenCalledWith('/dashboard');
+    });
+
+    it('should handle Google account linking scenario', async () => {
+      // Setup - user with existing Cognito account signs in with Google
+      mockSearchParams.set('code', 'google-linking-code');
+
+      const mockAuthService = {
+        hasValidSession: jest.fn().mockReturnValue(false),
+        isAuthenticated: jest.fn().mockReturnValue(false),
+        handleCallback: jest.fn().mockResolvedValue({
+          idToken: 'linked-id-token',
+          accessToken: 'linked-access-token',
+          refreshToken: 'linked-refresh-token',
+          expiresAt: Date.now() + 3600000,
+          // Cognito might include account linking information
+          linkedAccount: true,
+          linkedProvider: 'Google',
+        }),
+      };
+
+      (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+      // Render component
+      render(<AuthCallbackPage />);
+
+      // Wait for authentication to complete
+      await waitFor(() => {
+        expect(mockAuthService.handleCallback).toHaveBeenCalledWith('google-linking-code');
+      });
+
+      // Verify successful authentication flow
+      await waitFor(() => {
+        expect(mockRefreshUser).toHaveBeenCalled();
+      });
+
+      // Verify redirect to dashboard
+      expect(mockRouter.replace).toHaveBeenCalledWith('/dashboard');
+    });
+
+    it('should handle Google OAuth with missing email verification', async () => {
+      // Setup - Google user without verified email (edge case)
+      mockSearchParams.set('code', 'google-unverified-email-code');
+
+      const mockAuthService = {
+        hasValidSession: jest.fn().mockReturnValue(false),
+        isAuthenticated: jest.fn().mockReturnValue(false),
+        handleCallback: jest.fn().mockResolvedValue({
+          idToken: 'unverified-id-token',
+          accessToken: 'unverified-access-token',
+          refreshToken: 'unverified-refresh-token',
+          expiresAt: Date.now() + 3600000,
+          emailVerified: false, // Unverified email
+        }),
+      };
+
+      (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+      // Render component
+      render(<AuthCallbackPage />);
+
+      // Wait for authentication to complete
+      await waitFor(() => {
+        expect(mockAuthService.handleCallback).toHaveBeenCalledWith('google-unverified-email-code');
+      });
+
+      // Should still refresh user and redirect (Cognito handles verification)
+      await waitFor(() => {
+        expect(mockRefreshUser).toHaveBeenCalled();
+      });
+
+      expect(mockRouter.replace).toHaveBeenCalledWith('/dashboard');
+    });
+
+    it('should handle rapid Google OAuth redirects', async () => {
+      // Setup - simulating rapid redirects/multiple OAuth attempts
+      const codes = ['google-code-1', 'google-code-2', 'google-code-3'];
+      let currentCodeIndex = 0;
+
+      // Mock changing search params
+      (useSearchParams as jest.Mock).mockImplementation(() => ({
+        get: (key: string) => {
+          if (key === 'code') {
+            return codes[currentCodeIndex];
+          }
+          return null;
+        },
+      }));
+
+      const mockAuthService = {
+        hasValidSession: jest.fn().mockReturnValue(false),
+        isAuthenticated: jest.fn().mockReturnValue(false),
+        handleCallback: jest.fn().mockImplementation((code: string) => {
+          // Only resolve for the first code
+          if (code === codes[0]) {
+            return Promise.resolve({
+              idToken: 'test-id-token',
+              accessToken: 'test-access-token',
+              refreshToken: 'test-refresh-token',
+              expiresAt: Date.now() + 3600000,
+            });
+          }
+          return new Promise(() => {}); // Never resolves for other codes
+        }),
+      };
+
+      (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+      // Render component with first code
+      const { rerender } = render(<AuthCallbackPage />);
+
+      // Simulate rapid re-renders with different codes
+      currentCodeIndex = 1;
+      rerender(<AuthCallbackPage />);
+
+      currentCodeIndex = 2;
+      rerender(<AuthCallbackPage />);
+
+      // Wait for first authentication to complete
+      await waitFor(() => {
+        expect(mockAuthService.handleCallback).toHaveBeenCalledWith(codes[0]);
+      });
+
+      // Should only process the first code due to refs
+      expect(mockAuthService.handleCallback).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle Google OAuth timeout scenarios', async () => {
+      // Setup - simulating timeout during Google OAuth
+      mockSearchParams.set('code', 'google-timeout-code');
+
+      const mockAuthService = {
+        hasValidSession: jest.fn().mockReturnValue(false),
+        isAuthenticated: jest.fn().mockReturnValue(false),
+        handleCallback: jest.fn().mockRejectedValue(new Error('Request timeout')),
+      };
+
+      (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+      // Render component
+      render(<AuthCallbackPage />);
+
+      // Wait for error handling
+      await waitFor(() => {
+        expect(mockAuthService.handleCallback).toHaveBeenCalledWith('google-timeout-code');
+      });
+
+      // Verify error message
+      await waitFor(() => {
+        expect(screen.getByText('Authentication Error')).toBeInTheDocument();
+        expect(screen.getByText('Request timeout')).toBeInTheDocument();
+      });
+
+      // Verify redirect to home after timeout
+      await waitFor(
+        () => {
+          expect(mockRouter.replace).toHaveBeenCalledWith('/');
+        },
+        { timeout: 4000 },
+      );
+    });
+
+    it('should preserve Google OAuth state during refresh', async () => {
+      // Setup - Google OAuth with state parameter for CSRF protection
+      mockSearchParams.set('code', 'google-stateful-code');
+      mockSearchParams.set('state', 'csrf-token-123');
+
+      const mockAuthService = {
+        hasValidSession: jest.fn().mockReturnValue(false),
+        isAuthenticated: jest.fn().mockReturnValue(false),
+        handleCallback: jest.fn().mockResolvedValue({
+          idToken: 'stateful-id-token',
+          accessToken: 'stateful-access-token',
+          refreshToken: 'stateful-refresh-token',
+          expiresAt: Date.now() + 3600000,
+        }),
+      };
+
+      (AuthService as jest.Mock).mockImplementation(() => mockAuthService);
+
+      // Render component
+      render(<AuthCallbackPage />);
+
+      // The component should process the code regardless of state
+      // (Cognito handles state validation internally)
+      await waitFor(() => {
+        expect(mockAuthService.handleCallback).toHaveBeenCalledWith('google-stateful-code');
+      });
+
+      // Verify successful authentication
+      await waitFor(() => {
+        expect(mockRefreshUser).toHaveBeenCalled();
+      });
+
+      expect(mockRouter.replace).toHaveBeenCalledWith('/dashboard');
+    });
+  });
 });
