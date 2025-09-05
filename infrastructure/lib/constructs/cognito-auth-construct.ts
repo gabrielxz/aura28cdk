@@ -2,18 +2,26 @@ import { Construct } from 'constructs';
 import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
+import * as route53 from 'aws-cdk-lib/aws-route53';
 
 export interface CognitoAuthConstructProps {
   environment: 'dev' | 'prod';
   domainPrefix: string;
   callbackUrls: string[];
   logoutUrls: string[];
+  customDomain?: {
+    domainName: string; // e.g., auth.aura28.com
+    hostedZone: route53.IHostedZone;
+  };
 }
 
 export class CognitoAuthConstruct extends Construct {
   public readonly userPool: cognito.UserPool;
   public readonly userPoolClient: cognito.UserPoolClient;
   public readonly userPoolDomain: cognito.UserPoolDomain;
+  public readonly customDomainCertificate?: acm.Certificate;
+  public readonly customDomainName?: string;
 
   constructor(scope: Construct, id: string, props: CognitoAuthConstructProps) {
     super(scope, id);
@@ -66,13 +74,35 @@ export class CognitoAuthConstruct extends Construct {
       precedence: 1, // Highest priority
     });
 
+    // Create certificate for custom domain if needed (only for production)
+    if (props.customDomain && props.environment === 'prod') {
+      // Certificate must be in us-east-1 for Cognito custom domains
+      this.customDomainCertificate = new acm.Certificate(this, 'CustomDomainCertificate', {
+        domainName: props.customDomain.domainName,
+        validation: acm.CertificateValidation.fromDns(props.customDomain.hostedZone),
+      });
+      this.customDomainName = props.customDomain.domainName;
+    }
+
     // Create User Pool Domain
-    this.userPoolDomain = new cognito.UserPoolDomain(this, 'UserPoolDomain', {
-      userPool: this.userPool,
-      cognitoDomain: {
-        domainPrefix: props.domainPrefix,
-      },
-    });
+    if (this.customDomainCertificate && this.customDomainName) {
+      // Production with custom domain
+      this.userPoolDomain = new cognito.UserPoolDomain(this, 'UserPoolDomain', {
+        userPool: this.userPool,
+        customDomain: {
+          domainName: this.customDomainName,
+          certificate: this.customDomainCertificate,
+        },
+      });
+    } else {
+      // Dev environment or production without custom domain (fallback)
+      this.userPoolDomain = new cognito.UserPoolDomain(this, 'UserPoolDomain', {
+        userPool: this.userPool,
+        cognitoDomain: {
+          domainPrefix: props.domainPrefix,
+        },
+      });
+    }
 
     // Reference the existing Google OAuth secret from Secrets Manager
     // This secret should be manually created with real Google OAuth credentials
@@ -169,10 +199,23 @@ export class CognitoAuthConstruct extends Construct {
       description: 'Cognito Domain Prefix',
     });
 
+    // Output the appropriate hosted UI URL based on whether custom domain is used
+    const hostedUIUrl = this.customDomainName
+      ? `https://${this.customDomainName}`
+      : `https://${props.domainPrefix}.auth.${cdk.Stack.of(this).region}.amazoncognito.com`;
+
     new cdk.CfnOutput(this, 'CognitoHostedUIURL', {
-      value: `https://${props.domainPrefix}.auth.${cdk.Stack.of(this).region}.amazoncognito.com`,
+      value: hostedUIUrl,
       description: 'Cognito Hosted UI Base URL',
     });
+
+    // Output custom domain if configured
+    if (this.customDomainName) {
+      new cdk.CfnOutput(this, 'CognitoCustomDomain', {
+        value: this.customDomainName,
+        description: 'Cognito Custom Domain',
+      });
+    }
 
     new cdk.CfnOutput(this, 'AdminGroupName', {
       value: 'admin',

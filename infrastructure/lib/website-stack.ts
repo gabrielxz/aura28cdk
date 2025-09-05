@@ -37,12 +37,25 @@ export class WebsiteStack extends cdk.Stack {
       ? `${props.subdomain}.${props.domainName}`
       : props.domainName;
 
-    // Create Cognito auth resources
+    // Get hosted zone for both Cognito custom domain and CloudFront certificate
+    const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
+      domainName: props.domainName,
+    });
+
+    // Create Cognito auth resources with custom domain for production
+    const authDomainName = props.environment === 'prod' ? `auth.${props.domainName}` : undefined;
+
     this.auth = new CognitoAuthConstruct(this, 'Auth', {
       environment: props.environment,
       domainPrefix: `aura28-${props.environment}`,
       callbackUrls: [`http://localhost:3000/auth/callback`, `https://${siteDomain}/auth/callback`],
       logoutUrls: [`http://localhost:3000`, `https://${siteDomain}`],
+      customDomain: authDomainName
+        ? {
+            domainName: authDomainName,
+            hostedZone: hostedZone,
+          }
+        : undefined,
     });
 
     // Create DynamoDB table for user data
@@ -141,11 +154,6 @@ export class WebsiteStack extends cdk.Stack {
           abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
         },
       ],
-    });
-
-    // Get hosted zone
-    const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
-      domainName: props.domainName,
     });
 
     // Create certificate (must be in us-east-1 for CloudFront)
@@ -249,6 +257,17 @@ export class WebsiteStack extends cdk.Stack {
         ),
         zone: hostedZone,
       });
+
+      // Create Route53 A record for Cognito custom domain
+      if (authDomainName && this.auth.userPoolDomain) {
+        new route53.ARecord(this, 'AuthDomainAliasRecord', {
+          recordName: authDomainName,
+          target: route53.RecordTarget.fromAlias(
+            new route53_targets.UserPoolDomainTarget(this.auth.userPoolDomain),
+          ),
+          zone: hostedZone,
+        });
+      }
     }
 
     // Deploy site contents

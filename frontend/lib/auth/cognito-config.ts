@@ -4,6 +4,7 @@ export interface CognitoConfig {
   domain: string;
   region: string;
   redirectUri: string;
+  customDomain?: string;
 }
 
 export const getCognitoConfig = (): CognitoConfig => {
@@ -11,6 +12,7 @@ export const getCognitoConfig = (): CognitoConfig => {
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || '';
   const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN || '';
   const region = process.env.NEXT_PUBLIC_COGNITO_REGION || 'us-east-1';
+  const customDomain = process.env.NEXT_PUBLIC_COGNITO_CUSTOM_DOMAIN || undefined;
 
   // During build time, we might not have these values
   if (typeof window !== 'undefined' && (!userPoolId || !clientId || !domain)) {
@@ -29,11 +31,15 @@ export const getCognitoConfig = (): CognitoConfig => {
     domain,
     region,
     redirectUri,
+    customDomain,
   };
 };
 
 export const getCognitoUrls = (config: CognitoConfig) => {
-  const baseUrl = `https://${config.domain}.auth.${config.region}.amazoncognito.com`;
+  // Use custom domain if available, otherwise fall back to default Cognito domain
+  const baseUrl = config.customDomain
+    ? `https://${config.customDomain}`
+    : `https://${config.domain}.auth.${config.region}.amazoncognito.com`;
 
   return {
     login: `${baseUrl}/login?client_id=${config.clientId}&response_type=code&scope=email+openid+profile+aws.cognito.signin.user.admin&redirect_uri=${encodeURIComponent(
