@@ -85,20 +85,15 @@ describe('CognitoAuthConstruct', () => {
       });
     });
 
-    test('creates placeholder secrets for OAuth providers', () => {
-      template.hasResourceProperties('AWS::SecretsManager::Secret', {
-        Name: 'aura28/oauth/google/dev',
-        Description: 'Google OAuth credentials (to be populated manually)',
-      });
-
-      template.hasResourceProperties('AWS::SecretsManager::Secret', {
-        Name: 'aura28/oauth/facebook/dev',
-        Description: 'Facebook OAuth credentials (to be populated manually)',
-      });
-
-      template.hasResourceProperties('AWS::SecretsManager::Secret', {
-        Name: 'aura28/oauth/apple/dev',
-        Description: 'Apple OAuth credentials (to be populated manually)',
+    test('creates Google identity provider with proper configuration', () => {
+      // Check that Google identity provider is created
+      template.hasResourceProperties('AWS::Cognito::UserPoolIdentityProvider', {
+        ProviderType: 'Google',
+        AttributeMapping: {
+          email: 'email',
+          given_name: 'given_name',
+          family_name: 'family_name',
+        },
       });
     });
 

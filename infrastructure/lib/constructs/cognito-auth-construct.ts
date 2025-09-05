@@ -74,21 +74,18 @@ export class CognitoAuthConstruct extends Construct {
       },
     });
 
-    // Create or reference Google OAuth secret
-    // Always create a placeholder for now (will be replaced with actual credentials later)
-    new secretsmanager.Secret(this, 'GoogleOAuthSecret', {
-      secretName: `aura28/oauth/google/${props.environment}`,
-      description: 'Google OAuth credentials (to be populated manually)',
-      secretObjectValue: {
-        client_id: cdk.SecretValue.unsafePlainText('PLACEHOLDER_GOOGLE_CLIENT_ID'),
-        client_secret: cdk.SecretValue.unsafePlainText('PLACEHOLDER_GOOGLE_CLIENT_SECRET'),
-      },
-    });
+    // Reference the existing Google OAuth secret from Secrets Manager
+    // This secret should be manually created with real Google OAuth credentials
+    const googleSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'GoogleOAuthSecret',
+      `aura28/oauth/google/${props.environment}`,
+    );
 
-    // Create Google identity provider
+    // Create Google identity provider using credentials from Secrets Manager
     const googleProvider = new cognito.UserPoolIdentityProviderGoogle(this, 'GoogleProvider', {
-      clientId: 'PLACEHOLDER_GOOGLE_CLIENT_ID',
-      clientSecretValue: cdk.SecretValue.unsafePlainText('PLACEHOLDER_GOOGLE_CLIENT_SECRET'),
+      clientId: googleSecret.secretValueFromJson('client_id').unsafeUnwrap(),
+      clientSecretValue: googleSecret.secretValueFromJson('client_secret'),
       userPool: this.userPool,
       attributeMapping: {
         email: cognito.ProviderAttribute.GOOGLE_EMAIL,
@@ -148,25 +145,13 @@ export class CognitoAuthConstruct extends Construct {
     // Ensure proper dependency - client depends on provider
     this.userPoolClient.node.addDependency(googleProvider);
 
-    const facebookSecret = new secretsmanager.Secret(this, 'FacebookOAuthSecret', {
-      secretName: `aura28/oauth/facebook/${props.environment}`,
-      description: 'Facebook OAuth credentials (to be populated manually)',
-      secretObjectValue: {
-        app_id: cdk.SecretValue.unsafePlainText('PLACEHOLDER_FACEBOOK_APP_ID'),
-        app_secret: cdk.SecretValue.unsafePlainText('PLACEHOLDER_FACEBOOK_APP_SECRET'),
-      },
-    });
+    // Note: Facebook OAuth can be added later by creating a secret in Secrets Manager
+    // with the name: aura28/oauth/facebook/${environment}
+    // containing: { "app_id": "...", "app_secret": "..." }
 
-    const appleSecret = new secretsmanager.Secret(this, 'AppleOAuthSecret', {
-      secretName: `aura28/oauth/apple/${props.environment}`,
-      description: 'Apple OAuth credentials (to be populated manually)',
-      secretObjectValue: {
-        services_id: cdk.SecretValue.unsafePlainText('PLACEHOLDER_APPLE_SERVICES_ID'),
-        team_id: cdk.SecretValue.unsafePlainText('PLACEHOLDER_APPLE_TEAM_ID'),
-        key_id: cdk.SecretValue.unsafePlainText('PLACEHOLDER_APPLE_KEY_ID'),
-        private_key: cdk.SecretValue.unsafePlainText('PLACEHOLDER_APPLE_PRIVATE_KEY'),
-      },
-    });
+    // Note: Apple OAuth can be added later by creating a secret in Secrets Manager
+    // with the name: aura28/oauth/apple/${environment}
+    // containing: { "services_id": "...", "team_id": "...", "key_id": "...", "private_key": "..." }
 
     // Output values
     new cdk.CfnOutput(this, 'UserPoolId', {
@@ -195,8 +180,8 @@ export class CognitoAuthConstruct extends Construct {
     });
 
     new cdk.CfnOutput(this, 'OAuthSecretsReminder', {
-      value: `ACTION REQUIRED: When ready for social login, populate these secrets in AWS Secrets Manager: aura28/oauth/google/${props.environment}, ${facebookSecret.secretName}, ${appleSecret.secretName}`,
-      description: 'OAuth Secrets Reminder',
+      value: `Google OAuth is configured. To add more providers, create secrets in AWS Secrets Manager: aura28/oauth/facebook/${props.environment}, aura28/oauth/apple/${props.environment}`,
+      description: 'OAuth Configuration Status',
     });
   }
 }
