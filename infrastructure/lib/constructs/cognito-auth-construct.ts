@@ -74,6 +74,30 @@ export class CognitoAuthConstruct extends Construct {
       },
     });
 
+    // Create or reference Google OAuth secret
+    // Always create a placeholder for now (will be replaced with actual credentials later)
+    new secretsmanager.Secret(this, 'GoogleOAuthSecret', {
+      secretName: `aura28/oauth/google/${props.environment}`,
+      description: 'Google OAuth credentials (to be populated manually)',
+      secretObjectValue: {
+        client_id: cdk.SecretValue.unsafePlainText('PLACEHOLDER_GOOGLE_CLIENT_ID'),
+        client_secret: cdk.SecretValue.unsafePlainText('PLACEHOLDER_GOOGLE_CLIENT_SECRET'),
+      },
+    });
+
+    // Create Google identity provider
+    const googleProvider = new cognito.UserPoolIdentityProviderGoogle(this, 'GoogleProvider', {
+      clientId: 'PLACEHOLDER_GOOGLE_CLIENT_ID',
+      clientSecretValue: cdk.SecretValue.unsafePlainText('PLACEHOLDER_GOOGLE_CLIENT_SECRET'),
+      userPool: this.userPool,
+      attributeMapping: {
+        email: cognito.ProviderAttribute.GOOGLE_EMAIL,
+        givenName: cognito.ProviderAttribute.GOOGLE_GIVEN_NAME,
+        familyName: cognito.ProviderAttribute.GOOGLE_FAMILY_NAME,
+      },
+      scopes: ['profile', 'email', 'openid'],
+    });
+
     // Create User Pool Client
     this.userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
       userPool: this.userPool,
@@ -98,7 +122,10 @@ export class CognitoAuthConstruct extends Construct {
         logoutUrls: props.logoutUrls,
       },
       preventUserExistenceErrors: true,
-      supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.COGNITO],
+      supportedIdentityProviders: [
+        cognito.UserPoolClientIdentityProvider.COGNITO,
+        cognito.UserPoolClientIdentityProvider.GOOGLE,
+      ],
       readAttributes: new cognito.ClientAttributes()
         .withStandardAttributes({
           email: true,
@@ -118,15 +145,8 @@ export class CognitoAuthConstruct extends Construct {
         .withCustomAttributes(),
     });
 
-    // Create placeholder secrets for future OAuth providers
-    const googleSecret = new secretsmanager.Secret(this, 'GoogleOAuthSecret', {
-      secretName: `aura28/oauth/google/${props.environment}`,
-      description: 'Google OAuth credentials (to be populated manually)',
-      secretObjectValue: {
-        client_id: cdk.SecretValue.unsafePlainText('PLACEHOLDER_GOOGLE_CLIENT_ID'),
-        client_secret: cdk.SecretValue.unsafePlainText('PLACEHOLDER_GOOGLE_CLIENT_SECRET'),
-      },
-    });
+    // Ensure proper dependency - client depends on provider
+    this.userPoolClient.node.addDependency(googleProvider);
 
     const facebookSecret = new secretsmanager.Secret(this, 'FacebookOAuthSecret', {
       secretName: `aura28/oauth/facebook/${props.environment}`,
@@ -175,7 +195,7 @@ export class CognitoAuthConstruct extends Construct {
     });
 
     new cdk.CfnOutput(this, 'OAuthSecretsReminder', {
-      value: `ACTION REQUIRED: When ready for social login, populate these secrets in AWS Secrets Manager: ${googleSecret.secretName}, ${facebookSecret.secretName}, ${appleSecret.secretName}`,
+      value: `ACTION REQUIRED: When ready for social login, populate these secrets in AWS Secrets Manager: aura28/oauth/google/${props.environment}, ${facebookSecret.secretName}, ${appleSecret.secretName}`,
       description: 'OAuth Secrets Reminder',
     });
   }

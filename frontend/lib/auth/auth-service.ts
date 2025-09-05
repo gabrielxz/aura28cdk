@@ -47,10 +47,18 @@ export class AuthService {
 
   /**
    * Redirect to Cognito Hosted UI for login
+   * @param identityProvider - Optional identity provider to use (e.g., 'Google')
    */
-  redirectToLogin(): void {
+  redirectToLogin(identityProvider?: 'Google'): void {
     const urls = getCognitoUrls(this.config);
-    window.location.href = urls.login;
+    let loginUrl = urls.login;
+
+    // Add identity provider parameter if specified
+    if (identityProvider) {
+      loginUrl += `&identity_provider=${identityProvider}`;
+    }
+
+    window.location.href = loginUrl;
   }
 
   /**

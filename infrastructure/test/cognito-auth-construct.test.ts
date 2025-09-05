@@ -73,7 +73,7 @@ describe('CognitoAuthConstruct', () => {
           'https://dev.aura28.com/auth/callback',
         ],
         LogoutURLs: ['http://localhost:3000', 'https://dev.aura28.com'],
-        SupportedIdentityProviders: ['COGNITO'],
+        SupportedIdentityProviders: ['COGNITO', 'Google'],
       });
     });
 
