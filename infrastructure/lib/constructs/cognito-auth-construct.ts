@@ -74,17 +74,21 @@ export class CognitoAuthConstruct extends Construct {
       },
     });
 
-    // Fetch Google OAuth credentials from Secrets Manager
-    const googleSecret = secretsmanager.Secret.fromSecretNameV2(
-      this,
-      'GoogleOAuthSecretImport',
-      `aura28/oauth/google/${props.environment}`,
-    );
+    // Create or reference Google OAuth secret
+    // Always create a placeholder for now (will be replaced with actual credentials later)
+    new secretsmanager.Secret(this, 'GoogleOAuthSecret', {
+      secretName: `aura28/oauth/google/${props.environment}`,
+      description: 'Google OAuth credentials (to be populated manually)',
+      secretObjectValue: {
+        client_id: cdk.SecretValue.unsafePlainText('PLACEHOLDER_GOOGLE_CLIENT_ID'),
+        client_secret: cdk.SecretValue.unsafePlainText('PLACEHOLDER_GOOGLE_CLIENT_SECRET'),
+      },
+    });
 
     // Create Google identity provider
     const googleProvider = new cognito.UserPoolIdentityProviderGoogle(this, 'GoogleProvider', {
-      clientId: googleSecret.secretValueFromJson('client_id').unsafeUnwrap(),
-      clientSecretValue: googleSecret.secretValueFromJson('client_secret'),
+      clientId: 'PLACEHOLDER_GOOGLE_CLIENT_ID',
+      clientSecretValue: cdk.SecretValue.unsafePlainText('PLACEHOLDER_GOOGLE_CLIENT_SECRET'),
       userPool: this.userPool,
       attributeMapping: {
         email: cognito.ProviderAttribute.GOOGLE_EMAIL,
