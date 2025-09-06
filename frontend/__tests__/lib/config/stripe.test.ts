@@ -57,7 +57,7 @@ describe('STRIPE_CONFIG', () => {
 
   describe('Display Configuration (KAN-71)', () => {
     it('should have displayPrice field with formatted price', () => {
-      expect(STRIPE_CONFIG.displayPrice).toBe('$29.99');
+      expect(STRIPE_CONFIG.displayPrice).toBe('$147');
       expect(STRIPE_CONFIG.displayPrice).toMatch(/^\$\d+(\.\d{2})?$/);
     });
 
@@ -72,7 +72,7 @@ describe('STRIPE_CONFIG', () => {
       expect(typeof STRIPE_CONFIG.productDescription).toBe('string');
       expect(STRIPE_CONFIG.productDescription.length).toBeGreaterThan(50);
       // Check for key marketing terms
-      expect(STRIPE_CONFIG.productDescription.toLowerCase()).toContain('ai');
+      expect(STRIPE_CONFIG.productDescription.toLowerCase()).toContain('wisdom');
       expect(STRIPE_CONFIG.productDescription.toLowerCase()).toContain('personalized');
       expect(STRIPE_CONFIG.productDescription.toLowerCase()).toContain('birth chart');
     });
