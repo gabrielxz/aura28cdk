@@ -243,11 +243,7 @@ export default function ReadingsTab({ userApi, userId, onNeedRefresh }: Readings
     return (
       <div className="mt-6">
         <div className="mb-4 flex items-center justify-between">
-          <Button
-            onClick={() => setSelectedReading(null)}
-            variant="outline"
-            className="bg-transparent border-white/20 text-white hover:bg-white/20 hover:border-white/40"
-          >
+          <Button onClick={() => setSelectedReading(null)} variant="outline">
             ← Back to Readings
           </Button>
           {selectedReading.status === 'Ready' && selectedReading.content && (

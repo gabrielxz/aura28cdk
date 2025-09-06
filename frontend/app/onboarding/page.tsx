@@ -338,11 +338,7 @@ export default function OnboardingPage() {
 
             <div className="mt-6 flex justify-between">
               {currentStep > 1 && (
-                <Button
-                  variant="outline"
-                  onClick={handlePrevious}
-                  className="border-white/20 text-white hover:bg-white/10"
-                >
+                <Button variant="outline" onClick={handlePrevious}>
                   Previous
                 </Button>
               )}

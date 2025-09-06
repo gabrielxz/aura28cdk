@@ -96,12 +96,7 @@ export function ReadingsFilters({
           Filters
         </h3>
         {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearFilters}
-            className="text-sm text-white/80 hover:text-white hover:bg-white/10"
-          >
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-sm">
             <X className="mr-1 h-4 w-4" />
             Clear all
           </Button>
@@ -114,10 +109,7 @@ export function ReadingsFilters({
           <Label className="text-white/90">Start Date</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full justify-start bg-white/10 border-white/20 text-white hover:bg-white/20"
-              >
+              <Button variant="outline" className="w-full justify-start">
                 <Calendar className="mr-2 h-4 w-4" />
                 {localFilters.startDate || 'Select date'}
               </Button>
@@ -136,10 +128,7 @@ export function ReadingsFilters({
           <Label className="text-white/90">End Date</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full justify-start bg-white/10 border-white/20 text-white hover:bg-white/20"
-              >
+              <Button variant="outline" className="w-full justify-start">
                 <Calendar className="mr-2 h-4 w-4" />
                 {localFilters.endDate || 'Select date'}
               </Button>
