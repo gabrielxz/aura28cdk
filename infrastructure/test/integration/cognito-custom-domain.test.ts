@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import * as route53 from 'aws-cdk-lib/aws-route53';
+import { IHostedZone } from 'aws-cdk-lib/aws-route53';
 import { CognitoAuthConstruct } from '../../lib/constructs/cognito-auth-construct';
 
 describe('Cognito Custom Domain Integration Tests', () => {
