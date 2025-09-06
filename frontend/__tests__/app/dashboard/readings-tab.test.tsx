@@ -872,7 +872,7 @@ describe('ReadingsTab - KAN-71 Enhanced Empty State with Pricing Display', () =>
         expect(
           screen.getByText(/Unlock deep insights into your cosmic blueprint/),
         ).toBeInTheDocument();
-        expect(screen.getByText(/AI-powered astrological reading/)).toBeInTheDocument();
+        expect(screen.getByText(/personalized astrological reading/)).toBeInTheDocument();
       });
     });
 
