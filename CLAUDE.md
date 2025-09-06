@@ -145,6 +145,7 @@ The application uses a secure two-stage payment flow:
 NEXT_PUBLIC_COGNITO_USER_POOL_ID=us-east-1_xxxxxx
 NEXT_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxx
 NEXT_PUBLIC_COGNITO_DOMAIN=aura28-dev
+NEXT_PUBLIC_COGNITO_CUSTOM_DOMAIN=auth.aura28.com  # Optional: Custom domain for production
 NEXT_PUBLIC_COGNITO_REGION=us-east-1
 NEXT_PUBLIC_API_GATEWAY_URL=https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com
 ```
