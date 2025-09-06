@@ -6,6 +6,7 @@ import { AuthProvider } from '@/lib/auth/auth-context';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Toaster } from '@/components/ui/toaster';
+import { GoogleAnalytics } from '@/components/google-analytics';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -53,6 +54,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-aura-gradient`}
       >
+        <GoogleAnalytics />
         <AuthProvider>
           <Header />
           <main className="flex-1">{children}</main>
