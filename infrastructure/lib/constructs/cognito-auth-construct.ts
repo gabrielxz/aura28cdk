@@ -2,18 +2,26 @@ import { Construct } from 'constructs';
 import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
+import * as route53 from 'aws-cdk-lib/aws-route53';
 
 export interface CognitoAuthConstructProps {
   environment: 'dev' | 'prod';
   domainPrefix: string;
   callbackUrls: string[];
   logoutUrls: string[];
+  customDomain?: {
+    domainName: string; // e.g., auth.aura28.com
+    hostedZone: route53.IHostedZone;
+  };
 }
 
 export class CognitoAuthConstruct extends Construct {
   public readonly userPool: cognito.UserPool;
   public readonly userPoolClient: cognito.UserPoolClient;
   public readonly userPoolDomain: cognito.UserPoolDomain;
+  public readonly customDomainCertificate?: acm.Certificate;
+  public readonly customDomainName?: string;
 
   constructor(scope: Construct, id: string, props: CognitoAuthConstructProps) {
     super(scope, id);
@@ -66,12 +74,55 @@ export class CognitoAuthConstruct extends Construct {
       precedence: 1, // Highest priority
     });
 
+    // Create certificate for custom domain if needed (only for production)
+    if (props.customDomain && props.environment === 'prod') {
+      // Certificate must be in us-east-1 for Cognito custom domains
+      this.customDomainCertificate = new acm.Certificate(this, 'CustomDomainCertificate', {
+        domainName: props.customDomain.domainName,
+        validation: acm.CertificateValidation.fromDns(props.customDomain.hostedZone),
+      });
+      this.customDomainName = props.customDomain.domainName;
+    }
+
     // Create User Pool Domain
-    this.userPoolDomain = new cognito.UserPoolDomain(this, 'UserPoolDomain', {
+    if (this.customDomainCertificate && this.customDomainName) {
+      // Production with custom domain
+      this.userPoolDomain = new cognito.UserPoolDomain(this, 'UserPoolDomain', {
+        userPool: this.userPool,
+        customDomain: {
+          domainName: this.customDomainName,
+          certificate: this.customDomainCertificate,
+        },
+      });
+    } else {
+      // Dev environment or production without custom domain (fallback)
+      this.userPoolDomain = new cognito.UserPoolDomain(this, 'UserPoolDomain', {
+        userPool: this.userPool,
+        cognitoDomain: {
+          domainPrefix: props.domainPrefix,
+        },
+      });
+    }
+
+    // Reference the existing Google OAuth secret from Secrets Manager
+    // This secret should be manually created with real Google OAuth credentials
+    const googleSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'GoogleOAuthSecret',
+      `aura28/oauth/google/${props.environment}`,
+    );
+
+    // Create Google identity provider using credentials from Secrets Manager
+    const googleProvider = new cognito.UserPoolIdentityProviderGoogle(this, 'GoogleProvider', {
+      clientId: googleSecret.secretValueFromJson('client_id').unsafeUnwrap(),
+      clientSecretValue: googleSecret.secretValueFromJson('client_secret'),
       userPool: this.userPool,
-      cognitoDomain: {
-        domainPrefix: props.domainPrefix,
+      attributeMapping: {
+        email: cognito.ProviderAttribute.GOOGLE_EMAIL,
+        givenName: cognito.ProviderAttribute.GOOGLE_GIVEN_NAME,
+        familyName: cognito.ProviderAttribute.GOOGLE_FAMILY_NAME,
       },
+      scopes: ['profile', 'email', 'openid'],
     });
 
     // Create User Pool Client
@@ -98,7 +149,10 @@ export class CognitoAuthConstruct extends Construct {
         logoutUrls: props.logoutUrls,
       },
       preventUserExistenceErrors: true,
-      supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.COGNITO],
+      supportedIdentityProviders: [
+        cognito.UserPoolClientIdentityProvider.COGNITO,
+        cognito.UserPoolClientIdentityProvider.GOOGLE,
+      ],
       readAttributes: new cognito.ClientAttributes()
         .withStandardAttributes({
           email: true,
@@ -118,35 +172,16 @@ export class CognitoAuthConstruct extends Construct {
         .withCustomAttributes(),
     });
 
-    // Create placeholder secrets for future OAuth providers
-    const googleSecret = new secretsmanager.Secret(this, 'GoogleOAuthSecret', {
-      secretName: `aura28/oauth/google/${props.environment}`,
-      description: 'Google OAuth credentials (to be populated manually)',
-      secretObjectValue: {
-        client_id: cdk.SecretValue.unsafePlainText('PLACEHOLDER_GOOGLE_CLIENT_ID'),
-        client_secret: cdk.SecretValue.unsafePlainText('PLACEHOLDER_GOOGLE_CLIENT_SECRET'),
-      },
-    });
+    // Ensure proper dependency - client depends on provider
+    this.userPoolClient.node.addDependency(googleProvider);
 
-    const facebookSecret = new secretsmanager.Secret(this, 'FacebookOAuthSecret', {
-      secretName: `aura28/oauth/facebook/${props.environment}`,
-      description: 'Facebook OAuth credentials (to be populated manually)',
-      secretObjectValue: {
-        app_id: cdk.SecretValue.unsafePlainText('PLACEHOLDER_FACEBOOK_APP_ID'),
-        app_secret: cdk.SecretValue.unsafePlainText('PLACEHOLDER_FACEBOOK_APP_SECRET'),
-      },
-    });
+    // Note: Facebook OAuth can be added later by creating a secret in Secrets Manager
+    // with the name: aura28/oauth/facebook/${environment}
+    // containing: { "app_id": "...", "app_secret": "..." }
 
-    const appleSecret = new secretsmanager.Secret(this, 'AppleOAuthSecret', {
-      secretName: `aura28/oauth/apple/${props.environment}`,
-      description: 'Apple OAuth credentials (to be populated manually)',
-      secretObjectValue: {
-        services_id: cdk.SecretValue.unsafePlainText('PLACEHOLDER_APPLE_SERVICES_ID'),
-        team_id: cdk.SecretValue.unsafePlainText('PLACEHOLDER_APPLE_TEAM_ID'),
-        key_id: cdk.SecretValue.unsafePlainText('PLACEHOLDER_APPLE_KEY_ID'),
-        private_key: cdk.SecretValue.unsafePlainText('PLACEHOLDER_APPLE_PRIVATE_KEY'),
-      },
-    });
+    // Note: Apple OAuth can be added later by creating a secret in Secrets Manager
+    // with the name: aura28/oauth/apple/${environment}
+    // containing: { "services_id": "...", "team_id": "...", "key_id": "...", "private_key": "..." }
 
     // Output values
     new cdk.CfnOutput(this, 'UserPoolId', {
@@ -164,10 +199,23 @@ export class CognitoAuthConstruct extends Construct {
       description: 'Cognito Domain Prefix',
     });
 
+    // Output the appropriate hosted UI URL based on whether custom domain is used
+    const hostedUIUrl = this.customDomainName
+      ? `https://${this.customDomainName}`
+      : `https://${props.domainPrefix}.auth.${cdk.Stack.of(this).region}.amazoncognito.com`;
+
     new cdk.CfnOutput(this, 'CognitoHostedUIURL', {
-      value: `https://${props.domainPrefix}.auth.${cdk.Stack.of(this).region}.amazoncognito.com`,
+      value: hostedUIUrl,
       description: 'Cognito Hosted UI Base URL',
     });
+
+    // Output custom domain if configured
+    if (this.customDomainName) {
+      new cdk.CfnOutput(this, 'CognitoCustomDomain', {
+        value: this.customDomainName,
+        description: 'Cognito Custom Domain',
+      });
+    }
 
     new cdk.CfnOutput(this, 'AdminGroupName', {
       value: 'admin',
@@ -175,8 +223,8 @@ export class CognitoAuthConstruct extends Construct {
     });
 
     new cdk.CfnOutput(this, 'OAuthSecretsReminder', {
-      value: `ACTION REQUIRED: When ready for social login, populate these secrets in AWS Secrets Manager: ${googleSecret.secretName}, ${facebookSecret.secretName}, ${appleSecret.secretName}`,
-      description: 'OAuth Secrets Reminder',
+      value: `Google OAuth is configured. To add more providers, create secrets in AWS Secrets Manager: aura28/oauth/facebook/${props.environment}, aura28/oauth/apple/${props.environment}`,
+      description: 'OAuth Configuration Status',
     });
   }
 }

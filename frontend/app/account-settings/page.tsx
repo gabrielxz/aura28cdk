@@ -194,7 +194,7 @@ export default function AccountSettingsPage() {
                   value={formData.birthName}
                   onChange={(e) => handleInputChange('birthName', e.target.value)}
                   required
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                  className="bg-white/10 border-white/20 text-white"
                 />
               </div>
 
@@ -233,7 +233,7 @@ export default function AccountSettingsPage() {
                     value={formData.birthCity}
                     onChange={(e) => handleInputChange('birthCity', e.target.value)}
                     required
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                    className="bg-white/10 border-white/20 text-white"
                   />
                 </div>
 
@@ -247,7 +247,7 @@ export default function AccountSettingsPage() {
                     value={formData.birthState}
                     onChange={(e) => handleInputChange('birthState', e.target.value)}
                     required
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                    className="bg-white/10 border-white/20 text-white"
                   />
                 </div>
 
@@ -261,7 +261,7 @@ export default function AccountSettingsPage() {
                     value={formData.birthCountry}
                     onChange={(e) => handleInputChange('birthCountry', e.target.value)}
                     required
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                    className="bg-white/10 border-white/20 text-white"
                   />
                 </div>
               </div>

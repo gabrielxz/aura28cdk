@@ -60,8 +60,8 @@ Thumbs.db
 frontend/.vercel
 
 # CDK / Infrastructure
-infrastructure/*.js
-infrastructure/*.d.ts
+infrastructure/**/*.js
+infrastructure/**/*.d.ts
 infrastructure/cdk.out/
 infrastructure/.cdk.staging/
 infrastructure/node_modules/

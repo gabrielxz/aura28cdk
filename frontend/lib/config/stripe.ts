@@ -34,10 +34,10 @@ export const STRIPE_CONFIG = {
   readingPriceId: getStripePriceId(),
 
   // Display configuration for pricing
-  displayPrice: '$29.99',
+  displayPrice: '$147',
   paymentType: 'one-time payment',
   productDescription:
-    "Unlock deep insights into your cosmic blueprint with our AI-powered astrological reading, personalized to your unique birth chart. Discover your soul's purpose, karmic patterns, and spiritual potential through ancient wisdom combined with modern AI technology.",
+    "Unlock deep insights into your cosmic blueprint with a personalized astrological reading tailored to your unique birth chart. Discover your soul's purpose, karmic patterns, and spiritual potential through ancient wisdom that reveals what truly drives you and what's waiting on the other side.",
 
   // Session types
   sessionTypes: {
