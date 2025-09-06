@@ -62,10 +62,13 @@ function Calendar({
           defaultClassNames.dropdowns,
         ),
         dropdown_root: cn(
-          'has-focus:border-ring border-input shadow-xs has-focus:ring-ring/50 has-focus:ring-[3px] relative rounded-md border',
+          'has-focus:border-white/40 border-white/20 shadow-xs has-focus:ring-white/30 has-focus:ring-[3px] relative rounded-md border bg-[#1a1b3a] text-white',
           defaultClassNames.dropdown_root,
         ),
-        dropdown: cn('bg-popover absolute inset-0 opacity-0', defaultClassNames.dropdown),
+        dropdown: cn(
+          'bg-[#1a1b3a] text-white absolute inset-0 opacity-0',
+          defaultClassNames.dropdown,
+        ),
         caption_label: cn(
           'select-none font-medium',
           captionLayout === 'label'
