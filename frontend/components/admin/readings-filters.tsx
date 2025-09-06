@@ -182,7 +182,7 @@ export function ReadingsFilters({
           <Input
             type="text"
             placeholder="Search by email or name..."
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+            className="bg-white/10 border-white/20 text-white"
             value={userSearchValue}
             onChange={(e) => setUserSearchValue(e.target.value)}
           />

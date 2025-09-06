@@ -225,7 +225,7 @@ export default function OnboardingPage() {
                     value={formData.birthCity}
                     onChange={(e) => updateFormData('birthCity', e.target.value)}
                     placeholder="e.g., San Francisco"
-                    className={`bg-white/10 border-white/20 text-white placeholder:text-white/50 ${errors.birthCity ? 'border-red-500' : ''}`}
+                    className={`bg-white/10 border-white/20 text-white ${errors.birthCity ? 'border-red-500' : ''}`}
                   />
                   {errors.birthCity && (
                     <p className="mt-1 text-sm text-red-400">{errors.birthCity}</p>
@@ -241,7 +241,7 @@ export default function OnboardingPage() {
                     value={formData.birthState}
                     onChange={(e) => updateFormData('birthState', e.target.value)}
                     placeholder="e.g., California"
-                    className={`bg-white/10 border-white/20 text-white placeholder:text-white/50 ${errors.birthState ? 'border-red-500' : ''}`}
+                    className={`bg-white/10 border-white/20 text-white ${errors.birthState ? 'border-red-500' : ''}`}
                   />
                   {errors.birthState && (
                     <p className="mt-1 text-sm text-red-400">{errors.birthState}</p>
@@ -257,7 +257,7 @@ export default function OnboardingPage() {
                     value={formData.birthCountry}
                     onChange={(e) => updateFormData('birthCountry', e.target.value)}
                     placeholder="e.g., United States"
-                    className={`bg-white/10 border-white/20 text-white placeholder:text-white/50 ${errors.birthCountry ? 'border-red-500' : ''}`}
+                    className={`bg-white/10 border-white/20 text-white ${errors.birthCountry ? 'border-red-500' : ''}`}
                   />
                   {errors.birthCountry && (
                     <p className="mt-1 text-sm text-red-400">{errors.birthCountry}</p>
@@ -327,7 +327,7 @@ export default function OnboardingPage() {
                     value={formData.birthName}
                     onChange={(e) => updateFormData('birthName', e.target.value)}
                     placeholder="e.g., John Michael Smith"
-                    className={`bg-white/10 border-white/20 text-white placeholder:text-white/50 ${errors.birthName ? 'border-red-500' : ''}`}
+                    className={`bg-white/10 border-white/20 text-white ${errors.birthName ? 'border-red-500' : ''}`}
                   />
                   {errors.birthName && (
                     <p className="mt-1 text-sm text-red-400">{errors.birthName}</p>
