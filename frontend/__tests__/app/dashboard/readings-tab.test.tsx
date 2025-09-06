@@ -21,10 +21,10 @@ jest.mock('@/components/ui/use-toast', () => ({
 jest.mock('@/lib/config/stripe', () => ({
   STRIPE_CONFIG: {
     readingPriceId: 'price_test_reading_id',
-    displayPrice: '$29.99',
+    displayPrice: '$147',
     paymentType: 'one-time payment',
     productDescription:
-      "Unlock deep insights into your cosmic blueprint with our AI-powered astrological reading, personalized to your unique birth chart. Discover your soul's purpose, karmic patterns, and spiritual potential through ancient wisdom combined with modern AI technology.",
+      "Unlock deep insights into your cosmic blueprint with a personalized astrological reading tailored to your unique birth chart. Discover your soul's purpose, karmic patterns, and spiritual potential through ancient wisdom that reveals what truly drives you and what's waiting on the other side.",
     sessionTypes: {
       ONE_TIME: 'one-time',
       SUBSCRIPTION: 'subscription',
@@ -846,7 +846,7 @@ describe('ReadingsTab - KAN-71 Enhanced Empty State with Pricing Display', () =>
 
       await waitFor(() => {
         // Check for pricing display
-        expect(screen.getByText('$29.99')).toBeInTheDocument();
+        expect(screen.getByText('$147')).toBeInTheDocument();
         expect(screen.getByText('one-time payment')).toBeInTheDocument();
       });
     });
@@ -895,8 +895,11 @@ describe('ReadingsTab - KAN-71 Enhanced Empty State with Pricing Display', () =>
       await waitFor(() => {
         // Check for benefits list items
         expect(screen.getByText(/Personalized to your exact birth chart/)).toBeInTheDocument();
-        expect(screen.getByText(/AI-powered deep astrological analysis/)).toBeInTheDocument();
-        expect(screen.getByText(/Instant PDF download available/)).toBeInTheDocument();
+        expect(screen.getByText(/Reveals hidden blocks and spiritual gifts/)).toBeInTheDocument();
+        expect(screen.getByText(/Practical wisdom for relationships & goals/)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Life-altering clarity delivered within 24 hours/),
+        ).toBeInTheDocument();
       });
     });
 
