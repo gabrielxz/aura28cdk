@@ -388,43 +388,46 @@ export default function ReadingsTab({ userApi, userId, onNeedRefresh }: Readings
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-purple-600 dark:text-purple-400">✓</span>
-                    <span>AI-powered deep astrological analysis</span>
+                    <span>Reveals hidden blocks and spiritual gifts</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-purple-600 dark:text-purple-400">✓</span>
-                    <span>Instant PDF download available</span>
+                    <span>Practical wisdom for relationships & goals</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-600 dark:text-purple-400">✓</span>
+                    <span>Life-altering clarity delivered within 24 hours</span>
                   </li>
                 </ul>
-              </div>
 
-              {/* Purchase Button */}
-              {hasNatalChart ? (
-                <Button
-                  onClick={handlePurchaseReading}
-                  disabled={purchasingReading || !hasNatalChart}
-                  size="lg"
-                  className="mt-8 bg-gradient-to-r from-[#ff8a65] to-[#ffb74d] hover:opacity-90 text-[#1a1b3a] px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  {purchasingReading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Creating checkout session...
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingCart className="mr-2 h-5 w-5" />
-                      Purchase Soul Blueprint Reading
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <div className="mt-8 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 p-4">
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                    Please complete your profile and generate your natal chart before purchasing a
-                    reading.
-                  </p>
-                </div>
-              )}
+                {/* Purchase Button - Now inside the pricing card */}
+                {hasNatalChart ? (
+                  <Button
+                    onClick={handlePurchaseReading}
+                    disabled={purchasingReading || !hasNatalChart}
+                    size="lg"
+                    className="mt-6 w-full bg-gradient-to-r from-[#ff8a65] to-[#ffb74d] hover:opacity-90 text-[#1a1b3a] px-6 py-4 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    {purchasingReading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating checkout session...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        Purchase Soul Blueprint Reading
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <div className="mt-6 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 p-3">
+                    <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                      Please complete your profile and generate your natal chart before purchasing.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </Card>
