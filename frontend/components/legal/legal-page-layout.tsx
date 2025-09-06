@@ -24,7 +24,7 @@ export function LegalPageLayout({ document, children }: LegalPageLayoutProps) {
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header */}
       <div className="mb-8 text-center lg:text-left">
-        <h1 className="text-3xl font-bold tracking-tight mb-4">{document.title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight mb-4 text-white">{document.title}</h1>
         <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
