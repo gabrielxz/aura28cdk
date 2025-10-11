@@ -132,6 +132,14 @@ interface AngleData {
   minutes: number;
 }
 
+interface CelestialBodyData {
+  degree: number;
+  sign: string;
+  degreeInSign: number;
+  minutes: number;
+  name: string;
+}
+
 const ZODIAC_SIGNS = [
   'Aries',
   'Taurus',
@@ -184,6 +192,205 @@ const getDegreeInfo = (degree: number): { sign: string; degreeInSign: number; mi
   };
 };
 
+/**
+ * Calculate derived angular points (Descendant and IC) from existing angles
+ */
+const calculateDerivedAngles = (
+  ascendant: AngleData,
+  midheaven: AngleData,
+): { descendant: AngleData; imumCoeli: AngleData } => {
+  // Descendant is opposite to Ascendant (180° difference)
+  const descendantDegree = (ascendant.degree + 180) % 360;
+  const descendantInfo = getDegreeInfo(descendantDegree);
+
+  // Imum Coeli (IC) is opposite to Midheaven (180° difference)
+  const icDegree = (midheaven.degree + 180) % 360;
+  const icInfo = getDegreeInfo(icDegree);
+
+  return {
+    descendant: {
+      degree: descendantDegree,
+      sign: descendantInfo.sign,
+      degreeInSign: descendantInfo.degreeInSign,
+      minutes: descendantInfo.minutes,
+    },
+    imumCoeli: {
+      degree: icDegree,
+      sign: icInfo.sign,
+      degreeInSign: icInfo.degreeInSign,
+      minutes: icInfo.minutes,
+    },
+  };
+};
+
+/**
+ * Calculate Part of Fortune using tropical zodiac formula
+ * Formula: Ascendant + Moon - Sun
+ */
+const calculatePartOfFortune = (
+  ascendantDegree: number,
+  moonLongitude: number,
+  sunLongitude: number,
+): CelestialBodyData => {
+  // Calculate Part of Fortune
+  let fortuneDegree = ascendantDegree + moonLongitude - sunLongitude;
+
+  // Normalize to 0-360° range
+  fortuneDegree = ((fortuneDegree % 360) + 360) % 360;
+
+  const fortuneInfo = getDegreeInfo(fortuneDegree);
+
+  return {
+    degree: fortuneDegree,
+    sign: fortuneInfo.sign,
+    degreeInSign: fortuneInfo.degreeInSign,
+    minutes: fortuneInfo.minutes,
+    name: 'Part of Fortune',
+  };
+};
+
+/**
+ * Calculate lunar nodes (North Node and South Node)
+ */
+const calculateLunarNodes = (
+  julianDay: number,
+): { northNode: CelestialBodyData; southNode: CelestialBodyData } | null => {
+  if (!swisseph) {
+    console.warn('Swiss Ephemeris not available, skipping lunar nodes calculation');
+    return null;
+  }
+
+  try {
+    // Calculate True North Node
+    const northNodeData = swisseph.swe_calc_ut(
+      julianDay,
+      swisseph.SE_TRUE_NODE,
+      swisseph.SEFLG_SPEED,
+    );
+
+    if (!northNodeData || northNodeData.longitude === undefined) {
+      throw new Error('Failed to calculate North Node');
+    }
+
+    const northNodeInfo = getDegreeInfo(northNodeData.longitude);
+
+    // South Node is always 180° opposite to North Node
+    const southNodeDegree = (northNodeData.longitude + 180) % 360;
+    const southNodeInfo = getDegreeInfo(southNodeDegree);
+
+    return {
+      northNode: {
+        degree: northNodeData.longitude,
+        sign: northNodeInfo.sign,
+        degreeInSign: northNodeInfo.degreeInSign,
+        minutes: northNodeInfo.minutes,
+        name: 'North Node',
+      },
+      southNode: {
+        degree: southNodeDegree,
+        sign: southNodeInfo.sign,
+        degreeInSign: southNodeInfo.degreeInSign,
+        minutes: southNodeInfo.minutes,
+        name: 'South Node',
+      },
+    };
+  } catch (error) {
+    console.error('Error calculating lunar nodes:', error);
+    return null;
+  }
+};
+
+/**
+ * Calculate asteroids and minor celestial bodies
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const calculateAsteroids = (julianDay: number): any | null => {
+  if (!swisseph) {
+    console.warn('Swiss Ephemeris not available, skipping asteroid calculations');
+    return null;
+  }
+
+  try {
+    // Asteroid numbering: For numbered asteroids, use SE_AST_OFFSET + asteroid number
+    const asteroidIds = {
+      ceres: swisseph.SE_CERES || 2, // Main belt asteroid
+      pallas: swisseph.SE_PALLAS || 3, // Main belt asteroid
+      juno: swisseph.SE_JUNO || 4, // Main belt asteroid
+      vesta: swisseph.SE_VESTA || 5, // Main belt asteroid
+      eris: swisseph.SE_AST_OFFSET + 136199, // Dwarf planet
+      pholus: swisseph.SE_AST_OFFSET + 5145, // Centaur
+      nessus: swisseph.SE_AST_OFFSET + 7066, // Centaur
+      ixion: swisseph.SE_AST_OFFSET + 28978, // Plutino
+      orcus: swisseph.SE_AST_OFFSET + 90482, // Plutino
+      quaoar: swisseph.SE_AST_OFFSET + 50000, // Trans-Neptunian object
+      sedna: swisseph.SE_AST_OFFSET + 90377, // Trans-Neptunian object
+      varuna: swisseph.SE_AST_OFFSET + 20000, // Trans-Neptunian object
+    };
+
+    const asteroidNames = {
+      ceres: 'Ceres',
+      pallas: 'Pallas Athene',
+      juno: 'Juno',
+      vesta: 'Vesta',
+      eris: 'Eris',
+      pholus: 'Pholus',
+      nessus: 'Nessus',
+      ixion: 'Ixion',
+      orcus: 'Orcus',
+      quaoar: 'Quaoar',
+      sedna: 'Sedna',
+      varuna: 'Varuna',
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const asteroids: any = {};
+
+    // Calculate each asteroid
+    for (const [key, asteroidId] of Object.entries(asteroidIds)) {
+      try {
+        const asteroidData = swisseph.swe_calc_ut(julianDay, asteroidId, swisseph.SEFLG_SPEED);
+
+        if (asteroidData && asteroidData.longitude !== undefined) {
+          const asteroidInfo = getDegreeInfo(asteroidData.longitude);
+
+          asteroids[key] = {
+            degree: asteroidData.longitude,
+            sign: asteroidInfo.sign,
+            degreeInSign: asteroidInfo.degreeInSign,
+            minutes: asteroidInfo.minutes,
+            name: asteroidNames[key as keyof typeof asteroidNames],
+          };
+        } else {
+          console.warn(`Failed to calculate asteroid: ${key}`);
+          // Set default/placeholder data for missing asteroids
+          asteroids[key] = {
+            degree: 0,
+            sign: 'Unknown',
+            degreeInSign: 0,
+            minutes: 0,
+            name: asteroidNames[key as keyof typeof asteroidNames],
+          };
+        }
+      } catch (error) {
+        console.error(`Error calculating asteroid ${key}:`, error);
+        // Continue with next asteroid on error
+        asteroids[key] = {
+          degree: 0,
+          sign: 'Unknown',
+          degreeInSign: 0,
+          minutes: 0,
+          name: asteroidNames[key as keyof typeof asteroidNames],
+        };
+      }
+    }
+
+    return asteroids;
+  } catch (error) {
+    console.error('Error calculating asteroids:', error);
+    return null;
+  }
+};
+
 const calculateHousesWithSwisseph = async (
   birthDateTime: Date,
   latitude: number,
@@ -193,6 +400,8 @@ const calculateHousesWithSwisseph = async (
   ascendant: AngleData;
   midheaven: AngleData;
   planetHouses: Record<string, number>;
+  vertex?: AngleData;
+  julianDay: number;
 } | null> => {
   if (!swisseph) {
     console.warn('Swiss Ephemeris not available, skipping house calculations');
@@ -264,6 +473,18 @@ const calculateHousesWithSwisseph = async (
       minutes: mcInfo.minutes,
     };
 
+    // Extract Vertex if available
+    let vertex: AngleData | undefined;
+    if (houseData.vertex !== undefined) {
+      const vertexInfo = getDegreeInfo(houseData.vertex);
+      vertex = {
+        degree: houseData.vertex,
+        sign: vertexInfo.sign,
+        degreeInSign: vertexInfo.degreeInSign,
+        minutes: vertexInfo.minutes,
+      };
+    }
+
     // Calculate planet positions using Swiss Ephemeris for accuracy
     const planetHouses: Record<string, number> = {};
     const planetIds = [
@@ -325,6 +546,8 @@ const calculateHousesWithSwisseph = async (
       ascendant,
       midheaven,
       planetHouses,
+      vertex,
+      julianDay,
     };
   } catch (error) {
     console.error('Error calculating houses with Swiss Ephemeris:', error);
@@ -503,6 +726,7 @@ export const handler = async (event: any): Promise<void> => {
         swetestVersion: '2.10.03',
         houseSystem: 'placidus',
         zodiacType: 'tropical',
+        schemaVersion: '2.0.0', // Track schema version for new celestial bodies
       },
     };
 
@@ -515,6 +739,54 @@ export const handler = async (event: any): Promise<void> => {
       item.ascendant = houseData.ascendant;
       item.midheaven = houseData.midheaven;
       item.planetHouses = houseData.planetHouses;
+
+      // Calculate and add additional angular points
+      console.info('Calculating additional angular points (Descendant, IC)');
+      const derivedAngles = calculateDerivedAngles(houseData.ascendant, houseData.midheaven);
+
+      // Calculate Part of Fortune (requires Sun and Moon positions)
+      console.info('Calculating Part of Fortune');
+      let partOfFortune: CelestialBodyData | undefined;
+      if (planets.sun && planets.moon) {
+        partOfFortune = calculatePartOfFortune(
+          houseData.ascendant.degree,
+          planets.moon.longitude,
+          planets.sun.longitude,
+        );
+      }
+
+      // Calculate lunar nodes
+      console.info('Calculating lunar nodes');
+      const lunarNodes = calculateLunarNodes(houseData.julianDay);
+
+      // Build additionalPoints object
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const additionalPoints: any = {
+        descendant: derivedAngles.descendant,
+        imumCoeli: derivedAngles.imumCoeli,
+      };
+
+      if (partOfFortune) {
+        additionalPoints.partOfFortune = partOfFortune;
+      }
+
+      if (houseData.vertex) {
+        additionalPoints.vertex = houseData.vertex;
+      }
+
+      if (lunarNodes) {
+        additionalPoints.northNode = lunarNodes.northNode;
+        additionalPoints.southNode = lunarNodes.southNode;
+      }
+
+      item.additionalPoints = additionalPoints;
+
+      // Calculate asteroids
+      console.info('Calculating asteroids');
+      const asteroids = calculateAsteroids(houseData.julianDay);
+      if (asteroids) {
+        item.asteroids = asteroids;
+      }
     } else {
       item.houses = {
         status: 'failed',
