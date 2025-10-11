@@ -2,6 +2,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { getAllPlanets } from 'ephemeris';
 import * as crypto from 'crypto';
+import { DateTime } from 'luxon';
 
 const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
@@ -559,6 +560,13 @@ const calculateHousesWithSwisseph = async (
   }
 };
 
+/**
+ * Generate cache key for house calculations.
+ *
+ * Note: ephemerisVersion includes '-tz-fix' suffix to invalidate all cached
+ * entries calculated with the incorrect timezone offset. This ensures users
+ * get accurate recalculations with the fixed timezone logic.
+ */
 const generateCacheKey = (
   birthDate: string,
   birthTime: string,
@@ -572,7 +580,7 @@ const generateCacheKey = (
     lon: longitude,
     houseSystem: 'placidus',
     zodiacType: 'tropical',
-    ephemerisVersion: '2.10.03', // Only change when ephemeris data changes
+    ephemerisVersion: '2.10.03-tz-fix', // Only change when ephemeris data changes
   };
 
   // Use stable JSON stringification (keys in alphabetical order)
@@ -651,15 +659,37 @@ export const handler = async (event: any): Promise<void> => {
   const birthTime = validatedEvent.birthTime;
   const isTimeEstimated = false; // Since birth time is now required
 
-  // Create a date object that represents the local time at the birth location
+  /**
+   * Calculate timezone offset using Luxon for accurate historical timezone handling.
+   *
+   * Previous implementation used Date.toLocaleString() which was incorrect because:
+   * 1. It converted to locale string (losing timezone info)
+   * 2. Created new Date in system timezone (not birth location timezone)
+   * 3. Returned Lambda execution environment offset instead of birth location offset
+   *
+   * Luxon correctly:
+   * - Parses date/time in the specified IANA timezone
+   * - Calculates accurate historical offsets (including DST)
+   * - Returns the offset for the birth location and date
+   */
   const birthDateTimeStr = `${birthDate}T${birthTime}:00`;
-  const birthDateTime = new Date(birthDateTimeStr);
+  const birthDateTimeLocal = DateTime.fromISO(birthDateTimeStr, { zone: ianaTimeZone });
 
-  // Calculate timezone offset
-  const timezoneOffsetInHours =
-    new Date(
-      birthDateTime.toLocaleString('en-US', { timeZone: ianaTimeZone }),
-    ).getTimezoneOffset() / -60;
+  // Calculate accurate timezone offset in hours
+  const timezoneOffsetInHours = birthDateTimeLocal.offset / 60;
+
+  // Log timezone calculation details for debugging
+  console.info('Timezone calculation:', {
+    birthDateTimeStr,
+    ianaTimeZone,
+    localDateTime: birthDateTimeLocal.toString(),
+    offset: birthDateTimeLocal.offset,
+    offsetInHours: timezoneOffsetInHours,
+    utcDateTime: birthDateTimeLocal.toUTC().toISO(),
+  });
+
+  // Convert to JavaScript Date for ephemeris library (in UTC)
+  const birthDateTime = birthDateTimeLocal.toJSDate();
 
   try {
     // Calculate planetary positions using existing ephemeris library
