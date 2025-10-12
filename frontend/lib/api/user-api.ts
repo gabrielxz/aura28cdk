@@ -54,6 +54,38 @@ export interface PlanetData {
   minutes: number;
 }
 
+export interface CelestialBodyData {
+  degree: number;
+  sign: string;
+  degreeInSign: number;
+  minutes: number;
+  name: string;
+}
+
+export interface AdditionalPoints {
+  descendant: AngleData;
+  imumCoeli: AngleData;
+  partOfFortune?: CelestialBodyData;
+  vertex?: AngleData;
+  northNode?: CelestialBodyData;
+  southNode?: CelestialBodyData;
+}
+
+export interface Asteroids {
+  juno?: CelestialBodyData;
+  ceres?: CelestialBodyData;
+  pallas?: CelestialBodyData;
+  vesta?: CelestialBodyData;
+  eris?: CelestialBodyData;
+  pholus?: CelestialBodyData;
+  nessus?: CelestialBodyData;
+  ixion?: CelestialBodyData;
+  orcus?: CelestialBodyData;
+  quaoar?: CelestialBodyData;
+  sedna?: CelestialBodyData;
+  varuna?: CelestialBodyData;
+}
+
 export interface NatalChart {
   userId: string;
   chartType: 'natal';
@@ -83,7 +115,11 @@ export interface NatalChart {
     swetestVersion: string;
     houseSystem: string;
     zodiacType: string;
+    schemaVersion?: string;
   };
+  // New fields for additional celestial bodies (backwards compatible)
+  additionalPoints?: AdditionalPoints;
+  asteroids?: Asteroids;
 }
 
 export interface ValidationError {
